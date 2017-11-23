@@ -1,0 +1,12 @@
+{
+    "homedir": "/data/smoking-sigs",
+    "input": {
+        "id": "5",
+        "normal": "/data/smoking-sigs/5N.bam",
+        "tumor": "/data/smoking-sigs/5T.bam"
+    },
+    "reference": {
+        "genome": "/data/reference-genome/b37decoy/b37decoy.fasta",
+        "dbsnp": "/data/reference-genome/b37decoy/dbsnp.vcf"
+    }
+}

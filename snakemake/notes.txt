@@ -1,0 +1,23 @@
+# This assumes running on the PGV compute node, which already has a GATK jar.
+# Instructions still apply on a different machine, but will require installing GATK.
+
+# Set up a Conda environment:
+
+# snakemake needs python3
+conda create -n pgv
+source activate pgv
+
+# set up Bioconda; install channels in this order
+conda config --add channels r
+conda config --add channels defaults
+conda config --add channels conda-forge
+conda config --add channels bioconda
+
+# install a bunch of bio tools; gatk needs to be this version, latest doesn't work
+# graphviz needed for DAG visualization
+conda install bwa samtools sambamba snakemake picard gatk==3.7 graphviz
+
+# need to link GATK
+# unfortunately, then also need to edit the gatk binary (see "which gatk") to have the right
+# value for jar_file.
+gatk-register /data/biokepi-work-dir/workdir/toolkit/gatk.NOVERSION/GenomeAnalysisTK_37.jar

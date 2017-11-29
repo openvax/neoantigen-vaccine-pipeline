@@ -1,0 +1,135 @@
+"""
+This contains GATK-related processing rules.
+"""
+
+rule mark_dups:
+  input:
+    "{prefix}_aligned_coordinate_sorted.bam"
+  output:
+    "{prefix}_aligned_coordinate_sorted_dups.bam"
+  benchmark:
+    "{prefix}_mark_dups_benchmark.txt"
+  log:
+    "{prefix}_mark_dups.log"
+  shell:
+    "TMPDIR={wildcards.prefix}_tmp "
+    "MAX_SEQUENCES_FOR_DISK_READ_ENDS_MAP=50000 "
+    "MAX_FILE_HANDLES_FOR_READ_ENDS_MAP=20000 "
+    "SORTING_COLLECTION_SIZE_RATIO=0.250000 "
+    "picard -Xmx20g -Djava.io.tmpdir={wildcards.prefix}_tmp "
+    "MarkDuplicates "
+    "INPUT={input} OUTPUT={output} "
+    "VALIDATION_STRINGENCY=LENIENT METRICS_FILE={wildcards.prefix}_markdups_metrics.txt "
+    "2> {log}"
+
+rule index_mark_dups:
+  input:
+    "{prefix}_aligned_coordinate_sorted_dups.bam"
+  output:
+    "{prefix}_aligned_coordinate_sorted_dups.bam.bai"
+  shell:
+    "samtools index {input}"
+
+# TODO(julia): run jointly on tumor and normal
+# rule indel_realigner_target_creator:
+#   input:
+#     "{prefix}_aligned_coordinate_sorted_dups.bam.bai",
+#     bam = "{prefix}_aligned_coordinate_sorted_dups.bam"
+#   output:
+#     "{prefix}_aligned_coordinate_sorted_dups_indelreal.intervals"
+#   threads: 12
+#   params:
+#     reference = config["reference"]["genome"]
+#   benchmark:
+#     "{prefix}_indel_realigner_target_creator_benchmark.txt"
+#   log:
+#     "{prefix}_indel_realigner_target_creator.log"
+#   shell:
+#     "gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} -I {input.bam} -o {output} "
+#     "-nt {threads} "
+#     "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
+#     "2> {log}"
+
+rule indel_realigner_target_creator_joint:
+  input:
+    expand("{{prefix}}{type}_aligned_coordinate_sorted_dups.bam.bai", type=["N", "T"]),
+    normal = "{prefix}N_aligned_coordinate_sorted_dups.bam",
+    tumor = "{prefix}T_aligned_coordinate_sorted_dups.bam"
+  output:
+    "{prefix}_aligned_coordinate_sorted_dups_indelreal.intervals"
+  threads: 12
+  params:
+    reference = config["reference"]["genome"]
+  benchmark:
+    "{prefix}_indel_realigner_target_creator_benchmark.txt"
+  log:
+    "{prefix}_indel_realigner_target_creator.log"
+  shell:
+    "gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} -o {output} "
+    "-I {input.normal} -I {input.tumor}  -nt {threads} "
+    "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
+    "2> {log}"
+
+# hackiest thing ever. Constructs an intervals filename based on the prefix in the wildcards,
+# by removing the last character (ie path/to/workdir/5N -> path/to/workdir/5, etc.)
+# This only works because of the convention I'm using here, denoting type by one letter (T or N).
+# For more context, see how indel_realigner_target_creator_joint is defined.
+def get_intervals(wildcards):
+  prefix_minus_type = wildcards.prefix[:-1]
+  return prefix_minus_type + "_aligned_coordinate_sorted_dups_indelreal.intervals"
+
+rule indel_realigner:
+  input:
+    bam = "{prefix}_aligned_coordinate_sorted_dups.bam",
+    # intervals = "{diffprefix}_aligned_coordinate_sorted_dups_indelreal.intervals"
+    # intervals = rules.indel_realigner_target_creator_joint.output
+    intervals = get_intervals
+  output:
+    "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
+  params:
+    reference = config["reference"]["genome"]
+  benchmark:
+    "{prefix}_indel_realigner_benchmark.txt"
+  log:
+    "{prefix}_indel_realigner.log"
+  shell:
+    "gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} -I {input.bam} "
+    "-targetIntervals {input.intervals} -o {output} "
+    "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
+    "2> {log}"
+
+# TODO(julia): look into passing a bedfile to this
+rule base_recalibrator:
+  input:
+    "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
+  output:
+    "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table"
+  params:
+    reference = config["reference"]["genome"],
+    known_sites = config["reference"]["dbsnp"]
+  threads: 12
+  benchmark:
+    "{prefix}_base_recalibrator_benchmark.txt"
+  log:
+    "{prefix}_base_recalibrator.log"
+  shell:
+    "gatk -Xmx20g -T BaseRecalibrator -nct {threads} -I {input} -R {params.reference} "
+    "-knownSites {params.known_sites} -o {output} 2> {log}"
+
+rule bqsr_print_reads:
+  input:
+    bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam",
+    bqsr = "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table"
+  output:
+    "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
+  params:
+    reference = config["reference"]["genome"]
+  threads: 12
+  benchmark:
+    "{prefix}_base_recalibrator_print_reads_benchmark.txt"
+  log:
+    "{prefix}_base_recalibrator_print_reads.log"
+  shell:
+    "gatk -Xmx20g "
+    "-T PrintReads -nct {threads} -R {params.reference} -I {input.bam} -BQSR {input.bqsr} "
+    "-o {output} 2> {log}"

@@ -1,0 +1,32 @@
+"""
+This contains alignment-related processing rules.
+"""
+
+rule bwa_mem:
+  input:
+    "{prefix}_read_name_sorted.fastq"
+  output:
+    "{prefix}_aligned.sam"
+  params:
+    rg = "@RG\\tID:{prefix}.bam\\tSM:{prefix}\\tLB:ga\\tPL:Illumina",
+    reference = config["reference"]["genome"]
+  benchmark:
+    "{prefix}_bwa_mem_benchmark.txt"
+  log:
+    "{prefix}_bwa_mem.log"
+  threads: 12
+  shell:
+    "bwa mem -R '{params.rg}' -M -t {threads} -p -O 6 -E 1 -B 4 {params.reference} {input} "
+    "> {output} 2> {log}"
+
+rule convert_alignment_to_sorted_bam:
+  input:
+    "{prefix}_aligned.sam"
+  output:
+    "{prefix}_aligned_coordinate_sorted.bam"
+  benchmark:
+    "{prefix}_convert_alignment_to_sorted_bam_benchmark.txt"
+  log:
+    "{prefix}_convert_alignment_to_sorted_bam.log"
+  shell:
+    "picard -Xmx20g SortSam INPUT={input} OUTPUT={output} SORT_ORDER=coordinate 2> {log}"

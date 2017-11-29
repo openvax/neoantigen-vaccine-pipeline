@@ -32,6 +32,11 @@ import os
 
 configfile: "config.json"
 
+include:
+    "gatk.rules"
+include:
+    "alignment.rules"
+
 HOMEDIR = config["homedir"]
 SAMPLE_ID = config["input"]["id"]
 
@@ -79,137 +84,6 @@ rule convert_bam_to_fastq:
     "{prefix}_convert_bam_to_fastq_benchmark.txt"
   shell:
     "samtools bam2fq {input} > {output}"
-
-rule bwa_mem:
-  input:
-    "{prefix}_read_name_sorted.fastq"
-  output:
-    "{prefix}_aligned.sam"
-  params:
-    rg = "@RG\\tID:{prefix}.bam\\tSM:{prefix}\\tLB:ga\\tPL:Illumina",
-    reference = config["reference"]["genome"]
-  benchmark:
-    "{prefix}_bwa_mem_benchmark.txt"
-  log:
-    "{prefix}_bwa_mem.log"
-  threads: 12
-  shell:
-    "bwa mem -R '{params.rg}' -M -t {threads} -p -O 6 -E 1 -B 4 {params.reference} {input} "
-    "> {output} 2> {log}"
-
-rule convert_alignment_to_sorted_bam:
-  input:
-    "{prefix}_aligned.sam"
-  output:
-    "{prefix}_aligned_coordinate_sorted.bam"
-  benchmark:
-    "{prefix}_convert_alignment_to_sorted_bam_benchmark.txt"
-  log:
-    "{prefix}_convert_alignment_to_sorted_bam.log"
-  shell:
-    "picard -Xmx20g SortSam INPUT={input} OUTPUT={output} SORT_ORDER=coordinate 2> {log}"
-
-rule mark_dups:
-  input:
-    "{prefix}_aligned_coordinate_sorted.bam"
-  output:
-    "{prefix}_aligned_coordinate_sorted_dups.bam"
-  benchmark:
-    "{prefix}_mark_dups_benchmark.txt"
-  log:
-    "{prefix}_mark_dups.log"
-  shell:
-    "TMPDIR={wildcards.prefix}_tmp "
-    "MAX_SEQUENCES_FOR_DISK_READ_ENDS_MAP=50000 "
-    "MAX_FILE_HANDLES_FOR_READ_ENDS_MAP=20000 "
-    "SORTING_COLLECTION_SIZE_RATIO=0.250000 "
-    "picard -Xmx20g -Djava.io.tmpdir={wildcards.prefix}_tmp "
-    "MarkDuplicates "
-    "INPUT={input} OUTPUT={output} "
-    "VALIDATION_STRINGENCY=LENIENT METRICS_FILE={wildcards.prefix}_markdups_metrics.txt "
-    "2> {log}"
-
-rule index_mark_dups:
-  input:
-    "{prefix}_aligned_coordinate_sorted_dups.bam"
-  output:
-    "{prefix}_aligned_coordinate_sorted_dups.bam.bai"
-  shell:
-    "samtools index {input}"
-
-# TODO(julia): run jointly on tumor and normal
-rule indel_realigner_target_creator:
-  input:
-    "{prefix}_aligned_coordinate_sorted_dups.bam.bai",
-    bam = "{prefix}_aligned_coordinate_sorted_dups.bam"
-  output:
-    "{prefix}_aligned_coordinate_sorted_dups_indelreal.intervals"
-  threads: 12
-  params:
-    reference = config["reference"]["genome"]
-  benchmark:
-    "{prefix}_indel_realigner_target_creator_benchmark.txt"
-  log:
-    "{prefix}_indel_realigner_target_creator.log"
-  shell:
-    "gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} -I {input.bam} -o {output} "
-    "-nt {threads} "
-    "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
-    "2> {log}"
-
-rule indel_realigner:
-  input:
-    bam = "{prefix}_aligned_coordinate_sorted_dups.bam",
-    intervals = "{prefix}_aligned_coordinate_sorted_dups_indelreal.intervals",
-  output:
-    "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
-  params:
-    reference = config["reference"]["genome"]
-  benchmark:
-    "{prefix}_indel_realigner_benchmark.txt"
-  log:
-    "{prefix}_indel_realigner.log"
-  shell:
-    "gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} -I {input.bam} "
-    "-targetIntervals {input.intervals} -o {output} "
-    "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
-    "2> {log}"
-
-# TODO(julia): look into passing a bedfile to this
-rule base_recalibrator:
-  input:
-    "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
-  output:
-    "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table"
-  params:
-    reference = config["reference"]["genome"],
-    known_sites = config["reference"]["dbsnp"]
-  threads: 12
-  benchmark:
-    "{prefix}_base_recalibrator_benchmark.txt"
-  log:
-    "{prefix}_base_recalibrator.log"
-  shell:
-    "gatk -Xmx20g -T BaseRecalibrator -nct {threads} -I {input} -R {params.reference} "
-    "-knownSites {params.known_sites} -o {output} 2> {log}"
-
-rule bqsr_print_reads:
-  input:
-    bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam",
-    bqsr = "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table"
-  output:
-    "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
-  params:
-    reference =	config["reference"]["genome"]
-  threads: 12
-  benchmark:
-    "{prefix}_base_recalibrator_print_reads_benchmark.txt"
-  log:
-    "{prefix}_base_recalibrator_print_reads.log"
-  shell:
-    "gatk -Xmx20g "
-    "-T PrintReads -nct {threads} -R {params.reference} -I {input.bam} -BQSR {input.bqsr} "
-    "-o {output} 2> {log}"
 
 rule mutect2:
   input:

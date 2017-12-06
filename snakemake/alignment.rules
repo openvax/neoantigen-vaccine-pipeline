@@ -2,7 +2,7 @@
 This contains alignment-related processing rules.
 """
 
-rule bwa_mem:
+rule bwa_mem_starting_bam:
   input:
     "{prefix}_read_name_sorted.fastq"
   output:
@@ -17,6 +17,25 @@ rule bwa_mem:
   threads: 12
   shell:
     "bwa mem -R '{params.rg}' -M -t {threads} -p -O 6 -E 1 -B 4 {params.reference} {input} "
+    "> {output} 2> {log}"
+
+rule bwa_mem_starting_fastq:
+  input:
+    r1 = "{prefix}_R1.fastq",
+    r2 = "{prefix}_R2.fastq"
+  output:
+    "{prefix}_aligned.sam"
+  params:
+    rg = "@RG\\tID:{prefix}.fastq\\tSM:{prefix}\\tLB:ga\\tPL:Illumina",
+    reference = config["reference"]["genome"]
+  benchmark:
+    "{prefix}_bwa_mem_benchmark.txt"
+  log:
+    "{prefix}_bwa_mem.log"
+  threads: 12
+  shell:
+    "bwa mem -R '{params.rg}' -M -t {threads} -O 6 -E 1 -B 4 "
+    "{params.reference} {input.r1} {input.r2} "
     "> {output} 2> {log}"
 
 rule convert_alignment_to_sorted_bam:

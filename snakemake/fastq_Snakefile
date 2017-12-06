@@ -1,0 +1,106 @@
+"""
+To see how Snakemake behaves with certain commands given the current config.json, 
+try these examples:
+
+Print jobs (and their shell commands) required to produce an aligned tumor DNA file:
+snakemake -np /data/smoking-sigs/5/workdir/5T_aligned.sam --cores=24
+
+Print jobs (and their shell commands) required to produce the MuTect2 output:
+snakemake -np /data/smoking-sigs/5/workdir/5_mutect2.vcf --cores=24
+
+Note that these commands need to be run from this directory. Also, this file assumes the 
+existence of a config.json in the same directory with data of the form:
+
+{
+    "homedir": "path/to/homedir",
+    "input": {
+        "id": "some-id",
+        "normal": {
+          "r1": "path/to/normal_r1.fastq.gz",
+          "r2": "path/to/normal_r2.fastq.gz"
+        },
+        "tumor": {
+          "r1": "path/to/tumor_r1.fastq.gz",
+          "r2": "path/to/tumor_r2.fastq.gz"
+        }
+    },
+    "reference": {
+        "genome": "path/to/genome.fasta",
+        "dbsnp": "path/to/dbsnp.vcf"
+    }
+}
+
+The files listed in this config have to exist.
+
+"""
+
+import os
+
+configfile: "fastq_config.json"
+
+include:
+    "gatk.rules"
+include:
+    "alignment.rules"
+
+HOMEDIR = config["homedir"]
+SAMPLE_ID = config["input"]["id"]
+
+# DNA processing: MuTect2 variant calling
+
+rule all:
+  input:
+    os.path.join(HOMEDIR, SAMPLE_ID, "workdir", SAMPLE_ID + "_mutect2.vcf")
+
+rule unzip_fastq:
+  input:
+    "{prefix}.fastq.gz"
+  output:
+    "{prefix}.fastq"
+  shell:
+    "gunzip {input}"
+
+rule copy_normal_fastq_gz:
+  input:
+    r1 = config["input"]["normal"]["r1"],
+    r2 = config["input"]["normal"]["r2"]
+  output:
+    r1 = os.path.join(HOMEDIR, SAMPLE_ID, "workdir", SAMPLE_ID + "N_R1.fastq.gz"),
+    r2 = os.path.join(HOMEDIR, SAMPLE_ID, "workdir", SAMPLE_ID + "N_R2.fastq.gz")
+  shell:
+    "cp {input.r1} {output.r1} && cp {input.r2} {output.r2}"
+
+rule copy_tumor_fastq_gz:
+  input:
+    r1 = config["input"]["tumor"]["r1"],
+    r2 = config["input"]["tumor"]["r2"]
+  output:
+    r1 = os.path.join(HOMEDIR, SAMPLE_ID, "workdir", SAMPLE_ID + "T_R1.fastq.gz"),
+    r2 = os.path.join(HOMEDIR, SAMPLE_ID, "workdir", SAMPLE_ID + "T_R2.fastq.gz"),
+  shell:
+    "cp {input.r1} {output.r1} && cp {input.r2} {output.r2}"
+
+rule mutect2:
+  input:
+    normal = "{prefix}N_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
+    tumor = "{prefix}T_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
+  output:
+    "{prefix}_mutect2.vcf"
+  params:
+    reference = config["reference"]["genome"],
+    dbsnp = config["reference"]["dbsnp"]
+  benchmark:
+    "{prefix}_mutect2_benchmark.txt"
+  log:
+    "{prefix}_mutect2.log"
+  shell:
+    "gatk -Xmx20g "
+    "-T MuTect2 -I:normal {input.normal} -I:tumor {input.tumor} -R {params.reference} "
+    "--dbsnp {params.dbsnp} -o {output} "
+    "2> {log}"
+
+# RNA processing
+
+# STAR alignment
+
+# markdups

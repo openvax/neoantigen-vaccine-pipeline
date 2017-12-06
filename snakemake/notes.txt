@@ -15,7 +15,8 @@ conda config --add channels bioconda
 
 # install a bunch of bio tools; gatk needs to be this version, latest doesn't work
 # graphviz needed for DAG visualization
-conda install bwa samtools sambamba snakemake picard gatk==3.7 graphviz
+# ucsc-liftover for converting coverage bed files between various alignments
+conda install bwa samtools sambamba snakemake picard gatk==3.7 graphviz bedtools ucsc-liftover
 
 # need to link GATK
 # unfortunately, then also need to edit the gatk binary (see "which gatk") to have the right

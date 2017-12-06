@@ -1,0 +1,18 @@
+{
+    "homedir": "/data/smoking-sigs",
+    "input": {
+        "id": "5",
+        "normal": {
+            "r1": "/data/smoking-sigs/5N_R1.fastq.gz",
+            "r2": "/data/smoking-sigs/5N_R2.fastq.gz"
+        },
+        "tumor": {
+            "r1": "/data/smoking-sigs/5T_R1.fastq.gz",
+            "r2": "/data/smoking-sigs/5T_R2.fastq.gz"
+        }
+    },
+    "reference": {
+        "genome": "/data/reference-genome/b37decoy/b37decoy.fasta",
+        "dbsnp": "/data/reference-genome/b37decoy/dbsnp.vcf"
+    }
+}

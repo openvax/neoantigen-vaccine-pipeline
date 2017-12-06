@@ -22,3 +22,6 @@ conda install bwa samtools sambamba snakemake picard gatk==3.7 graphviz bedtools
 # unfortunately, then also need to edit the gatk binary (see "which gatk") to have the right
 # value for jar_file.
 gatk-register /data/biokepi-work-dir/workdir/toolkit/gatk.NOVERSION/GenomeAnalysisTK_37.jar
+
+# This is the location of the MuTect jar file on the PGV compute node:
+# /biokepi/workdir/toolkit/mutect.NOVERSION/muTect-1.1.6-10b1ba92.jar

@@ -13,6 +13,7 @@
     },
     "reference": {
         "genome": "/data/reference-genome/b37decoy/b37decoy.fasta",
-        "dbsnp": "/data/reference-genome/b37decoy/dbsnp.vcf"
+        "dbsnp": "/data/reference-genome/b37decoy/dbsnp.vcf",
+        "cosmic": "/data/reference-genome/b37decoy/cosmic.vcf"
     }
 }

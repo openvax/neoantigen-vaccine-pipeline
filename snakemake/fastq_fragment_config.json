@@ -1,0 +1,40 @@
+{
+    "homedir": "/data/smoking-sigs",
+    "input": {
+        "id": "5",
+        "normal": [
+            {
+                "fragment_id": "L1",
+                "r1": "/data/smoking-sigs/5N_L1_R1.fastq.gz",
+                "r2": "/data/smoking-sigs/5N_L1_R2.fastq.gz"
+            },
+            {
+                "fragment_id": "L2",
+                "r1": "/data/smoking-sigs/5N_L2_R1.fastq.gz",
+                "r2": "/data/smoking-sigs/5N_L2_R2.fastq.gz"
+            }
+        ],
+        "tumor": [
+            {
+                "fragment_id": "L1",
+                "r1": "/data/smoking-sigs/5T_L1_R1.fastq.gz",
+                "r2": "/data/smoking-sigs/5T_L1_R2.fastq.gz"
+            },
+            {
+                "fragment_id": "L2",
+                "r1": "/data/smoking-sigs/5T_L2_R1.fastq.gz",
+                "r2": "/data/smoking-sigs/5T_L2_R2.fastq.gz"
+            },
+            {
+                "fragment_id": "L3",
+                "r1": "/data/smoking-sigs/5T_L3_R1.fastq.gz",
+                "r2": "/data/smoking-sigs/5T_L3_R2.fastq.gz"
+            }
+        ]
+    },
+    "reference": {
+        "genome": "/data/reference-genome/b37decoy/b37decoy.fasta",
+        "dbsnp": "/data/reference-genome/b37decoy/dbsnp.vcf",
+        "cosmic": "/data/reference-genome/b37decoy/cosmic.vcf"
+    }
+}

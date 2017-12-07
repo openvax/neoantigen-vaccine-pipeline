@@ -3,10 +3,10 @@ To see how Snakemake behaves with certain commands given the current config.json
 try these examples:
 
 Print jobs (and their shell commands) required to produce an aligned tumor DNA file:
-snakemake -np /data/smoking-sigs/5/workdir/5T_aligned.sam --cores=24
+snakemake -s fastq_Snakefile -np /data/smoking-sigs/5/workdir/5T_aligned.sam --cores=24
 
 Print jobs (and their shell commands) required to produce the MuTect2 output:
-snakemake -np /data/smoking-sigs/5/workdir/5_mutect2.vcf --cores=24
+snakemake -s fastq_Snakefile -np /data/smoking-sigs/5/workdir/5_mutect2.vcf --cores=24
 
 Note that these commands need to be run from this directory. Also, this file assumes the 
 existence of a config.json in the same directory with data of the form:

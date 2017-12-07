@@ -1,0 +1,135 @@
+"""
+To see how Snakemake behaves with certain commands given the current config.json, 
+try these examples:
+
+Print jobs (and their shell commands) required to produce an aligned tumor DNA file:
+snakemake -s fastq_fragment_Snakefile -np /data/smoking-sigs/5/workdir/5T_aligned.sam --cores=24
+
+Print jobs (and their shell commands) required to produce the MuTect2 output:
+snakemake -s fastq_fragment_Snakefile -np /data/smoking-sigs/5/workdir/5_mutect2.vcf --cores=24
+
+Note that these commands need to be run from this directory. Also, this file assumes the 
+existence of a config.json in the same directory with data of the form:
+
+{
+    "homedir": "path/to/homedir",
+    "input": {
+        "id": "some-id",
+        "normal": [
+            {
+                "r1": "path/to/normal_L1_R1.fastq.gz",
+                "r2": "path/to/normal_L1_R2.fastq.gz"
+            },
+            {
+                "r1": "path/to/normal_L2_R1.fastq.gz",
+                "r2": "path/to/normal_L2_R2.fastq.gz"
+            }
+        ],
+        "tumor": [
+            {
+                "r1": "path/to/tumor_L1_R1.fastq.gz",
+                "r2": "path/to/tumor_L1_R2.fastq.gz"
+            },
+            {
+                "r1": "path/to/tumor_L2_R1.fastq.gz",
+                "r2": "path/to/tumor_L2_R2.fastq.gz"
+            }
+        ]
+    },
+    "reference": {
+        "genome": "path/to/genome.fasta",
+        "dbsnp": "path/to/dbsnp.vcf"
+    }
+}
+
+The files listed in this config have to exist.
+
+"""
+
+import os
+from shutil import copy2
+
+configfile: "fastq_fragment_config.json"
+
+include:
+    "gatk.rules"
+include:
+    "alignment.rules"
+
+HOMEDIR = config["homedir"]
+SAMPLE_ID = config["input"]["id"]
+WORKDIR = os.path.join(HOMEDIR, SAMPLE_ID, "workdir")
+PREFIX = os.path.join(WORKDIR, SAMPLE_ID)
+
+# copy all fragments over to the workdir, create if it doesn't exist
+if not os.path.exists(WORKDIR):
+  os.makedirs(WORKDIR)
+
+FRAGMENT_IDS = {
+  "normal": set(),
+  "tumor": set()
+}
+
+# naming convention for files in workdir: normal_L1_R1.fastq.gz
+# Assume that all inputs are fastq.gz files.
+for input_type in ["normal", "tumor"]:
+  for fragment in config["input"][input_type]:
+    for read in [1, 2]:
+      assert fragment["r%d" % read].endswith("fastq.gz")
+      FRAGMENT_IDS[input_type].add(fragment["fragment_id"])
+      source = fragment["r%d" % read]
+      dest = os.path.join(WORKDIR,
+        "%s_%s_R%d.fastq.gz" % (input_type, fragment["fragment_id"], read))
+      if not os.path.exists(dest):
+        print('Copying %s to %s' % (source, dest))
+        copy2(source, dest)
+
+rule unzip_fastq:
+  input:
+    "{prefix}.fastq.gz"
+  output:
+    "{prefix}.fastq"
+  shell:
+    "gunzip {input}"
+
+# merge a bunch of BAMs into one thing
+rule merge_normal_aligned_fragments:
+  input:
+    expand("{{prefix}}_{fragment_id}_aligned_coordinate_sorted.bam",
+      fragment_id=FRAGMENT_IDS["normal"])
+  output:
+    "{prefix}_merged_aligned_coordinate_sorted.bam"
+  wildcard_constraints:
+    prefix=".*normal.*"
+  shell:
+    "samtools merge {output} {input}"
+
+rule merge_tumor_aligned_fragments:
+  input:
+    expand("{{prefix}}_{fragment_id}_aligned_coordinate_sorted.bam",
+      fragment_id=FRAGMENT_IDS["tumor"])
+  output:
+    "{prefix}_merged_aligned_coordinate_sorted.bam"
+  wildcard_constraints:
+    prefix=".*tumor.*"
+  shell:
+    "samtools merge {output} {input}"
+
+rule mutect2:
+  input:
+    normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
+    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
+  output:
+    "{prefix}/mutect2.vcf"
+  params:
+    reference = config["reference"]["genome"],
+    dbsnp = config["reference"]["dbsnp"]
+  benchmark:
+    "{prefix}/mutect2_benchmark.txt"
+  log:
+    "{prefix}/mutect2.log"
+  shell:
+    "gatk -Xmx20g "
+    "-T MuTect2 -I:normal {input.normal} -I:tumor {input.tumor} -R {params.reference} "
+    "--dbsnp {params.dbsnp} -o {output} "
+    "2> {log}"

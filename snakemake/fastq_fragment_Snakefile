@@ -3,10 +3,13 @@ To see how Snakemake behaves with certain commands given the current config.json
 try these examples:
 
 Print jobs (and their shell commands) required to produce an aligned tumor DNA file:
-snakemake -s fastq_fragment_Snakefile -np /data/smoking-sigs/5/workdir/5T_aligned.sam --cores=24
+snakemake -s fastq_fragment_Snakefile -np /data/smoking-sigs/5/workdir/tumor_aligned.sam --cores=24
 
 Print jobs (and their shell commands) required to produce the MuTect2 output:
-snakemake -s fastq_fragment_Snakefile -np /data/smoking-sigs/5/workdir/5_mutect2.vcf --cores=24
+snakemake -s fastq_fragment_Snakefile -np /data/smoking-sigs/5/workdir/mutect.vcf --cores=24
+
+To see a DAG of all the jobs:
+snakemake --dag /data/smoking-sigs/5/workdir/mutect.vcf -s fastq_fragment_Snakefile | dot -Tsvg > ~/Desktop/dag.svg
 
 Note that these commands need to be run from this directory. Also, this file assumes the 
 existence of a config.json in the same directory with data of the form:
@@ -58,8 +61,12 @@ include:
 
 HOMEDIR = config["homedir"]
 SAMPLE_ID = config["input"]["id"]
+
+# TODO(julia): specify workdir in the config, don't infer it here
 WORKDIR = os.path.join(HOMEDIR, SAMPLE_ID, "workdir")
 PREFIX = os.path.join(WORKDIR, SAMPLE_ID)
+
+CHR = list(range(1, 23)) + ['X', 'Y', 'MT']
 
 # copy all fragments over to the workdir, create if it doesn't exist
 if not os.path.exists(WORKDIR):
@@ -133,3 +140,39 @@ rule mutect2:
     "-T MuTect2 -I:normal {input.normal} -I:tumor {input.tumor} -R {params.reference} "
     "--dbsnp {params.dbsnp} -o {output} "
     "2> {log}"
+
+# run a separate mutect task for each chromosome
+rule mutect_per_chr:
+  input:
+    normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
+    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
+  output:
+    "{prefix}/mutect_{chr}.vcf"
+  params:
+    reference = config["reference"]["genome"],
+    cosmic = config["reference"]["cosmic"],
+    dbsnp = config["reference"]["dbsnp"]
+  benchmark:
+    "{prefix}/mutect_{chr}_benchmark.txt"
+  log:
+    "{prefix}/mutect_{chr}.log"
+  shell:
+    "java -Xmx2g -jar /biokepi/workdir/toolkit/mutect.NOVERSION/muTect-1.1.6-10b1ba92.jar "
+    "--analysis_type MuTect "
+    "--reference_sequence {params.reference} "
+    "--cosmic {params.cosmic} "
+    "--dbsnp {params.dbsnp} "
+    "--intervals {wildcards.chr} "
+    "--input_file:normal {input.normal} "
+    "--input_file:tumor {input.tumor} "
+    "--out {output}.out "
+    "--vcf {output} "
+    "--coverage_file {output}_coverage.wig"
+ 
+rule mutect:
+  input:
+    expand("{{prefix}}/mutect_{chr}.vcf", chr=CHR)
+  output:
+    "{prefix}/mutect.vcf"
+  shell:
+    "vcf-concat {input} > {output}"

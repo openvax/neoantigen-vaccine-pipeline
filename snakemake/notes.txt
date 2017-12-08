@@ -16,12 +16,21 @@ conda config --add channels bioconda
 # install a bunch of bio tools; gatk needs to be this version, latest doesn't work
 # graphviz needed for DAG visualization
 # ucsc-liftover for converting coverage bed files between various alignments
-conda install bwa samtools sambamba snakemake picard gatk==3.7 graphviz bedtools ucsc-liftover
+# java version specific to MuTect
+conda install bwa samtools sambamba snakemake picard gatk==3.7 graphviz bedtools ucsc-liftover java-jdk==8.0.92
 
 # need to link GATK
 # unfortunately, then also need to edit the gatk binary (see "which gatk") to have the right
 # value for jar_file.
 gatk-register /data/biokepi-work-dir/workdir/toolkit/gatk.NOVERSION/GenomeAnalysisTK_37.jar
 
-# This is the location of the MuTect jar file on the PGV compute node:
-# /biokepi/workdir/toolkit/mutect.NOVERSION/muTect-1.1.6-10b1ba92.jar
+# MuTect 1.1.7 downloaded from https://software.broadinstitute.org/gatk/download/mutect, to path:
+# /biokepi/workdir/toolkit/mutect-1.1.7.jar 
+
+# MuTect needs Java 1.7, while GATK and other things need Java 1.8.
+# Dealing with this by setting up a separate Conda environment, specifically for Java 7
+conda create -n java17
+source activate java17
+conda install java-jdk==7.0.91
+# This results in java 7 being installed to /home/julia/miniconda3/envs/java17/bin/java
+# This should be run only for MuTect.

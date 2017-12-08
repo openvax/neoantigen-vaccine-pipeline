@@ -182,7 +182,8 @@ rule mutect_per_chr:
     "--input_file:tumor {input.tumor} "
     "--out {output}.out "
     "--vcf {output} "
-    "--coverage_file {output}_coverage.wig"
+    "--coverage_file {output}_coverage.wig "
+    "2> {log}"
  
 rule mutect:
   input:

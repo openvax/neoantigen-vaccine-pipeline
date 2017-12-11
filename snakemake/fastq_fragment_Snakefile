@@ -103,7 +103,6 @@ rule unzip_fastq:
     "gunzip {input}"
 
 # merge a bunch of BAMs into one thing
-# TODO(julia): only run a merge if necessary, otherwise if only one input, just copy over the file
 rule merge_normal_aligned_fragments:
   input:
     expand("{{prefix}}_{fragment_id}_aligned_coordinate_sorted.bam",
@@ -118,7 +117,6 @@ rule merge_normal_aligned_fragments:
     else:
       shell("cp {input} {output}")
 
-# TODO(julia): only run a merge if necessary, otherwise if only one input, just copy over the file
 rule merge_tumor_aligned_fragments:
   input:
     expand("{{prefix}}_{fragment_id}_aligned_coordinate_sorted.bam",
@@ -132,25 +130,6 @@ rule merge_tumor_aligned_fragments:
       shell("samtools merge {output} {input}")
     else:
       shell("cp {input} {output}")
-
-rule mutect2:
-  input:
-    normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
-    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
-  output:
-    "{prefix}/mutect2.vcf"
-  params:
-    reference = config["reference"]["genome"],
-    dbsnp = config["reference"]["dbsnp"]
-  benchmark:
-    "{prefix}/mutect2_benchmark.txt"
-  log:
-    "{prefix}/mutect2.log"
-  shell:
-    "gatk -Xmx20g "
-    "-T MuTect2 -I:normal {input.normal} -I:tumor {input.tumor} -R {params.reference} "
-    "--dbsnp {params.dbsnp} -o {output} "
-    "2> {log}"
 
 # run a separate mutect task for each chromosome
 # TODO(julia): need a better solution for running Java 1.7, for now hard-coding the path to that

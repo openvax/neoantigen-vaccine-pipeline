@@ -1,0 +1,35 @@
+{
+    "homedir": "/data/pipeline",
+    "input": {
+        "id": "pt002_old",
+        "normal": [
+            {
+                "fragment_id": "L001",
+                "r1": "/biokepi/pt002/old_pbmc_dna/PGV001_002_PB_DNA_01_01_S1_L001_R1_001.fastq.gz",
+                "r2": "/biokepi/pt002/old_pbmc_dna/PGV001_002_PB_DNA_01_01_S1_L001_R2_001.fastq.gz"
+            },
+            {
+                "fragment_id": "L002",
+                "r1": "/biokepi/pt002/old_pbmc_dna/PGV001_002_PB_DNA_01_01_S1_L002_R1_001.fastq.gz",
+                "r2": "/biokepi/pt002/old_pbmc_dna/PGV001_002_PB_DNA_01_01_S1_L002_R2_001.fastq.gz"
+            }
+        ],
+        "tumor": [
+            {
+                "fragment_id": "L001",
+                "r1": "/biokepi/pt002/old_tumor_dna/PGV001_002_TU_DNA_01_01_S2_L001_R1_001.fastq.gz",
+                "r2": "/biokepi/pt002/old_tumor_dna/PGV001_002_TU_DNA_01_01_S2_L001_R2_001.fastq.gz"
+            },
+            {
+                "fragment_id": "L002",
+                "r1": "/biokepi/pt002/old_tumor_dna/PGV001_002_TU_DNA_01_01_S2_L002_R1_001.fastq.gz",
+                "r2": "/biokepi/pt002/old_tumor_dna/PGV001_002_TU_DNA_01_01_S2_L002_R2_001.fastq.gz"
+            }
+        ]
+    },
+    "reference": {
+        "genome": "/biokepi/workdir/reference-genome/b37decoy/b37decoy.fasta",
+        "dbsnp": "/biokepi/workdir/reference-genome/b37decoy/dbsnp.vcf",
+        "cosmic": "/biokepi/workdir/reference-genome/b37decoy/cosmic.vcf"
+    }
+}

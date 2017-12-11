@@ -52,7 +52,7 @@ The files listed in this config have to exist.
 import os
 from shutil import copy2
 
-configfile: "pt002_config.json"
+configfile: "pt002_old_config.json"
 
 include:
     "gatk.rules"

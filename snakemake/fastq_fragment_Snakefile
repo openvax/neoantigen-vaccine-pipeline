@@ -185,6 +185,7 @@ rule mutect_per_chr:
     "--coverage_file {output}_coverage.wig "
     "2> {log}"
  
+# is it okay to use vcf-concat and not vcf-merge?
 rule mutect:
   input:
     expand("{{prefix}}/mutect_{chr}.vcf", chr=CHR)
@@ -192,3 +193,23 @@ rule mutect:
     "{prefix}/mutect.vcf"
   shell:
     "vcf-concat {input} > {output}"
+
+# TODO(julia): split by chromosome, like the MuTect jobs
+rule mutect2:
+  input:
+    normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
+    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
+  output:
+    "{prefix}/mutect2.vcf"
+  params:
+    reference = config["reference"]["genome"],
+    dbsnp = config["reference"]["dbsnp"]
+  benchmark:
+    "{prefix}/mutect2_benchmark.txt"
+  log:
+    "{prefix}/mutect2.log"
+  shell:
+    "gatk -Xmx20g "
+    "-T MuTect2 -I:normal {input.normal} -I:tumor {input.tumor} -R {params.reference} "
+    "--dbsnp {params.dbsnp} -o {output} "
+    "2> {log}"

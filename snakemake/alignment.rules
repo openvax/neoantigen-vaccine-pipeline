@@ -2,6 +2,8 @@
 This contains alignment-related processing rules.
 """
 
+# TODO(julia): add a rule for filtering all BAMs to a coverage file right after alignment
+
 rule bwa_mem_starting_bam:
   input:
     "{prefix}_read_name_sorted.fastq"

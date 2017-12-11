@@ -17,7 +17,7 @@ conda config --add channels bioconda
 # graphviz needed for DAG visualization
 # ucsc-liftover for converting coverage bed files between various alignments
 # java version specific to MuTect
-conda install bwa samtools sambamba snakemake picard gatk==3.7 graphviz bedtools ucsc-liftover java-jdk==8.0.92
+conda install bwa samtools sambamba snakemake picard gatk==3.7 graphviz bedtools ucsc-liftover java-jdk==8.0.92 vcftools
 
 # need to link GATK
 # unfortunately, then also need to edit the gatk binary (see "which gatk") to have the right
@@ -34,3 +34,19 @@ source activate java17
 conda install java-jdk==7.0.91
 # This results in java 7 being installed to /home/julia/miniconda3/envs/java17/bin/java
 # This should be run only for MuTect.
+
+# Also need to install the Perl vcftools:
+cd ~/bin
+wget -O vcftools_0.1.13.tar.gz http://downloads.sourceforge.net/project/vcftools/vcftools_0.1.13.tar.gz
+tar xvfz vcftools_0.1.13.tar.gz
+cd vcftools_0.1.13/
+export PERL5LIB=~/bin/vcftools-vcftools-ea875e2/src/perl
+# this will build both the C++ and Perl, we're only using Perl, but that's fine
+make
+# copy stuff over to $HOME/bin, already on the path
+# run `which vcftools` to make sure it's the conda-installed version, rather than this one
+# (depends on PATH setup)
+cp bin/* $HOME/bin
+cp lib/perl5/site_perl/* $HOME/bin
+export PERL5LIB=$HOME/bin/
+# run `vcf-concat -h` to make sure things work

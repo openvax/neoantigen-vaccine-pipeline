@@ -75,7 +75,6 @@ rule indel_realigner:
     "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
     "2> {log}"
 
-# TODO(julia): look into passing a bedfile to this
 rule base_recalibrator:
   input:
     "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"

@@ -79,7 +79,9 @@ FRAGMENT_IDS = {
 
 # naming convention for files in workdir: normal_L1_R1.fastq.gz
 # Assume that all inputs are fastq.gz files.
-for input_type in ["normal", "tumor"]:
+for input_type in ["normal", "tumor", "rna"]:
+  if input_type not in config["input"]:
+    continue
   for fragment in config["input"][input_type]:
     for read in [1, 2]:
       assert fragment["r%d" % read].endswith("fastq.gz")

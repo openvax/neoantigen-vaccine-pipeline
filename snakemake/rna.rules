@@ -43,6 +43,10 @@ rule star_align:
   params:
     genome_dir = STAR_GENOME_DIR,
     rg_sm = config["input"]["id"] + "_rna"
+  benchmark:
+    "{prefix}_star_align_benchmark.txt"
+  log:
+    "{prefix}_star_align.log"
   threads: 12
   shell:
     "STAR "

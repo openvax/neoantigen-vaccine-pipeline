@@ -152,7 +152,7 @@ rule merge_rna_aligned_fragments:
   threads: 12
   run:
     if len(input) > 1:
-      shell("sambamba merge -t {threads} -p {output} {input} 2> {log}")
+      shell("sambamba merge -t {threads} {output} {input} 2> {log}")
     else:
       shell("cp {input} {output}")
 

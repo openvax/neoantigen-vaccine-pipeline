@@ -4,29 +4,55 @@ This contains RNA processing rules.
 
 import os
 
+READ_LENGTH = 124
+STAR_GENOME_DIR = os.path.join(
+    os.path.dirname(config["reference"]["genome"]), "star-genome-%d" % READ_LENGTH)
+
+# TODO(julia): run with a benchmark/log, also consider outputting to workdir rather than the input
+# for where the reference stuff lives
 rule star_align_reference:
   input:
     reference = config["reference"]["genome"],
     transcripts = config["reference"]["transcripts"]
   params:
-    size = 124,
-    output_path = os.path.join(
-        os.path.dirname(config["reference"]["genome"]), "star-genome-124")
+    size = READ_LENGTH,
+    genome_dir = STAR_GENOME_DIR
   output:
-    os.path.join(
-        os.path.dirname(config["reference"]["genome"]),
-        "star-genome-124",
-        "SA")
+    os.path.join(STAR_GENOME_DIR, "SA")
   threads: 12
   run:
-    if not os.path.exists(params.output_path):
-        shell("mkdir {params.output_path}")
+    if not os.path.exists(params.genome_dir):
+        shell("mkdir {params.genome_dir}")
     shell("""
         STAR \
         --runMode genomeGenerate \
-        --genomeDir {params.output_path} \
+        --genomeDir {params.genome_dir} \
         --genomeFastaFiles {input.reference} \
         --sjdbGTFfile {input.transcripts} \
         --sjdbOverhang {params.size} \
         --runThreadN {threads}
     """)
+
+rule star_align:
+  input:
+    r1 = "{prefix}_R1.fastq",
+    r2 = "{prefix}_R2.fastq",
+    genome_alignment = rules.star_align_reference.output
+  output:
+    "{prefix}Aligned.sortedByCoord.out.bam"
+  params:
+    genome_dir = STAR_GENOME_DIR,
+    rg_sm = config["input"]["id"] + "_rna"
+  threads: 12
+  shell:
+    "STAR "
+    "--genomeDir {params.genome_dir} "
+    "--runThreadN {threads} "
+    "--outSAMtype BAM SortedByCoordinate "
+    "--outSAMstrandField intronMotif "
+    "--outSAMattributes NH HI NM MD "
+    "--outSAMmapqUnique 60 "
+    "--outFilterIntronMotifs RemoveNoncanonical "
+    "--outSAMattrRGline ID:{wildcards.prefix} SM:'{params.rg_sm}' "
+    "--outFileNamePrefix {wildcards.prefix} "
+    "--readFilesIn {input.r1} {input.r2}"

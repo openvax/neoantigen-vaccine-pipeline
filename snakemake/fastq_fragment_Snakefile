@@ -58,6 +58,8 @@ include:
     "gatk.rules"
 include:
     "alignment.rules"
+include:
+    "rna.rules"
 
 HOMEDIR = config["homedir"]
 SAMPLE_ID = config["input"]["id"]

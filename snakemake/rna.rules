@@ -1,0 +1,32 @@
+"""
+This contains RNA processing rules.
+"""
+
+import os
+
+rule star_align_reference:
+  input:
+    reference = config["reference"]["genome"],
+    transcripts = config["reference"]["transcripts"]
+  params:
+    size = 124,
+    output_path = os.path.join(
+        os.path.dirname(config["reference"]["genome"]), "star-genome-124")
+  output:
+    os.path.join(
+        os.path.dirname(config["reference"]["genome"]),
+        "star-genome-124",
+        "SA")
+  threads: 12
+  run:
+    if not os.path.exists(params.output_path):
+        shell("mkdir {params.output_path}")
+    shell("""
+        STAR \
+        --runMode genomeGenerate \
+        --genomeDir {params.output_path} \
+        --genomeFastaFiles {input.reference} \
+        --sjdbGTFfile {input.transcripts} \
+        --sjdbOverhang {params.size} \
+        --runThreadN {threads}
+    """)

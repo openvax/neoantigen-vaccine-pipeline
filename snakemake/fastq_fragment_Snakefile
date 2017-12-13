@@ -74,7 +74,8 @@ if not os.path.exists(WORKDIR):
 
 FRAGMENT_IDS = {
   "normal": set(),
-  "tumor": set()
+  "tumor": set(),
+  "rna": set()
 }
 
 # naming convention for files in workdir: normal_L1_R1.fastq.gz

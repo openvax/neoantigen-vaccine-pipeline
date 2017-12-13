@@ -59,4 +59,5 @@ rule star_align:
     "--outFilterIntronMotifs RemoveNoncanonical "
     "--outSAMattrRGline ID:{wildcards.prefix} SM:'{params.rg_sm}' "
     "--outFileNamePrefix {wildcards.prefix} "
-    "--readFilesIn {input.r1} {input.r2}"
+    "--readFilesIn {input.r1} {input.r2} "
+    "2> {log}"

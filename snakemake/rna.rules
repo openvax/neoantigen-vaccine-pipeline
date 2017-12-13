@@ -61,3 +61,64 @@ rule star_align:
     "--outFileNamePrefix {wildcards.prefix} "
     "--readFilesIn {input.r1} {input.r2} "
     "2> {log}"
+
+# then we run mark duplicates on the RNA, which can just reuse the mark_dups rule from gatk.rules
+
+# split the resulting BAM by CIGAR string; only want to do indel realignment on reads that don't
+# contain any Ns
+rule filter_n:
+  input:
+    "{prefix}_aligned_coordinate_sorted_dups.bam"
+  output:
+    "{prefix}_aligned_coordinate_sorted_dups_cigar_n_filtered.bam"
+  benchmark:
+    "{prefix}_split_out_n_benchmark.txt"
+  shell:
+    "sambamba view "
+    "--format=bam "
+    "-F 'cigar =~ /^.*N.*$/' "
+    "{input} > {output}"
+
+rule filter_other:
+  input:
+    "{prefix}_aligned_coordinate_sorted_dups.bam"
+  output:
+    "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered.bam"
+  benchmark:
+    "{prefix}_split_out_other_benchmark.txt"
+  shell:
+    "sambamba view "
+    "--format=bam "
+    "-F 'cigar =~ /^[0-9MIDSHPX=]*$/' "
+    "{input} > {output}"
+
+rule sort_filter_other:
+  input:
+    "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered.bam"
+  output:
+    "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam"
+  threads: 12
+  benchmark:
+    "{prefix}_sort_filter_other_benchmark.txt"
+  log:
+    "{prefix}_sort_filter_other.log"
+  shell:
+    "sambamba sort -t {threads}  "
+    "--tmpdir {wildcards.prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered "
+    "-o {output} "
+    "{input} "
+    "2> {log}"
+
+# TODO(julia): make a generic index rule using sambamba
+rule index_rna:
+  input:
+    "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam"
+  output:
+    "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam.bai"
+  threads: 12
+  benchmark:
+    "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted_index_benchmark.txt"
+  log:
+    "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted_index.log"
+  shell:
+    "sambamba index -t {threads} {input} {output} 2> {log}"

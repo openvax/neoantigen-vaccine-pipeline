@@ -136,6 +136,26 @@ rule merge_tumor_aligned_fragments:
     else:
       shell("cp {input} {output}")
 
+# TODO(julia): combine this with the other merge rules somehow
+rule merge_rna_aligned_fragments:
+  input:
+    expand("{{prefix}}_{fragment_id}Aligned.sortedByCoord.out.bam",
+      fragment_id=FRAGMENT_IDS["rna"])
+  output:
+    "{prefix}_merged_aligned_coordinate_sorted.bam"
+  wildcard_constraints:
+    prefix=".*rna.*"
+  benchmark:
+    "{prefix}_merge_rna_aligned_fragments_benchmark.txt"
+  log:
+    "{prefix}_merge_rna_aligned_fragments.log"
+  threads: 12
+  run:
+    if len(input) > 1:
+      shell("sambamba merge -t -p {threads} {output} {input} 2> {log}")
+    else:
+      shell("cp {input} {output}")
+
 # run a separate mutect task for each chromosome
 # TODO(julia): need a better solution for running Java 1.7, for now hard-coding the path to that
 # Java version as well as to the downloaded MuTect jar on PGVNode

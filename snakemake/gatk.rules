@@ -22,6 +22,7 @@ rule mark_dups:
     "VALIDATION_STRINGENCY=LENIENT METRICS_FILE={wildcards.prefix}_markdups_metrics.txt "
     "2> {log}"
 
+"""
 rule index_mark_dups:
   input:
     "{prefix}_aligned_coordinate_sorted_dups.bam"
@@ -29,6 +30,20 @@ rule index_mark_dups:
     "{prefix}_aligned_coordinate_sorted_dups.bam.bai"
   shell:
     "samtools index {input}"
+"""
+
+rule sambamba_index_bam:
+  input:
+    "{prefix}.bam"
+  output:
+    "{prefix}.bam.bai"
+  threads: 12
+  benchmark:
+    "{prefix}_index_benchmark.txt"
+  log:
+    "{prefix}_index.log"
+  shell:
+    "sambamba index -t {threads} {input} {output} 2> {log}"
 
 rule indel_realigner_target_creator_joint:
   input:

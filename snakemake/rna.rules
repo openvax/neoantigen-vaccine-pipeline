@@ -110,6 +110,7 @@ rule sort_rna_bam:
     "2> {log}"
 
 # TODO(julia): make a generic index rule using sambamba
+"""
 rule index_rna:
   input:
     "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam"
@@ -122,3 +123,4 @@ rule index_rna:
     "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted_index.log"
   shell:
     "sambamba index -t {threads} {input} {output} 2> {log}"
+"""

@@ -70,9 +70,9 @@ rule filter_n:
   input:
     "{prefix}_aligned_coordinate_sorted_dups.bam"
   output:
-    "{prefix}_aligned_coordinate_sorted_dups_cigar_n_filtered.bam"
+    "{prefix}_aligned_coordinate_sorted_dups_cigar_N_filtered.bam"
   benchmark:
-    "{prefix}_split_out_n_benchmark.txt"
+    "{prefix}_filter_N_benchmark.txt"
   shell:
     "sambamba view "
     "--format=bam "
@@ -92,19 +92,19 @@ rule filter_other:
     "-F 'cigar =~ /^[0-9MIDSHPX=]*$/' "
     "{input} > {output}"
 
-rule sort_filter_other:
+rule sort_rna_bam:
   input:
-    "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered.bam"
+    "{prefix}.bam"
   output:
-    "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam"
+    "{prefix}_sorted.bam"
   threads: 12
   benchmark:
-    "{prefix}_sort_filter_other_benchmark.txt"
+    "{prefix}_sort_benchmark.txt"
   log:
-    "{prefix}_sort_filter_other.log"
+    "{prefix}_sort.log"
   shell:
     "sambamba sort -t {threads}  "
-    "--tmpdir {wildcards.prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered "
+    "--tmpdir {wildcards.prefix}_sort_tmp "
     "-o {output} "
     "{input} "
     "2> {log}"

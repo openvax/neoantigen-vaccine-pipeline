@@ -22,16 +22,6 @@ rule mark_dups:
     "VALIDATION_STRINGENCY=LENIENT METRICS_FILE={wildcards.prefix}_markdups_metrics.txt "
     "2> {log}"
 
-"""
-rule index_mark_dups:
-  input:
-    "{prefix}_aligned_coordinate_sorted_dups.bam"
-  output:
-    "{prefix}_aligned_coordinate_sorted_dups.bam.bai"
-  shell:
-    "samtools index {input}"
-"""
-
 rule sambamba_index_bam:
   input:
     "{prefix}.bam"

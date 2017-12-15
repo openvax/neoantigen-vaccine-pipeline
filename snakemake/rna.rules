@@ -144,8 +144,10 @@ rule indel_realigner_per_chr:
     "{prefix}/rna_indel_realigner_{chr}_benchmark.txt"
   log:
     "{prefix}/rna_indel_realigner_{chr}.log"
+  resources:
+    mem_mb = 10000
   shell:
-    "gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} -I {input.bam} "
+    "gatk -Xmx10g -T IndelRealigner -compress 0 -R {params.reference} -I {input.bam} "
     "-targetIntervals {input.intervals} -o {output} "
     "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
     "2> {log}"
@@ -155,5 +157,14 @@ rule indel_realigner_merge:
     expand("{{prefix}}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.bam", chr=CHR)
   output:
     "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"
+  shell:
+    "samtools merge {output} {input}"
+
+rule merge_all_rna:
+  input:
+    "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam",
+    "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_N_filtered_sorted.bam"
+  output:
+    "{prefix}/rna_final.bam"
   shell:
     "samtools merge {output} {input}"

@@ -147,7 +147,7 @@ rule indel_realigner_per_chr:
   resources:
     mem_mb = 10000
   shell:
-    "gatk -Xmx10g -T IndelRealigner -compress 0 -R {params.reference} -I {input.bam} "
+    "gatk -Xmx10g -T IndelRealigner -R {params.reference} -I {input.bam} "
     "-targetIntervals {input.intervals} --intervals {chr} -o {output} "
     "--filter_mismatching_base_and_quals --filter_bases_not_stored "
     "2> {log}"

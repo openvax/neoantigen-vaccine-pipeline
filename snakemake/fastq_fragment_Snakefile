@@ -58,6 +58,8 @@ include:
     "gatk.rules"
 include:
     "alignment.rules"
+include:
+    "rna.rules"
 
 HOMEDIR = config["homedir"]
 SAMPLE_ID = config["input"]["id"]
@@ -131,6 +133,26 @@ rule merge_tumor_aligned_fragments:
   run:
     if len(input) > 1:
       shell("samtools merge {output} {input}")
+    else:
+      shell("cp {input} {output}")
+
+# TODO(julia): combine this with the other merge rules somehow
+rule merge_rna_aligned_fragments:
+  input:
+    expand("{{prefix}}_{fragment_id}Aligned.sortedByCoord.out.bam",
+      fragment_id=FRAGMENT_IDS["rna"])
+  output:
+    "{prefix}_merged_aligned_coordinate_sorted.bam"
+  wildcard_constraints:
+    prefix=".*rna.*"
+  benchmark:
+    "{prefix}_merge_rna_aligned_fragments_benchmark.txt"
+  log:
+    "{prefix}_merge_rna_aligned_fragments.log"
+  threads: 12
+  run:
+    if len(input) > 1:
+      shell("sambamba merge -t {threads} {output} {input} 2> {log}")
     else:
       shell("cp {input} {output}")
 

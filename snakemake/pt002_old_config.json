@@ -2,6 +2,14 @@
     "homedir": "/data/pipeline",
     "input": {
         "id": "pt002_old",
+        "mhc_alleles": [
+            "HLA-A*30:01",
+            "HLA-A*32:01",
+            "HLA-B*07:02",
+            "HLA-B*18:01",
+            "HLA-C*07:02",
+            "HLA-C*07:01"
+        ],
         "normal": [
             {
                 "fragment_id": "L001",
@@ -49,6 +57,9 @@
         "strelka": {
             "bin": "/home/julia/bin/bin",
             "config": "/home/julia/bin/bin/strelka_config.txt"
+        },
+        "pyensembl": {
+            "cache_dir": "/biokepi/workdir/pyensembl-cache"
         }
     }
 }

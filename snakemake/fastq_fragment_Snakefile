@@ -62,6 +62,8 @@ include:
     "rna.rules"
 include:
     "variant_calling.rules"
+include:
+    "special_sauce.rules"
 
 HOMEDIR = config["homedir"]
 SAMPLE_ID = config["input"]["id"]

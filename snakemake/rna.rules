@@ -93,11 +93,12 @@ rule filter_other:
     "-F 'cigar =~ /^[0-9MIDSHPX=]*$/' "
     "{input} > {output}"
 
+# apparently this also creates an index file? awesome
 rule sort_rna_bam:
   input:
     "{prefix}.bam"
   output:
-    "{prefix}_sorted.bam"
+    bam = "{prefix}_sorted.bam"
   threads: 12
   benchmark:
     "{prefix}_sort_benchmark.txt"
@@ -106,7 +107,7 @@ rule sort_rna_bam:
   shell:
     "sambamba sort -t {threads} -m 4GB "
     "--tmpdir {wildcards.prefix}_sort_tmp "
-    "-o {output} "
+    "-o {output.bam} "
     "{input} "
     "2> {log}"
 

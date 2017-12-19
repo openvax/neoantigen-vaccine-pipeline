@@ -17,7 +17,8 @@ rule vaxrank:
     rna_index = "{prefix}/rna_final_sorted.bam.bai"
   output:
     ascii_report = "{prefix}/vaccine-peptide-report.txt",
-    json_file = "{prefix}/vaccine-peptide-report.json"
+    json_file = "{prefix}/vaccine-peptide-report.json",
+    pdf_report = "{prefix}/vaccine-peptide-report.pdf"
   params:
     mhc_alleles = config["input"]["mhc_alleles"],
     mhc_predictor = "netmhcpan",
@@ -42,6 +43,7 @@ rule vaxrank:
         --mhc-predictor {params.mhc_predictor} \
         --mhc-alleles %s \
         --output-ascii-report {output.ascii_report} \
+        --output-pdf-report {output.pdf_report} \
         --output-json-file {output.json_file} \
         --log-path {log} \
         --vaccine-peptide-length {params.vaccine_peptide_length} \

@@ -49,6 +49,6 @@
         "strelka": {
             "bin": "/home/julia/bin/bin",
             "config": "/home/julia/bin/bin/strelka_config.txt"
-
+        }
     }
 }

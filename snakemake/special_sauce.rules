@@ -41,7 +41,7 @@ rule vaxrank:
         --vcf {input.mutect} \
         --bam {input.rna} \
         --mhc-predictor {params.mhc_predictor} \
-        --mhc_alleles %s \
+        --mhc-alleles %s \
         --output-ascii-report {output.ascii_report} \
         --output-json-file {output.json_file} \
         --output-pdf-report {output.pdf_report} \

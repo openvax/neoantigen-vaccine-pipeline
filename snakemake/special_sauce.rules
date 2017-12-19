@@ -44,7 +44,6 @@ rule vaxrank:
         --mhc-alleles %s \
         --output-ascii-report {output.ascii_report} \
         --output-json-file {output.json_file} \
-        --output-pdf-report {output.pdf_report} \
         --log-path {log} \
         --vaccine-peptide-length {params.vaccine_peptide_length} \
         --padding-around-mutation {params.padding_around_mutation} \

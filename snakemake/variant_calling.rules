@@ -65,7 +65,8 @@ rule strelka:
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
     tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
   output:
-    "{prefix}/strelka.vcf"   # placeholder
+    "{prefix}/strelka_output/results/passed.somatic.snvs.vcf",
+    "{prefix}/strelka_output/results/passed.somatic.indels.vcf"
   params:
     reference = config["reference"]["genome"],
     strelka_config = "strelka_config.txt",

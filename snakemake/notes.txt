@@ -52,6 +52,7 @@ export PERL5LIB=$HOME/bin/
 # run `vcf-concat -h` to make sure things work
 
 # Install Strelka, this is how it's currently done in existing pipeline
+# Note that Strelka needs Python 2.7, so that's probably what the system Python needs to be?
 wget -O strelka_workflow-1.0.14.tar.gz ftp://strelka:%27%27@ftp.illumina.com/v1-branch/v1.0.14/strelka_workflow-1.0.14.tar.gz
 tar xvfz strelka_workflow-1.0.14.tar.gz
 cd strelka_workflow-1.0.14

@@ -78,6 +78,7 @@ rule strelka:
     "{prefix}/strelka.log"
   threads: 24
   shell:
+    "rm -rf {params.output_dir}; "
     "{params.strelka_bin}/configureStrelkaWorkflow.pl "
     "--normal {input.normal} "
     "--tumor {input.tumor} "

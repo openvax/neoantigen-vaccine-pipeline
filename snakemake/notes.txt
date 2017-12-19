@@ -61,3 +61,13 @@ make
 chmod -R a+rx ./*
 make install
 export STRELKA_BIN=$HOME/bin/bin
+
+# add vaxrank to the Conda env
+pip install vaxrank
+
+# for vaxrank to generate PDF reports, need to do this on a Linux box:
+sudo apt-get install wkhtmltopdf
+sudo apt-get install xvfb
+
+# TODO(julia): explain how to set up netMHCcons and netMHCpan, for now they already exist on
+# the PGVNode so going to punt on this

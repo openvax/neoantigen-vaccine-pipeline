@@ -60,6 +60,8 @@ rule mutect2:
     "--dbsnp {params.dbsnp} -o {output} "
     "2> {log}"
 
+# TODO(julia): the logs here print to stdout still, need to figure out what the logs are coming from
+# and print to the logfile instead
 rule strelka:
   input:
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
@@ -87,4 +89,26 @@ rule strelka:
     "--output-dir {params.output_dir}; "
     "cd {params.output_dir}; "
     "make -j {threads} "
+    "2> {log}"
+
+rule strelka_combine:
+  input:
+    snvs = "{prefix}/strelka_output/results/passed.somatic.snvs.vcf",
+    indels = "{prefix}/strelka_output/results/passed.somatic.indels.vcf"
+  output:
+    "{prefix}/strelka.vcf"
+  params:
+    reference = config["reference"]["genome"]
+  benchmark:
+    "{prefix}/strelka_combine_benchmark.txt"
+  log:
+    "{prefix}/strelka_combine.log"
+  shell:
+    "gatk -T CombineVariants "
+    "--variant:snvs {input.snvs} "
+    "--variant:indels {input.indels} "
+    "-R {params.reference} "
+    "-genotypeMergeOptions PRIORITIZE "
+    "-o {output} "
+    "-priority snvs,indels "
     "2> {log}"

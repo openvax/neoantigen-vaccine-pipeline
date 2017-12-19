@@ -46,6 +46,9 @@
         "transcripts": "/biokepi/workdir/reference-genome/b37decoy/transcripts.gtf"
     },
     "tools": {
-        "strelka_bin": "/home/julia/bin/bin"
+        "strelka": {
+            "bin": "/home/julia/bin/bin",
+            "config": "/home/julia/bin/bin/strelka_config.txt"
+
     }
 }

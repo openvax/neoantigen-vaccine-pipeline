@@ -69,8 +69,8 @@ rule strelka:
     "{prefix}/strelka_output/results/passed.somatic.indels.vcf"
   params:
     reference = config["reference"]["genome"],
-    strelka_config = "strelka_config.txt",
-    strelka_bin = config["tools"]["strelka_bin"],
+    strelka_bin = config["tools"]["strelka"]["bin"],
+    strelka_config = config["tools"]["strelka"]["config"],
     output_dir = "{prefix}/strelka_output"
   benchmark:
     "{prefix}/strelka_benchmark.txt"

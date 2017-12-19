@@ -17,7 +17,7 @@ conda config --add channels bioconda
 # graphviz needed for DAG visualization
 # ucsc-liftover for converting coverage bed files between various alignments
 # java version specific to MuTect
-conda install bwa samtools sambamba snakemake picard gatk==3.7 graphviz bedtools ucsc-liftover java-jdk==8.0.92 vcftools star strelka
+conda install bwa samtools sambamba snakemake picard gatk==3.7 graphviz bedtools ucsc-liftover java-jdk==8.0.92 vcftools star
 
 # need to link GATK
 # unfortunately, then also need to edit the gatk binary (see "which gatk") to have the right
@@ -50,3 +50,13 @@ cp bin/* $HOME/bin
 cp lib/perl5/site_perl/* $HOME/bin
 export PERL5LIB=$HOME/bin/
 # run `vcf-concat -h` to make sure things work
+
+# Install Strelka, this is how it's currently done in existing pipeline
+wget -O strelka_workflow-1.0.14.tar.gz ftp://strelka:%27%27@ftp.illumina.com/v1-branch/v1.0.14/strelka_workflow-1.0.14.tar.gz
+tar xvfz strelka_workflow-1.0.14.tar.gz
+cd strelka_workflow-1.0.14
+./configure prefix=$HOME/bin
+make
+chmod -R a+rx ./*
+make install
+export STRELKA_BIN=$HOME/bin/bin

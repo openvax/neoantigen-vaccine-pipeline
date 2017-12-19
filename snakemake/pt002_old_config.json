@@ -44,5 +44,8 @@
         "dbsnp": "/biokepi/workdir/reference-genome/b37decoy/dbsnp.vcf",
         "cosmic": "/biokepi/workdir/reference-genome/b37decoy/cosmic.vcf",
         "transcripts": "/biokepi/workdir/reference-genome/b37decoy/transcripts.gtf"
+    },
+    "tools": {
+        "strelka_bin": "/home/julia/bin/bin"
     }
 }

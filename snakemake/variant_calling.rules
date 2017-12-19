@@ -59,3 +59,30 @@ rule mutect2:
     "-T MuTect2 -I:normal {input.normal} -I:tumor {input.tumor} -R {params.reference} "
     "--dbsnp {params.dbsnp} -o {output} "
     "2> {log}"
+
+rule strelka:
+  input:
+    normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
+    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
+  output:
+    "{prefix}/strelka.vcf"   # placeholder
+  params:
+    reference = config["reference"]["genome"],
+    strelka_config = "strelka_config.txt",
+    strelka_bin = config["tools"]["strelka_bin"],
+    output_dir = "{prefix}/strelka_output"
+  benchmark:
+    "{prefix}/strelka_benchmark.txt"
+  log:
+    "{prefix}/strelka.log"
+  threads: 24
+  shell:
+    "{params.strelka_bin}/configureStrelkaWorkflow.pl "
+    "--normal {input.normal} "
+    "--tumor {input.tumor} "
+    "--ref {params.reference} "
+    "--config {params.strelka_config} "
+    "--output-dir {params.output_dir}; "
+    "cd {params.output_dir}; "
+    "make -j {threads} "
+    "2> {log}"

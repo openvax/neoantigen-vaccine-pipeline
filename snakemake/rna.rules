@@ -157,6 +157,8 @@ rule indel_realigner_merge:
     expand("{{prefix}}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.bam", chr=CHR)
   output:
     "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"
+  benchmark:
+    "{prefix}/rna_indel_realigner_merge_benchmark.txt"
   shell:
     "samtools merge {output} {input}"
 
@@ -166,5 +168,7 @@ rule merge_all_rna:
     "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_N_filtered_sorted.bam"
   output:
     "{prefix}/rna_final.bam"
+  benchmark:
+    "{prefix}/rna_final_merge_benchmark.txt"
   shell:
     "samtools merge {output} {input}"

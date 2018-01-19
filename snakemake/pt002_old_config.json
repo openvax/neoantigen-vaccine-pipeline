@@ -1,5 +1,5 @@
 {
-    "homedir": "/data/pipeline",
+    "workdir": "/data/pipeline/workdir",
     "input": {
         "id": "pt002_old",
         "mhc_alleles": [

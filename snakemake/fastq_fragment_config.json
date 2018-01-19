@@ -1,5 +1,5 @@
 {
-    "homedir": "/data/smoking-sigs",
+    "workdir": "/data/smoking-sigs/workdir",
     "input": {
         "id": "5",
         "normal": [

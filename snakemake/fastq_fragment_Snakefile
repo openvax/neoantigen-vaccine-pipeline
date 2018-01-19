@@ -3,37 +3,41 @@ To see how Snakemake behaves with certain commands given the current config.json
 try these examples:
 
 Print jobs (and their shell commands) required to produce an aligned tumor DNA file:
-snakemake -s fastq_fragment_Snakefile -np /data/smoking-sigs/5/workdir/tumor_aligned.sam --cores=24
+snakemake -s fastq_fragment_Snakefile -np /data/smoking-sigs/workdir/5/tumor_aligned.sam --cores=24
 
 Print jobs (and their shell commands) required to produce the MuTect2 output:
-snakemake -s fastq_fragment_Snakefile -np /data/smoking-sigs/5/workdir/mutect.vcf --cores=24
+snakemake -s fastq_fragment_Snakefile -np /data/smoking-sigs/workdir/5/mutect.vcf --cores=24
 
 To see a DAG of all the jobs:
-snakemake --dag /data/smoking-sigs/5/workdir/mutect.vcf -s fastq_fragment_Snakefile | dot -Tsvg > ~/Desktop/dag.svg
+snakemake --dag /data/smoking-sigs/workdir/5/mutect.vcf -s fastq_fragment_Snakefile | dot -Tsvg > ~/Desktop/dag.svg
 
 Note that these commands need to be run from this directory. Also, this file assumes the 
 existence of a config.json in the same directory with data of the form:
 
 {
-    "homedir": "path/to/homedir",
+    "workdir": "path/to/workdir",
     "input": {
         "id": "some-id",
         "normal": [
             {
+                "fragment_id": "L1",
                 "r1": "path/to/normal_L1_R1.fastq.gz",
                 "r2": "path/to/normal_L1_R2.fastq.gz"
             },
             {
+                "fragment_id": "L2",
                 "r1": "path/to/normal_L2_R1.fastq.gz",
                 "r2": "path/to/normal_L2_R2.fastq.gz"
             }
         ],
         "tumor": [
             {
+                "fragment_id": "L1",
                 "r1": "path/to/tumor_L1_R1.fastq.gz",
                 "r2": "path/to/tumor_L1_R2.fastq.gz"
             },
             {
+                "fragment_id": "L2",
                 "r1": "path/to/tumor_L2_R1.fastq.gz",
                 "r2": "path/to/tumor_L2_R2.fastq.gz"
             }
@@ -65,16 +69,12 @@ include:
 include:
     "special_sauce.rules"
 
-HOMEDIR = config["homedir"]
 SAMPLE_ID = config["input"]["id"]
-
-# TODO(julia): specify workdir in the config, don't infer it here
-WORKDIR = os.path.join(HOMEDIR, SAMPLE_ID, "workdir")
-PREFIX = os.path.join(WORKDIR, SAMPLE_ID)
+WORKDIR = os.path.join(config["workdir"], SAMPLE_ID)
 
 CHR = list(range(1, 23)) + ['X', 'Y', 'MT']
 
-# copy all fragments over to the workdir, create if it doesn't exist
+# copy all fragments over to the sample-specific workdir, create if it doesn't exist
 if not os.path.exists(WORKDIR):
   os.makedirs(WORKDIR)
 
@@ -140,7 +140,6 @@ rule merge_tumor_aligned_fragments:
     else:
       shell("cp {input} {output}")
 
-# TODO(julia): combine this with the other merge rules somehow
 rule merge_rna_aligned_fragments:
   input:
     expand("{{prefix}}_{fragment_id}Aligned.sortedByCoord.out.bam",

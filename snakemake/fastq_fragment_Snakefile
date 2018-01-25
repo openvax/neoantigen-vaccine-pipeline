@@ -11,8 +11,8 @@ snakemake -s fastq_fragment_Snakefile -np /data/smoking-sigs/workdir/5/mutect.vc
 To see a DAG of all the jobs:
 snakemake --dag /data/smoking-sigs/workdir/5/mutect.vcf -s fastq_fragment_Snakefile | dot -Tsvg > ~/Desktop/dag.svg
 
-Note that these commands need to be run from this directory. Also, this file assumes the 
-existence of a config.json in the same directory with data of the form:
+Note that these commands need to be run from this directory. Also, this file needs a configfile
+(passed as --configfile to the snakemake command) with data of the form:
 
 {
     "workdir": "path/to/workdir",
@@ -55,8 +55,6 @@ The files listed in this config have to exist.
 
 import os
 from shutil import copy2
-
-configfile: "pt002_old_config.json"
 
 include:
     "gatk.rules"

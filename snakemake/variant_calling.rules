@@ -17,6 +17,8 @@ rule mutect_per_chr:
     "{prefix}/mutect_{chr}_benchmark.txt"
   log:
     "{prefix}/mutect_{chr}.log"
+  resources:
+    mem_mb = 2000
   shell:
     "{params.java} -Xmx2g -jar {params.mutect_jar} "
     "--analysis_type MuTect "
@@ -75,7 +77,7 @@ rule mutect2_per_chr:
   log:
     "{prefix}/mutect2_{chr}.log"
   shell:
-    "gatk -Xmx20g -T MuTect2 "
+    "gatk -Xmx2g -T MuTect2 "
     "-I:normal {input.normal} "
     "-I:tumor {input.tumor} "
     "-R {params.reference} "

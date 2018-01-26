@@ -41,24 +41,57 @@ rule mutect:
     "vcf-concat {input} > {output}"
 
 # TODO(julia): split by chromosome, like the MuTect jobs
-rule mutect2:
+# rule mutect2:
+#   input:
+#     normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
+#     tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
+#   output:
+#     "{prefix}/mutect2.vcf"
+#   params:
+#     reference = config["reference"]["genome"],
+#     dbsnp = config["reference"]["dbsnp"]
+#   benchmark:
+#     "{prefix}/mutect2_benchmark.txt"
+#   log:
+#     "{prefix}/mutect2.log"
+#   shell:
+#     "gatk -Xmx20g "
+#     "-T MuTect2 -I:normal {input.normal} -I:tumor {input.tumor} -R {params.reference} "
+#     "--dbsnp {params.dbsnp} -o {output} "
+#     "2> {log}"
+
+rule mutect2_per_chr:
   input:
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
     tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
   output:
-    "{prefix}/mutect2.vcf"
+    "{prefix}/mutect2_{chr}.vcf"
   params:
     reference = config["reference"]["genome"],
+    cosmic = config["reference"]["cosmic"],
     dbsnp = config["reference"]["dbsnp"]
   benchmark:
-    "{prefix}/mutect2_benchmark.txt"
+    "{prefix}/mutect2_{chr}_benchmark.txt"
   log:
-    "{prefix}/mutect2.log"
+    "{prefix}/mutect2_{chr}.log"
   shell:
-    "gatk -Xmx20g "
-    "-T MuTect2 -I:normal {input.normal} -I:tumor {input.tumor} -R {params.reference} "
-    "--dbsnp {params.dbsnp} -o {output} "
+    "gatk -Xmx20g -T MuTect2 "
+    "-I:normal {input.normal} "
+    "-I:tumor {input.tumor} "
+    "-R {params.reference} "
+    "--dbsnp {params.dbsnp} "
+    "--cosmic {params.cosmic} "
+    "--intervals {wildcards.chr} "
+    "-o {output} "
     "2> {log}"
+
+rule mutect2:
+  input:
+    expand("{{prefix}}/mutect2_{chr}.vcf", chr=CHR)
+  output:
+    "{prefix}/mutect2.vcf"
+  shell:
+    "vcf-concat {input} > {output}"
 
 # TODO(julia): the logs here print to stdout still, need to figure out what the logs are coming from
 # and print to the logfile instead

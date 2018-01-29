@@ -42,26 +42,6 @@ rule mutect:
   shell:
     "vcf-concat {input} > {output}"
 
-# TODO(julia): split by chromosome, like the MuTect jobs
-# rule mutect2:
-#   input:
-#     normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
-#     tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
-#   output:
-#     "{prefix}/mutect2.vcf"
-#   params:
-#     reference = config["reference"]["genome"],
-#     dbsnp = config["reference"]["dbsnp"]
-#   benchmark:
-#     "{prefix}/mutect2_benchmark.txt"
-#   log:
-#     "{prefix}/mutect2.log"
-#   shell:
-#     "gatk -Xmx20g "
-#     "-T MuTect2 -I:normal {input.normal} -I:tumor {input.tumor} -R {params.reference} "
-#     "--dbsnp {params.dbsnp} -o {output} "
-#     "2> {log}"
-
 rule mutect2_per_chr:
   input:
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
@@ -77,7 +57,7 @@ rule mutect2_per_chr:
   log:
     "{prefix}/mutect2_{chr}.log"
   shell:
-    "gatk -Xmx2g -T MuTect2 "
+    "gatk -T MuTect2 "
     "-I:normal {input.normal} "
     "-I:tumor {input.tumor} "
     "-R {params.reference} "

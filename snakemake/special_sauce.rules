@@ -18,16 +18,18 @@ rule vaxrank:
   output:
     ascii_report = "{prefix}/vaccine-peptide-report.txt",
     json_file = "{prefix}/vaccine-peptide-report.json",
-    pdf_report = "{prefix}/vaccine-peptide-report.pdf"
+    pdf_report = "{prefix}/vaccine-peptide-report.pdf",
+    xlsx_report = "{prefix}/vaccine-peptide-report.xlsx"
   params:
     mhc_alleles = config["input"]["mhc_alleles"],
+    patient_id = config["input"]["id"],
     mhc_predictor = "netmhcpan",
     vaccine_peptide_length = 25,
     padding_around_mutation = 5,
     max_vaccine_peptides_per_mutation = 3,
     min_mapping_quality = 1,
     min_variant_sequence_coverage = 1,
-    min_alt_rna_reads = 3,
+    min_alt_rna_reads = 2,
     mhc_epitope_lengths = "8-11"
   benchmark:
     "{prefix}/vaxrank_benchmark.txt"
@@ -44,7 +46,9 @@ rule vaxrank:
         --mhc-alleles %s \
         --output-ascii-report {output.ascii_report} \
         --output-pdf-report {output.pdf_report} \
+        --output-xlsx-report {output.xlsx_report} \
         --output-json-file {output.json_file} \
+        --output-patient-id {params.patient_id} \
         --log-path {log} \
         --vaccine-peptide-length {params.vaccine_peptide_length} \
         --padding-around-mutation {params.padding_around_mutation} \
@@ -65,21 +69,23 @@ rule vaxrank_with_mutect2:
   output:
     ascii_report = "{prefix}/vaccine-peptide-report-with-mutect2.txt",
     json_file = "{prefix}/vaccine-peptide-report-with-mutect2.json",
-    pdf_report = "{prefix}/vaccine-peptide-report-with-mutect2.pdf"
+    pdf_report = "{prefix}/vaccine-peptide-report-with-mutect2.pdf",
+    xlsx_report = "{prefix}/vaccine-peptide-report-with-mutect2.xlsx"
   params:
     mhc_alleles = config["input"]["mhc_alleles"],
+    patient_id = config["input"]["id"],
     mhc_predictor = "netmhcpan",
     vaccine_peptide_length = 25,
     padding_around_mutation = 5,
     max_vaccine_peptides_per_mutation = 3,
     min_mapping_quality = 1,
     min_variant_sequence_coverage = 1,
-    min_alt_rna_reads = 3,
+    min_alt_rna_reads = 2,
     mhc_epitope_lengths = "8-11"
   benchmark:
-    "{prefix}/vaxrank_benchmark.txt"
+    "{prefix}/vaxrank_with_mutect2_benchmark.txt"
   log:
-    "{prefix}/vaxrank.log"
+    "{prefix}/vaxrank_with_mutect2.log"
   run:
     mhc_alleles = ",".join(params.mhc_alleles)
     shell("""
@@ -92,7 +98,9 @@ rule vaxrank_with_mutect2:
         --mhc-alleles %s \
         --output-ascii-report {output.ascii_report} \
         --output-pdf-report {output.pdf_report} \
+        --output-xlsx-report {output.xlsx_report} \
         --output-json-file {output.json_file} \
+        --output-patient-id {params.patient_id} \
         --log-path {log} \
         --vaccine-peptide-length {params.vaccine_peptide_length} \
         --padding-around-mutation {params.padding_around_mutation} \

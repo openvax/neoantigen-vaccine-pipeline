@@ -2,7 +2,17 @@
 This contains alignment-related processing rules.
 """
 
-# TODO(julia): add a rule for filtering all BAMs to a coverage file right after alignment
+def get_rg(wildcards):
+  prefix = wildcards.prefix
+  basename = os.path.basename(prefix)
+  if basename.startswith("normal"):
+    sm = "normal"
+  elif basename.startswith("tumor"):
+    sm = "tumor"
+  else:
+    raise ValueError("Unexpected prefix, cannot extract SM tag: %s" % prefix)
+  return "@RG\\tID:{prefix}.bam\\tSM:{sample_id}_{sm}\\tLB:ga\\tPL:Illumina".format(
+    prefix=prefix, sample_id=config["input"]["id"], sm=sm)
 
 rule bwa_mem_starting_bam:
   input:
@@ -10,7 +20,7 @@ rule bwa_mem_starting_bam:
   output:
     "{prefix}_aligned.sam"
   params:
-    rg = "@RG\\tID:{prefix}.bam\\tSM:{prefix}\\tLB:ga\\tPL:Illumina",
+    rg = get_rg,
     reference = config["reference"]["genome"]
   benchmark:
     "{prefix}_bwa_mem_benchmark.txt"
@@ -23,12 +33,12 @@ rule bwa_mem_starting_bam:
 
 rule bwa_mem_starting_fastq:
   input:
-    r1 = "{prefix}_R1.fastq",
-    r2 = "{prefix}_R2.fastq"
+    r1 = "{prefix}_R1.fastq.gz",
+    r2 = "{prefix}_R2.fastq.gz"
   output:
     "{prefix}_aligned.sam"
   params:
-    rg = "@RG\\tID:{prefix}.fastq\\tSM:{prefix}\\tLB:ga\\tPL:Illumina",
+    rg = get_rg,
     reference = config["reference"]["genome"]
   benchmark:
     "{prefix}_bwa_mem_benchmark.txt"

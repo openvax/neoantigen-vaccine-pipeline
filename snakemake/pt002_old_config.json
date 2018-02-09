@@ -61,5 +61,6 @@
         "pyensembl": {
             "cache_dir": "/biokepi/workdir/pyensembl-cache"
         }
-    }
+    },
+    "run_mutect2": true,
 }

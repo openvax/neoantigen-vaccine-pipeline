@@ -11,8 +11,8 @@ def get_rg(wildcards):
     sm = "tumor"
   else:
     raise ValueError("Unexpected prefix, cannot extract SM tag: %s" % prefix)
-  return "@RG\\tID:{prefix}.bam\\tSM:{sample_id}_{type}\\tLB:ga\\tPL:Illumina".format(
-    prefix=prefix, sample_id=config["input"]["id"], type=sm)
+  return "@RG\\tID:{prefix}.bam\\tSM:{sample_id}_{sm}\\tLB:ga\\tPL:Illumina".format(
+    prefix=prefix, sample_id=config["input"]["id"], sm=sm)
 
 rule bwa_mem_starting_bam:
   input:

@@ -19,7 +19,7 @@ rule star_align_reference:
     genome_dir = STAR_GENOME_DIR
   output:
     os.path.join(STAR_GENOME_DIR, "SA")
-  threads: 12
+  threads: _get_half_cores
   run:
     if not os.path.exists(params.genome_dir):
         shell("mkdir {params.genome_dir}")
@@ -35,8 +35,8 @@ rule star_align_reference:
 
 rule star_align:
   input:
-    r1 = "{prefix}_R1.fastq",
-    r2 = "{prefix}_R2.fastq",
+    r1 = "{prefix}_R1.fastq.gz",
+    r2 = "{prefix}_R2.fastq.gz",
     genome_alignment = rules.star_align_reference.output
   output:
     "{prefix}Aligned.sortedByCoord.out.bam"
@@ -47,7 +47,7 @@ rule star_align:
     "{prefix}_star_align_benchmark.txt"
   log:
     "{prefix}_star_align.log"
-  threads: 12
+  threads: _get_half_cores
   shell:
     "STAR "
     "--genomeDir {params.genome_dir} "
@@ -59,6 +59,7 @@ rule star_align:
     "--outFilterIntronMotifs RemoveNoncanonical "
     "--outSAMattrRGline ID:{wildcards.prefix} SM:'{params.rg_sm}' "
     "--outFileNamePrefix {wildcards.prefix} "
+    "--readFilesCommand zcat "
     "--readFilesIn {input.r1} {input.r2} "
     "2> {log}"
 
@@ -99,7 +100,7 @@ rule sort_rna_bam:
     "{prefix}.bam"
   output:
     bam = "{prefix}_sorted.bam"
-  threads: 12
+  threads: _get_half_cores
   benchmark:
     "{prefix}_sort_benchmark.txt"
   log:
@@ -126,6 +127,8 @@ rule indel_realigner_target_creator_per_chr:
   log:
     "{prefix}/rna_indel_realigner_target_creator_{chr}.log"
   threads: 7
+  resources:
+    mem_mb = 20000
   shell:
     "gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} "
     "--intervals {wildcards.chr} "

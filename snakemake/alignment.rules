@@ -2,7 +2,7 @@
 This contains alignment-related processing rules.
 """
 
-def get_rg(wildcards):
+def _get_rg(wildcards):
   prefix = wildcards.prefix
   basename = os.path.basename(prefix)
   if basename.startswith("normal"):
@@ -20,13 +20,13 @@ rule bwa_mem_starting_bam:
   output:
     "{prefix}_aligned.sam"
   params:
-    rg = get_rg,
+    rg = _get_rg,
     reference = config["reference"]["genome"]
   benchmark:
     "{prefix}_bwa_mem_benchmark.txt"
   log:
     "{prefix}_bwa_mem.log"
-  threads: 12
+  threads: _get_half_cores
   shell:
     "bwa mem -R '{params.rg}' -M -t {threads} -p -O 6 -E 1 -B 4 {params.reference} {input} "
     "> {output} 2> {log}"
@@ -38,13 +38,13 @@ rule bwa_mem_starting_fastq:
   output:
     "{prefix}_aligned.sam"
   params:
-    rg = get_rg,
+    rg = _get_rg,
     reference = config["reference"]["genome"]
   benchmark:
     "{prefix}_bwa_mem_benchmark.txt"
   log:
     "{prefix}_bwa_mem.log"
-  threads: 12
+  threads: _get_half_cores
   shell:
     "bwa mem -R '{params.rg}' -M -t {threads} -O 6 -E 1 -B 4 "
     "{params.reference} {input.r1} {input.r2} "
@@ -59,5 +59,7 @@ rule convert_alignment_to_sorted_bam:
     "{prefix}_convert_alignment_to_sorted_bam_benchmark.txt"
   log:
     "{prefix}_convert_alignment_to_sorted_bam.log"
+  resources:
+    mem_mb = 20000
   shell:
     "picard -Xmx20g SortSam INPUT={input} OUTPUT={output} SORT_ORDER=coordinate 2> {log}"

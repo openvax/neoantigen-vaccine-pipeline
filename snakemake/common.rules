@@ -1,0 +1,4 @@
+# Common functions
+
+def _get_half_cores(_):
+  return int(config["num_threads"]/2)

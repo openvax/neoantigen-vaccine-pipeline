@@ -42,7 +42,6 @@ rule vaxrank:
     vcf_input_str = ""
     for vcf in input.vcfs:
         vcf_input_str += "--vcf %s " % vcf
-    rna = input.rna
     shell("""
         vaxrank %s \
         --bam {input.rna} \

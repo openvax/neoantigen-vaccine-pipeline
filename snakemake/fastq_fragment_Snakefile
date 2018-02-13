@@ -57,6 +57,8 @@ import os
 from shutil import copy2
 
 include:
+    "common.rules"
+include:
     "gatk.rules"
 include:
     "alignment.rules"

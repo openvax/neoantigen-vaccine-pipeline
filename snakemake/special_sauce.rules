@@ -41,12 +41,12 @@ rule vaxrank:
   run:
     vcf_input_str = ""
     for vcf in input.vcfs:
-        vcf_input_str += "--vcf %s" % vcf
+        vcf_input_str += "--vcf %s " % vcf
     shell("""
-        vaxrank {vcfs} \
+        vaxrank %s \
         --bam {input.rna} \
         --mhc-predictor {params.mhc_predictor} \
-        --mhc-alleles {mhc_alleles} \
+        --mhc-alleles %s \
         --output-ascii-report {output.ascii_report} \
         --output-pdf-report {output.pdf_report} \
         --output-xlsx-report {output.xlsx_report} \
@@ -60,5 +60,4 @@ rule vaxrank:
         --min-variant-sequence-coverage {params.min_variant_sequence_coverage} \
         --min-alt-rna-reads {params.min_alt_rna_reads} \
         --mhc-epitope-lengths {params.mhc_epitope_lengths}
-        """.format(
-            vcfs=vcf_input_str, mhc_alleles=",".join(params.mhc_alleles)))
+        """ % (vcf_input_str, ",".join(params.mhc_alleles)))

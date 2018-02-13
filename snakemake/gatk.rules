@@ -11,6 +11,8 @@ rule mark_dups:
     "{prefix}_mark_dups_benchmark.txt"
   log:
     "{prefix}_mark_dups.log"
+  resources:
+    mem_mb = 20000
   shell:
     "TMPDIR={wildcards.prefix}_tmp "
     "MAX_SEQUENCES_FOR_DISK_READ_ENDS_MAP=50000 "
@@ -27,7 +29,7 @@ rule sambamba_index_bam:
     "{prefix}.bam"
   output:
     "{prefix}.bam.bai"
-  threads: 12
+  threads: _get_half_cores
   benchmark:
     "{prefix}_index_benchmark.txt"
   log:
@@ -42,13 +44,15 @@ rule indel_realigner_target_creator_joint:
     tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups.bam"
   output:
     "{prefix}/aligned_coordinate_sorted_dups_indelreal.intervals"
-  threads: 12
+  threads: _get_half_cores
   params:
     reference = config["reference"]["genome"]
   benchmark:
     "{prefix}/indel_realigner_target_creator_benchmark.txt"
   log:
     "{prefix}/indel_realigner_target_creator.log"
+  resources:
+    mem_mb = 20000
   shell:
     "gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} -o {output} "
     "-I {input.normal} -I {input.tumor}  -nt {threads} "
@@ -74,6 +78,8 @@ rule indel_realigner:
     "{prefix}_indel_realigner_benchmark.txt"
   log:
     "{prefix}_indel_realigner.log"
+  resources:
+    mem_mb = 20000
   shell:
     "gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} -I {input.bam} "
     "-targetIntervals {input.intervals} -o {output} "
@@ -88,11 +94,13 @@ rule base_recalibrator:
   params:
     reference = config["reference"]["genome"],
     known_sites = config["reference"]["dbsnp"]
-  threads: 12
+  threads: _get_half_cores
   benchmark:
     "{prefix}_base_recalibrator_benchmark.txt"
   log:
     "{prefix}_base_recalibrator.log"
+  resources:
+    mem_mb = 20000
   shell:
     "gatk -Xmx20g -T BaseRecalibrator -nct {threads} -I {input} -R {params.reference} "
     "-knownSites {params.known_sites} -o {output} 2> {log}"
@@ -105,11 +113,13 @@ rule bqsr_print_reads:
     "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
   params:
     reference = config["reference"]["genome"]
-  threads: 12
+  threads: _get_half_cores
   benchmark:
     "{prefix}_base_recalibrator_print_reads_benchmark.txt"
   log:
     "{prefix}_base_recalibrator_print_reads.log"
+  resources:
+    mem_mb = 20000
   shell:
     "gatk -Xmx20g "
     "-T PrintReads -nct {threads} -R {params.reference} -I {input.bam} -BQSR {input.bqsr} "

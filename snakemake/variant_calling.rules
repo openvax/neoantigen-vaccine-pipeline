@@ -93,7 +93,7 @@ rule strelka:
     "{prefix}/strelka_benchmark.txt"
   log:
     "{prefix}/strelka.log"
-  threads: _get_all_cores
+  threads: 20
   shell:
     "rm -rf {params.output_dir}; "
     "{params.strelka_bin}/configureStrelkaWorkflow.pl "

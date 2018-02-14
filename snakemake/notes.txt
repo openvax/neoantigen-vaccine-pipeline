@@ -37,10 +37,10 @@ conda install java-jdk==7.0.91
 
 # Also need to install the Perl vcftools:
 cd ~/bin
-wget -O vcftools_0.1.13.tar.gz http://downloads.sourceforge.net/project/vcftools/vcftools_0.1.13.tar.gz
+wget -O vcftools_0.1.13.tar.gz https://kent.dl.sourceforge.net/project/vcftools/vcftools_0.1.13.tar.gz
 tar xvfz vcftools_0.1.13.tar.gz
 cd vcftools_0.1.13/
-export PERL5LIB=~/bin/vcftools-vcftools-ea875e2/src/perl
+# export PERL5LIB=~/bin/vcftools-vcftools-ea875e2/src/perl  (not sure where I got this from? seems unnecessary)
 # this will build both the C++ and Perl, we're only using Perl, but that's fine
 make
 # copy stuff over to $HOME/bin, already on the path
@@ -66,8 +66,33 @@ export STRELKA_BIN=$HOME/bin/bin
 pip install vaxrank
 
 # for vaxrank to generate PDF reports, need to do this on a Linux box:
-sudo apt-get install wkhtmltopdf
 sudo apt-get install xvfb
+
+# get wkhtmltopdf for making vaxrank reports
+wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz
+tar xvfJ wkhtmltox-0.12.4_linux-generic-amd64.tar.xz
+cd wkhtmltox/bin
+sudo chown root:root wkhtmltopdf
+sudo cp wkhtmltopdf /usr/local/bin/wkhtmltopdf
+curl https://pastebin.com/raw/AmfYN3er > ~/.fonts.conf   # for the kerning to not be awful
 
 # TODO(julia): explain how to set up netMHCcons and netMHCpan, for now they already exist on
 # the PGVNode so going to punt on this
+
+# Right now, the pipeline relies on having generated a bunch of reference genome content.
+# See the example pt002_old_config.json for the files it expects. Current contents of a reference
+# genome directory, I believe all of these are needed for correct DNA processing (these are specific
+# to b37decoy, obviously different for other references):
+b37decoy.dict
+b37decoy.fasta
+b37decoy.fasta.amb
+b37decoy.fasta.ann
+b37decoy.fasta.bwt
+b37decoy.fasta.fai
+b37decoy.fasta.pac
+b37decoy.fasta.sa
+cosmic.vcf
+cosmic.vcf.idx
+dbsnp.vcf
+dbsnp.vcf.idx
+transcripts.gtf

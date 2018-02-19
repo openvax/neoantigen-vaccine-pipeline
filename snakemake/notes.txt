@@ -76,8 +76,8 @@ sudo chown root:root wkhtmltopdf
 sudo cp wkhtmltopdf /usr/local/bin/wkhtmltopdf
 curl https://pastebin.com/raw/AmfYN3er > ~/.fonts.conf   # for the kerning to not be awful
 
-# TODO(julia): explain how to set up netMHCcons and netMHCpan, for now they already exist on
-# the PGVNode so going to punt on this
+# For our purposes: to set up netMHCcons/pan, follow instructions at:
+# https://github.com/openvax/netmhc-bundle
 
 # Right now, the pipeline relies on having generated a bunch of reference genome content.
 # See the example pt002_old_config.json for the files it expects. Current contents of a reference
@@ -96,3 +96,5 @@ cosmic.vcf.idx
 dbsnp.vcf
 dbsnp.vcf.idx
 transcripts.gtf
+
+Also copy strelka_config.txt to /home/julia/bin/bin.

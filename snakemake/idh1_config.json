@@ -1,0 +1,38 @@
+{
+    "workdir": "/data/pipeline/workdir",
+    "input": {
+        "id": "idh1-test-sample",
+        "mhc_alleles": [],
+        "normal": [
+            {
+                "fragment_id": "L001",
+                "type": "single-end",
+                "r": "../datagen/idh1_r132h_normal.fastq"
+            }
+        ],
+        "tumor": [
+            {
+                "fragment_id": "L001",
+                "type": "single-end",
+                "r": "../datagen/idh1_r132h_tumor.fastq"
+            }
+        ]
+    },
+    "reference": {
+        "genome": "/biokepi/workdir/reference-genome/b37decoy/b37decoy.fasta",
+        "dbsnp": "/biokepi/workdir/reference-genome/b37decoy/dbsnp.vcf",
+        "cosmic": "/biokepi/workdir/reference-genome/b37decoy/cosmic.vcf",
+        "transcripts": "/biokepi/workdir/reference-genome/b37decoy/transcripts.gtf"
+    },
+    "tools": {
+        "strelka": {
+            "bin": "/home/julia/bin/bin",
+            "config": "/home/julia/bin/bin/strelka_config.txt"
+        },
+        "pyensembl": {
+            "cache_dir": "/biokepi/workdir/pyensembl-cache"
+        }
+    },
+    "run_mutect2": true,
+    "num_threads": 20,
+}

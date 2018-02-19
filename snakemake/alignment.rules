@@ -14,7 +14,7 @@ def _get_rg(wildcards):
   return "@RG\\tID:{prefix}.bam\\tSM:{sample_id}_{sm}\\tLB:ga\\tPL:Illumina".format(
     prefix=prefix, sample_id=config["input"]["id"], sm=sm)
 
-rule bwa_mem_starting_bam:
+rule bwa_mem_starting_interleaved_paired_end_fastq:
   input:
     "{prefix}_read_name_sorted.fastq"
   output:
@@ -31,7 +31,25 @@ rule bwa_mem_starting_bam:
     "bwa mem -R '{params.rg}' -M -t {threads} -p -O 6 -E 1 -B 4 {params.reference} {input} "
     "> {output} 2> {log}"
 
-rule bwa_mem_starting_fastq:
+rule bwa_mem_starting_single_end_fastq:
+  input:
+    r = "{prefix}.fastq",
+  output:
+    "{prefix}_aligned.sam"
+  params:
+    rg = _get_rg,
+    reference = config["reference"]["genome"]
+  benchmark:
+    "{prefix}_bwa_mem_benchmark.txt"
+  log:
+    "{prefix}_bwa_mem.log"
+  threads: _get_half_cores
+  shell:
+    "bwa mem -R '{params.rg}' -M -t {threads} -O 6 -E 1 -B 4 "
+    "{params.reference} {input.r} "
+    "> {output} 2> {log}"
+
+rule bwa_mem_starting_paired_end_fastq_gz:
   input:
     r1 = "{prefix}_R1.fastq.gz",
     r2 = "{prefix}_R2.fastq.gz"

@@ -73,6 +73,7 @@ SAMPLE_ID = config["input"]["id"]
 WORKDIR = os.path.join(config["workdir"], SAMPLE_ID)
 
 CHR = list(range(1, 23)) + ['X', 'Y', 'MT']
+SUPPORTED_FILETYPES = {".fastq.gz", ".fastq", ".bam"}
 
 # copy all fragments over to the sample-specific workdir, create if it doesn't exist
 if not os.path.exists(WORKDIR):
@@ -84,24 +85,47 @@ FRAGMENT_IDS = {
   "rna": set()
 }
 
-# naming convention for files in workdir: normal_L1_R1.fastq.gz
-# Assume that all inputs are fastq.gz files.
+
+# support any type of paired-end and single-end input, figure out what kind of input it is,
+# copy over with a predictable name. Naming convention for files in workdir: normal_L1_R1.fastq.gz
+# TODO(julia): make sure alignment works with any of those start points
+def _determine_filetype(filename):
+  for supported_filetype in SUPPORTED_FILETYPES:
+    if filename.endswith(supported_filetype):
+      return supported_filetype
+  raise ValueError("Unsupported filetype in %s", filename)
+
 for input_type in ["normal", "tumor", "rna"]:
   if input_type not in config["input"]:
     continue
   for fragment in config["input"][input_type]:
-    for read in [1, 2]:
-      assert fragment["r%d" % read].endswith("fastq.gz")
-      FRAGMENT_IDS[input_type].add(fragment["fragment_id"])
-      source = fragment["r%d" % read]
-      # if either the .fastq.gz or .fastq files already exist, don't copy anew
-      dest = os.path.join(WORKDIR,
-        "%s_%s_R%d.fastq.gz" % (input_type, fragment["fragment_id"], read))
-      unzipped_dest = os.path.join(WORKDIR,
-        "%s_%s_R%d.fastq" % (input_type, fragment["fragment_id"], read))
-      if not (os.path.exists(dest) or os.path.exists(unzipped_dest)):
+    FRAGMENT_IDS[input_type].add(fragment["fragment_id"])
+
+    if fragment["type"] == "paired-end":
+      # TODO(julia): this assumes split FASTQs, which might not be the case: we might see a single
+      # interleaved FASTQ someday. Worry about this later
+      for read in [1, 2]:
+        source = fragment["r%d" % read]
+        filetype = _determine_filetype(source)
+        # if the files already exist, don't copy anew
+        dest = os.path.join(WORKDIR,
+          "%s_%s_R%d%s" % (input_type, fragment["fragment_id"], read, filetype))
+        if not (os.path.exists(dest)):
+          print('Copying %s to %s' % (source, dest))
+          copy2(source, dest)
+
+    elif fragment["type"] == "single-end":
+      source = fragment["r"]
+      filetype = _determine_filetype(source)
+      # if the files already exist, don't copy anew
+      dest = os.path.join(WORKDIR, "%s_%s%s" % (input_type, fragment["fragment_id"], filetype))
+      if not os.path.exists(dest):
         print('Copying %s to %s' % (source, dest))
         copy2(source, dest)
+
+    else:
+      raise ValueError("Unsupported input type: expected single-end or paired-end")
+
 
 # merge a bunch of BAMs into one thing
 rule merge_normal_aligned_fragments:

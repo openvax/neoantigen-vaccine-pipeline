@@ -138,7 +138,7 @@ rule merge_normal_aligned_fragments:
     prefix=".*normal.*"
   run:
     if len(input) > 1:
-      shell("samtools merge {output} {input}")
+      shell("sambamba merge {output} {input}")
     else:
       shell("cp {input} {output}")
 
@@ -152,7 +152,7 @@ rule merge_tumor_aligned_fragments:
     prefix=".*tumor.*"
   run:
     if len(input) > 1:
-      shell("samtools merge {output} {input}")
+      shell("sambamba merge {output} {input}")
     else:
       shell("cp {input} {output}")
 

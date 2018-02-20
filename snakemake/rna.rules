@@ -115,7 +115,7 @@ rule sort_rna_bam:
 CHR = list(range(1, 23)) + ['X', 'Y', 'MT']
 
 # run per-chromosome indel realignment on the reads without Ns
-rule indel_realigner_target_creator_per_chr:
+rule rna_indel_realigner_target_creator_per_chr:
   input:
     "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam"
   output:
@@ -126,17 +126,17 @@ rule indel_realigner_target_creator_per_chr:
     "{prefix}/rna_indel_realigner_target_creator_{chr}_benchmark.txt"
   log:
     "{prefix}/rna_indel_realigner_target_creator_{chr}.log"
-  threads: 7
+  threads: _get_half_cores
   resources:
     mem_mb = 20000
   shell:
     "gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} "
     "--intervals {wildcards.chr} "
     "-I {input} -o {output} -nt {threads} "
-    "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
+    "--filter_mismatching_base_and_quals --filter_bases_not_stored "
     "2> {log}"
 
-rule indel_realigner_per_chr:
+rule rna_indel_realigner_per_chr:
   input:
     bam = "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam",
     intervals = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.intervals"
@@ -156,7 +156,7 @@ rule indel_realigner_per_chr:
     "--filter_mismatching_base_and_quals --filter_bases_not_stored "
     "2> {log}"
 
-rule indel_realigner_merge:
+rule rna_indel_realigner_merge:
   input:
     expand("{{prefix}}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.bam", chr=CHR)
   output:
@@ -164,7 +164,7 @@ rule indel_realigner_merge:
   benchmark:
     "{prefix}/rna_indel_realigner_merge_benchmark.txt"
   shell:
-    "samtools merge {output} {input}"
+    "sambamba merge {output} {input}"
 
 rule merge_all_rna:
   input:
@@ -175,4 +175,4 @@ rule merge_all_rna:
   benchmark:
     "{prefix}/rna_final_merge_benchmark.txt"
   shell:
-    "samtools merge {output} {input}"
+    "sambamba merge {output} {input}"

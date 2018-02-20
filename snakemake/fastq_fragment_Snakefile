@@ -85,10 +85,10 @@ FRAGMENT_IDS = {
   "rna": set()
 }
 
+
 # support any type of paired-end and single-end input, figure out what kind of input it is,
 # copy over with a predictable name. Naming convention for files in workdir: normal_L1_R1.fastq.gz
 # TODO(julia): make sure alignment works with any of those start points
-
 def _determine_filetype(filename):
   for supported_filetype in SUPPORTED_FILETYPES:
     if filename.endswith(supported_filetype):
@@ -101,10 +101,9 @@ for input_type in ["normal", "tumor", "rna"]:
   for fragment in config["input"][input_type]:
     FRAGMENT_IDS[input_type].add(fragment["fragment_id"])
 
-    if fragment["type"] not in ["paired-end", "single-end"]:
-      raise ValueError("Unsupported input type: expected single-end or paired-end")
-
     if fragment["type"] == "paired-end":
+      # TODO(julia): this assumes split FASTQs, which might not be the case: we might see a single
+      # interleaved FASTQ someday. Worry about this later
       for read in [1, 2]:
         source = fragment["r%d" % read]
         filetype = _determine_filetype(source)
@@ -115,7 +114,7 @@ for input_type in ["normal", "tumor", "rna"]:
           print('Copying %s to %s' % (source, dest))
           copy2(source, dest)
 
-    else:
+    elif fragment["type"] == "single-end":
       source = fragment["r"]
       filetype = _determine_filetype(source)
       # if the files already exist, don't copy anew
@@ -123,6 +122,10 @@ for input_type in ["normal", "tumor", "rna"]:
       if not os.path.exists(dest):
         print('Copying %s to %s' % (source, dest))
         copy2(source, dest)
+
+    else:
+      raise ValueError("Unsupported input type: expected single-end or paired-end")
+
 
 # merge a bunch of BAMs into one thing
 rule merge_normal_aligned_fragments:

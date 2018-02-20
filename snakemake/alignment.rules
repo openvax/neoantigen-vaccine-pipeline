@@ -14,26 +14,15 @@ def _get_rg(wildcards):
   return "@RG\\tID:{prefix}.bam\\tSM:{sample_id}_{sm}\\tLB:ga\\tPL:Illumina".format(
     prefix=prefix, sample_id=config["input"]["id"], sm=sm)
 
-rule bwa_mem_starting_interleaved_paired_end_fastq:
+# TODO(julia): if we need to bring back alignment for BAMs, make something similar to this and run
+# "samtools fastq <input.bam> | <bwa command>" where the bwa command is identical to this one except
+# also uses the -p param
+# see https://www.biostars.org/p/134638/
+#
+# NB: this will not work correctly on a paired-end interleaved FASTQ input
+rule bwa_mem_single_end_fastq:
   input:
-    "{prefix}_read_name_sorted.fastq"
-  output:
-    "{prefix}_aligned.sam"
-  params:
-    rg = _get_rg,
-    reference = config["reference"]["genome"]
-  benchmark:
-    "{prefix}_bwa_mem_benchmark.txt"
-  log:
-    "{prefix}_bwa_mem.log"
-  threads: _get_half_cores
-  shell:
-    "bwa mem -R '{params.rg}' -M -t {threads} -p -O 6 -E 1 -B 4 {params.reference} {input} "
-    "> {output} 2> {log}"
-
-rule bwa_mem_starting_single_end_fastq:
-  input:
-    r = "{prefix}.fastq",
+    "{prefix}.fastq"
   output:
     "{prefix}_aligned.sam"
   params:
@@ -46,10 +35,10 @@ rule bwa_mem_starting_single_end_fastq:
   threads: _get_half_cores
   shell:
     "bwa mem -R '{params.rg}' -M -t {threads} -O 6 -E 1 -B 4 "
-    "{params.reference} {input.r} "
+    "{params.reference} {input} "
     "> {output} 2> {log}"
 
-rule bwa_mem_starting_paired_end_fastq_gz:
+rule bwa_mem_paired_end_split_fastq_gz:
   input:
     r1 = "{prefix}_R1.fastq.gz",
     r2 = "{prefix}_R2.fastq.gz"

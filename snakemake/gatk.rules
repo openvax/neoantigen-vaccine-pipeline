@@ -63,19 +63,15 @@ rule dna_indel_realigner_target_creator_per_chr:
     "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
     "2> {log}"
 
-# hackiest thing ever: constructs an intervals filename based on the path from the prefix and the
-# chromosome. Assumes that the prefix directory contains the intervals file.
-def _get_chr_intervals_from_prefix(wildcards):
-  return os.path.join(
-    os.path.dirname(wildcards.prefix),
-    "aligned_coordinate_sorted_dups_indelreal_%s.intervals" % wildcards.chr)
-
 rule dna_indel_realigner_per_chr:
   input:
-    bam = "{prefix}_aligned_coordinate_sorted_dups.bam",
-    intervals = _get_chr_intervals_from_prefix
+    expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai", type=["normal", "tumor"]),
+    normal = "{prefix}/normal_aligned_coordinate_sorted_dups.bam",
+    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups.bam",
+    intervals = "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals"
   output:
-    "{prefix}_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam"
+    "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam",
+    "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam"
   params:
     reference = config["reference"]["genome"]
   benchmark:
@@ -85,9 +81,11 @@ rule dna_indel_realigner_per_chr:
   resources:
     mem_mb = 20000
   shell:
-    "gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} -I {input.bam} "
-    "-targetIntervals {input.intervals} --intervals {wildcards.chr} -o {output} "
+    "gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} "
+    "-I {input.normal} -I {input.tumor} "
+    "-targetIntervals {input.intervals} --intervals {wildcards.chr} "
     "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
+    "--nWayOut _indelreal_chr_{wildcards.chr}.bam "
     "2> {log}"
 
 rule dna_indel_realigner_merge:

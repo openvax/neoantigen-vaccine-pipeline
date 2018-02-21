@@ -51,9 +51,9 @@ rule dna_indel_realigner_target_creator_per_chr:
   params:
     reference = config["reference"]["genome"]
   benchmark:
-    "{prefix}/indel_realigner_target_creator_{chr}_benchmark.txt"
+    "{prefix}/dna_indel_realigner_target_creator_{chr}_benchmark.txt"
   log:
-    "{prefix}/indel_realigner_target_creator_{chr}.log"
+    "{prefix}/dna_indel_realigner_target_creator_{chr}.log"
   resources:
     mem_mb = 20000
   shell:
@@ -75,9 +75,9 @@ rule dna_indel_realigner_per_chr:
   params:
     reference = config["reference"]["genome"]
   benchmark:
-    "{prefix}_indel_realigner_{chr}_benchmark.txt"
+    "{prefix}/dna_indel_realigner_{chr}_benchmark.txt"
   log:
-    "{prefix}_indel_realigner_{chr}.log"
+    "{prefix}/dna_indel_realigner_{chr}.log"
   resources:
     mem_mb = 20000
   # IndelRealigner writes the output to this directory; need to move the files manually after

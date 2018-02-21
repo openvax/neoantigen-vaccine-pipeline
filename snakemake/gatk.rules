@@ -80,13 +80,16 @@ rule dna_indel_realigner_per_chr:
     "{prefix}_indel_realigner_{chr}.log"
   resources:
     mem_mb = 20000
+  # IndelRealigner writes the output to this directory; need to move the files manually after
   shell:
     "gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} "
     "-I {input.normal} -I {input.tumor} "
     "-targetIntervals {input.intervals} --intervals {wildcards.chr} "
     "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
     "--nWayOut _indelreal_chr_{wildcards.chr}.bam "
-    "2> {log}"
+    "2> {log} && "
+    "mv {{normal,tumor}}_aligned_coordinate_sorted_dups_indelreal_chr_{wildcards.chr}.bam "
+    "{wildcards.prefix}"
 
 rule dna_indel_realigner_merge:
   input:

@@ -37,54 +37,69 @@ rule sambamba_index_bam:
   shell:
     "sambamba index -t {threads} {input} {output} 2> {log}"
 
-rule indel_realigner_target_creator_joint:
+CHR = list(range(1, 23)) + ['X', 'Y', 'MT']
+
+# TODO(julia): figure out how to combine with RNA IndelRealigner rules, very similar
+rule dna_indel_realigner_target_creator_per_chr:
   input:
     expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai", type=["normal", "tumor"]),
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups.bam",
     tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups.bam"
   output:
-    "{prefix}/aligned_coordinate_sorted_dups_indelreal.intervals"
+    "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals"
   threads: _get_half_cores
   params:
     reference = config["reference"]["genome"]
   benchmark:
-    "{prefix}/indel_realigner_target_creator_benchmark.txt"
+    "{prefix}/dna_indel_realigner_target_creator_{chr}_benchmark.txt"
   log:
-    "{prefix}/indel_realigner_target_creator.log"
+    "{prefix}/dna_indel_realigner_target_creator_{chr}.log"
   resources:
     mem_mb = 20000
   shell:
-    "gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} -o {output} "
-    "-I {input.normal} -I {input.tumor}  -nt {threads} "
+    "gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} "
+    "--intervals {wildcards.chr} "
+    "-I {input.normal} -I {input.tumor} -o {output} -nt {threads} "
     "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
     "2> {log}"
 
-# hackiest thing ever: constructs an intervals filename based on the path from the prefix.
-# Assumes that the prefix directory contains the intervals file.
-def get_intervals_from_prefix(wildcards):
-  return os.path.join(
-    os.path.dirname(wildcards.prefix),
-    "aligned_coordinate_sorted_dups_indelreal.intervals")
-
-rule indel_realigner:
+rule dna_indel_realigner_per_chr:
   input:
-    bam = "{prefix}_aligned_coordinate_sorted_dups.bam",
-    intervals = get_intervals_from_prefix
+    expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai", type=["normal", "tumor"]),
+    normal = "{prefix}/normal_aligned_coordinate_sorted_dups.bam",
+    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups.bam",
+    intervals = "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals"
   output:
-    "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
+    "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam",
+    "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam"
   params:
     reference = config["reference"]["genome"]
   benchmark:
-    "{prefix}_indel_realigner_benchmark.txt"
+    "{prefix}/dna_indel_realigner_{chr}_benchmark.txt"
   log:
-    "{prefix}_indel_realigner.log"
+    "{prefix}/dna_indel_realigner_{chr}.log"
   resources:
     mem_mb = 20000
+  # IndelRealigner writes the output to this directory; need to move the files manually after
   shell:
-    "gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} -I {input.bam} "
-    "-targetIntervals {input.intervals} -o {output} "
+    "gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} "
+    "-I {input.normal} -I {input.tumor} "
+    "-targetIntervals {input.intervals} --intervals {wildcards.chr} "
     "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
-    "2> {log}"
+    "--nWayOut _indelreal_chr_{wildcards.chr}.bam "
+    "2> {log} && "
+    "mv {{normal,tumor}}_aligned_coordinate_sorted_dups_indelreal_chr_{wildcards.chr}.bam "
+    "{wildcards.prefix}"
+
+rule dna_indel_realigner_merge:
+  input:
+    expand("{{prefix}}_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam", chr=CHR)
+  output:
+    "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
+  benchmark:
+    "{prefix}/dna_indel_realigner_merge_benchmark.txt"
+  shell:
+    "sambamba merge {output} {input}"
 
 rule base_recalibrator:
   input:

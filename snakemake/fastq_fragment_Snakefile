@@ -115,9 +115,8 @@ for input_type in ["normal", "tumor", "rna"]:
           print('Copying %s to %s' % (source, dest))
           if source.startswith("gs://"):
             # use gsutil cp to copy
-            # NOTE: this is unsafe, we should replace with setting up gsutil to use with Python;
-            # this is a temporary solution
-            subprocess.call("gsutil cp %s %s" % (source, dest), shell=True)
+            # is this any less safe than snakemake's "shell" directive?
+            subprocess.call("gsutil -m cp %s %s" % (source, dest), shell=True)
           else:
             copy2(source, dest)
 
@@ -129,10 +128,7 @@ for input_type in ["normal", "tumor", "rna"]:
       if not os.path.exists(dest):
         print('Copying %s to %s' % (source, dest))
         if source.startswith("gs://"):
-          # use gsutil cp to copy
-          # NOTE: this is unsafe, we should replace with setting up gsutil to use with Python;
-          # this is a temporary solution
-          subprocess.call("gsutil cp %s %s" % (source, dest), shell=True)
+          subprocess.call("gsutil -m cp %s %s" % (source, dest), shell=True)
         else:
           copy2(source, dest)
 

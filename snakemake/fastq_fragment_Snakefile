@@ -55,6 +55,7 @@ The files listed in this config have to exist.
 
 import os
 from shutil import copy2
+import subprocess
 
 include:
     "common.rules"
@@ -112,7 +113,13 @@ for input_type in ["normal", "tumor", "rna"]:
           "%s_%s_R%d%s" % (input_type, fragment["fragment_id"], read, filetype))
         if not (os.path.exists(dest)):
           print('Copying %s to %s' % (source, dest))
-          copy2(source, dest)
+          if source.startswith("gs://"):
+            # use gsutil cp to copy
+            # NOTE: this is unsafe, we should replace with setting up gsutil to use with Python;
+            # this is a temporary solution
+            subprocess.call("gsutil cp %s %s" % (source, dest), shell=True)
+          else:
+            copy2(source, dest)
 
     elif fragment["type"] == "single-end":
       source = fragment["r"]
@@ -121,7 +128,13 @@ for input_type in ["normal", "tumor", "rna"]:
       dest = os.path.join(WORKDIR, "%s_%s%s" % (input_type, fragment["fragment_id"], filetype))
       if not os.path.exists(dest):
         print('Copying %s to %s' % (source, dest))
-        copy2(source, dest)
+        if source.startswith("gs://"):
+          # use gsutil cp to copy
+          # NOTE: this is unsafe, we should replace with setting up gsutil to use with Python;
+          # this is a temporary solution
+          subprocess.call("gsutil cp %s %s" % (source, dest), shell=True)
+        else:
+          copy2(source, dest)
 
     else:
       raise ValueError("Unsupported input type: expected single-end or paired-end")

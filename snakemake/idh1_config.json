@@ -34,5 +34,5 @@
         }
     },
     "run_mutect2": true,
-    "num_threads": 20,
+    "num_threads": 20
 }

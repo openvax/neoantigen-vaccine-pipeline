@@ -27,12 +27,12 @@
     "tools": {
         "strelka": {
             "bin": "/home/julia/bin/bin",
-            "config": "/home/julia/bin/bin/strelka_config.txt"
+            "config": "strelka_config.txt"
         },
         "pyensembl": {
             "cache_dir": "/biokepi/workdir/pyensembl-cache"
         }
     },
     "run_mutect2": true,
-    "num_threads": 20,
+    "num_threads": 20
 }

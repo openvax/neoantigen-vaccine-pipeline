@@ -12,11 +12,11 @@ STAR_GENOME_DIR = os.path.join(
 # for where the reference stuff lives
 rule star_align_reference:
   input:
-    reference = config["reference"]["genome"],
-    transcripts = config["reference"]["transcripts"]
   params:
     size = READ_LENGTH,
-    genome_dir = STAR_GENOME_DIR
+    genome_dir = STAR_GENOME_DIR,
+    reference = config["reference"]["genome"],
+    transcripts = config["reference"]["transcripts"]
   output:
     os.path.join(STAR_GENOME_DIR, "SA")
   threads: _get_half_cores
@@ -27,13 +27,13 @@ rule star_align_reference:
         STAR \
         --runMode genomeGenerate \
         --genomeDir {params.genome_dir} \
-        --genomeFastaFiles {input.reference} \
-        --sjdbGTFfile {input.transcripts} \
+        --genomeFastaFiles {params.reference} \
+        --sjdbGTFfile {params.transcripts} \
         --sjdbOverhang {params.size} \
         --runThreadN {threads}
     """)
 
-rule star_align:
+rule star_align_paired_end_split_fastq_gz:
   input:
     r1 = "{prefix}_R1.fastq.gz",
     r2 = "{prefix}_R2.fastq.gz",
@@ -62,6 +62,37 @@ rule star_align:
     "--readFilesCommand zcat "
     "--readFilesIn {input.r1} {input.r2} "
     "2> {log}"
+
+rule star_align_single_end_fastq:
+  input:
+    r = "{prefix}.fastq",
+    genome_alignment = rules.star_align_reference.output
+  output:
+    "{prefix}Aligned.sortedByCoord.out.bam"
+  params:
+    genome_dir = STAR_GENOME_DIR,
+    rg_sm = config["input"]["id"] + "_rna"
+  benchmark:
+    "{prefix}_star_align_benchmark.txt"
+  log:
+    "{prefix}_star_align.log"
+  threads: _get_half_cores
+  shell:
+    "STAR "
+    "--genomeDir {params.genome_dir} "
+    "--runThreadN {threads} "
+    "--outSAMtype BAM SortedByCoordinate "
+    "--outSAMstrandField intronMotif "
+    "--outSAMattributes NH HI NM MD "
+    "--outSAMmapqUnique 60 "
+    "--outFilterIntronMotifs RemoveNoncanonical "
+    "--outSAMattrRGline ID:{wildcards.prefix} SM:'{params.rg_sm}' "
+    "--outFileNamePrefix {wildcards.prefix} "
+    "--readFilesCommand zcat "
+    "--readFilesIn {input.r} "
+    "2> {log}"
+
+
 
 # then we run mark duplicates on the RNA, which can just reuse the mark_dups rule from gatk.rules
 

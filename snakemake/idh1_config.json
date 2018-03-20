@@ -16,6 +16,13 @@
                 "type": "single-end",
                 "r": "../datagen/idh1_r132h_tumor.fastq"
             }
+        ],
+        "rna": [
+            {
+                "fragment_id": "L001",
+                "type": "single-end",
+                "r": "../datagen/idh1_r132h_tumor.fastq"
+            }
         ]
     },
     "reference": {

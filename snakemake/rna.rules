@@ -92,8 +92,6 @@ rule star_align_single_end_fastq:
     "--readFilesIn {input.r} "
     "2> {log}"
 
-
-
 # then we run mark duplicates on the RNA, which can just reuse the mark_dups rule from gatk.rules
 
 # split the resulting BAM by CIGAR string; only want to do indel realignment on reads that don't

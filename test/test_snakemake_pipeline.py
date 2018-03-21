@@ -29,7 +29,7 @@ def test_workflow_compiles():
         shutil.rmtree(_datadir)
     os.chdir('snakemake')
     ok_(snakemake.snakemake(
-        'fastq_fragment_Snakefile',
+        'Snakefile',
         cores=20,
         resources={'mem_mb': 160000},
         configfile='idh1_config.json',

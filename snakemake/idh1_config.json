@@ -2,7 +2,9 @@
     "workdir": "/data/pipeline/workdir",
     "input": {
         "id": "idh1-test-sample",
-        "mhc_alleles": [],
+        "mhc_alleles": [
+            "HLA-A*30:01",
+        ],
         "normal": [
             {
                 "fragment_id": "L001",

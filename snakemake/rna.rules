@@ -65,7 +65,7 @@ rule star_align_paired_end_split_fastq_gz:
 
 rule star_align_single_end_fastq:
   input:
-    r = "{prefix}.fastq",
+    r = "{prefix}.fastq.gz",
     genome_alignment = rules.star_align_reference.output
   output:
     "{prefix}Aligned.sortedByCoord.out.bam"

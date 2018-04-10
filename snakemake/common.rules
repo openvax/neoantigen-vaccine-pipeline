@@ -5,3 +5,11 @@ def _get_half_cores(_):
 
 def _get_all_cores(_):
   return int(config["num_threads"])
+
+rule zip_fastq:
+  input:
+    "{prefix}.fastq"
+  output:
+    "{prefix}.fastq.gz"
+  shell:
+    "gzip {input}"

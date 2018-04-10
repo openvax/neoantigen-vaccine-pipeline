@@ -14,21 +14,28 @@
 
 import json
 from nose.tools import ok_
+import os
+import shutil
 
 import snakemake
 
+_datadir = '/data/pipeline/workdir/test-sample'
+
 # This simulates a dry run on the test data, and mostly checks rule graph validity.
+# Assumes that the directory /data/pipeline/workdir exists and is writable.
 def test_workflow_compiles():
+    # remove test directory if it exists
+    if os.path.exists(_datadir) and os.path.isdir(_datadir):
+        shutil.rmtree(_datadir)
+    os.chdir('snakemake')
     ok_(snakemake.snakemake(
-        'snakemake/fastq_fragment_Snakefile',
+        'Snakefile',
         cores=20,
         resources={'mem_mb': 160000},
-        configfile='snakemake/idh1_config.json',
+        configfile='../test/test_config.json',
         dryrun=True,
         printshellcmds=True,
         targets=[
-            '/data/pipeline/workdir/idh1-test-sample/mutect.vcf',
-            '/data/pipeline/workdir/idh1-test-sample/mutect2.vcf',
-            '/data/pipeline/workdir/idh1-test-sample/strelka.vcf',
+            os.path.join(_datadir, 'vaccine-peptide-report.txt'),
         ],
     ))

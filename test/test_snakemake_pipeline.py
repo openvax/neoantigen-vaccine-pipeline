@@ -19,7 +19,7 @@ import shutil
 
 import snakemake
 
-_datadir = '/data/pipeline/workdir/idh1-test-sample'
+_datadir = '/data/pipeline/workdir/test-sample'
 
 # This simulates a dry run on the test data, and mostly checks rule graph validity.
 # Assumes that the directory /data/pipeline/workdir exists and is writable.
@@ -32,7 +32,7 @@ def test_workflow_compiles():
         'Snakefile',
         cores=20,
         resources={'mem_mb': 160000},
-        configfile='idh1_config.json',
+        configfile='../test/test_config.json',
         dryrun=True,
         printshellcmds=True,
         targets=[

@@ -1,5 +1,5 @@
 {
-    "workdir": "/data/pipeline/workdir",
+    "workdir": "/tmp",
     "input": {
         "id": "test-sample",
         "mhc_alleles": [

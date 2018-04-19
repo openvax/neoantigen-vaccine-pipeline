@@ -19,10 +19,10 @@ import shutil
 
 import snakemake
 
-_datadir = '/data/pipeline/workdir/test-sample'
+_datadir = '/tmp/test-sample'
 
 # This simulates a dry run on the test data, and mostly checks rule graph validity.
-# Assumes that the directory /data/pipeline/workdir exists and is writable.
+# Assumes that the directory /tmp/test-sample exists and is writable.
 def test_workflow_compiles():
     # remove test directory if it exists
     if os.path.exists(_datadir) and os.path.isdir(_datadir):

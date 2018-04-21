@@ -36,6 +36,7 @@ def test_workflow_compiles():
         dryrun=True,
         printshellcmds=True,
         targets=[
-            os.path.join(_datadir, 'vaccine-peptide-report.txt'),
+            os.path.join(_datadir, 'vaccine-peptide-report-mutect-strelka-mutect2.txt'),
+            os.path.join(_datadir, 'vaccine-peptide-report-mutect-strelka.txt'),
         ],
     ))

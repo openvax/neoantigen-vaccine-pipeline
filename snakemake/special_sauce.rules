@@ -9,20 +9,20 @@ This contains rules for our own data processing libraries.
 # touch /biokepi/workdir/pyensembl-cache/b37decoy.cached
 # (add this last one as input to the vaxrank rule later)
 
-VCF_TYPES = ["strelka", "mutect"]
-if config["run_mutect2"] == True:
-    VCF_TYPES.append("mutect2")
+def _get_vaxrank_input_vcfs(wildcards):
+    vcf_types = wildcards.vcf_types.split("-")
+    return ["%s/%s.vcf" % (wildcards.prefix, vcf_type) for vcf_type in vcf_types]
 
 rule vaxrank:
   input:
-    vcfs = expand("{{prefix}}/{type}.vcf", type=VCF_TYPES),
+    vcfs = _get_vaxrank_input_vcfs,
     rna = "{prefix}/rna_final_sorted.bam",
     rna_index = "{prefix}/rna_final_sorted.bam.bai"
   output:
-    ascii_report = "{prefix}/vaccine-peptide-report.txt",
-    json_file = "{prefix}/vaccine-peptide-report.json",
-    pdf_report = "{prefix}/vaccine-peptide-report.pdf",
-    xlsx_report = "{prefix}/vaccine-peptide-report.xlsx"
+    ascii_report = "{prefix}/vaccine-peptide-report-{vcf_types}.txt",
+    json_file = "{prefix}/vaccine-peptide-report-{vcf_types}.json",
+    pdf_report = "{prefix}/vaccine-peptide-report-{vcf_types}.pdf",
+    xlsx_report = "{prefix}/vaccine-peptide-report-{vcf_types}.xlsx"
   params:
     mhc_alleles = config["input"]["mhc_alleles"],
     patient_id = config["input"]["id"],

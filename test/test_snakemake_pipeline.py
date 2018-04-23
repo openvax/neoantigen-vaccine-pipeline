@@ -14,29 +14,31 @@
 
 import json
 from nose.tools import ok_
-import os
-import shutil
+from os import chdir
+from os.path import dirname, join
+import tempfile
 
 import snakemake
 
-_datadir = '/data/pipeline/workdir/test-sample'
+def _get_snakemake_dir_path():
+    return join(dirname(__file__), '..', 'snakemake')
 
 # This simulates a dry run on the test data, and mostly checks rule graph validity.
-# Assumes that the directory /data/pipeline/workdir exists and is writable.
 def test_workflow_compiles():
-    # remove test directory if it exists
-    if os.path.exists(_datadir) and os.path.isdir(_datadir):
-        shutil.rmtree(_datadir)
-    os.chdir('snakemake')
-    ok_(snakemake.snakemake(
-        'Snakefile',
-        cores=20,
-        resources={'mem_mb': 160000},
-        configfile='../test/test_config.json',
-        dryrun=True,
-        printshellcmds=True,
-        targets=[
-            os.path.join(_datadir, 'vaccine-peptide-report-mutect-strelka-mutect2.txt'),
-            os.path.join(_datadir, 'vaccine-peptide-report-mutect-strelka.txt'),
-        ],
-    ))
+    chdir(_get_snakemake_dir_path())
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        ok_(snakemake.snakemake(
+            'Snakefile',
+            cores=20,
+            resources={'mem_mb': 160000},
+            configfile='idh1_config.json',
+            config={'workdir': tmpdirname},
+            dryrun=True,
+            printshellcmds=True,
+            targets=[
+                join(tmpdirname, 'idh1-test-sample',
+                    'vaccine-peptide-report-mutect-strelka-mutect2.txt'),
+                join(tmpdirname, 'idh1-test-sample',
+                    'vaccine-peptide-report-mutect-strelka.txt'),
+            ],
+        ))

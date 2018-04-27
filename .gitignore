@@ -104,3 +104,7 @@ ENV/
 
 # creation of test data
 snakemake/test-sample/*
+
+# We expect the user to add these files to the Docker directory
+docker/base/GenomeAnalysisTK.jar
+docker/base/mutect-1.1.7.jar

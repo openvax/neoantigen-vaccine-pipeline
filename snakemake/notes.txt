@@ -25,7 +25,7 @@ conda install bwa samtools sambamba snakemake picard gatk==3.7 graphviz bedtools
 gatk-register /data/biokepi-work-dir/workdir/toolkit/gatk.NOVERSION/GenomeAnalysisTK_37.jar
 
 # MuTect 1.1.7 downloaded from https://software.broadinstitute.org/gatk/download/mutect, to path:
-# /biokepi/workdir/toolkit/mutect-1.1.7.jar 
+# /biokepi/workdir/toolkit/mutect-1.1.7.jar
 
 # MuTect needs Java 1.7, while GATK and other things need Java 1.8.
 # Dealing with this by setting up a separate Conda environment, specifically for Java 7

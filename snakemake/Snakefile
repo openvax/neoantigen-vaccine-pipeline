@@ -72,8 +72,6 @@ include:
 
 SAMPLE_ID = config["input"]["id"]
 WORKDIR = os.path.join(config["workdir"], SAMPLE_ID)
-
-CHR = list(range(1, 23)) + ['X', 'Y', 'MT']
 SUPPORTED_FILETYPES = {".fastq.gz", ".fastq", ".bam"}
 
 # copy all fragments over to the sample-specific workdir, create if it doesn't exist

@@ -116,32 +116,42 @@ RUN pip install --ignore-installed vaxrank==0.7.12
 # needed for vaxrank reports to be reasonably formatted, otherwise kerning is off
 RUN curl https://pastebin.com/raw/AmfYN3er > $HOME/.fonts.conf
 
-# Copy the current directory contents into the container
-ADD . $HOME
-
-# set up Strelka config
-COPY strelka_config.txt $HOME/
-ENV STRELKA_CONFIG $HOME/strelka_config.txt
-
-ENV PYENSEMBL_CACHE_DIR /tool-cache/pyensembl
-ENV VAXRANK_REF_PEPTIDES_DIR /tool-cache/reference-peptides
-
 ######## THESE ARE LAB-SPECIFIC BITS ########
-
-# need to link GATK
-COPY GenomeAnalysisTK.jar $HOME/GenomeAnalysisTK.jar
-RUN $PGV_BIN/gatk-register $HOME/GenomeAnalysisTK.jar
-
-# MuTect setup
-COPY mutect-1.1.7.jar $HOME/
-ENV MUTECT $HOME/mutect-1.1.7.jar
 
 # NetMHC setup
 ARG MHCBUNDLE_PASS
-RUN git clone https://mhcbundle:$MHCBUNDLE_PASS@github.com/openvax/netmhc-bundle.git && mkdir tmp
+RUN git clone https://mhcbundle:$MHCBUNDLE_PASS@github.com/openvax/netmhc-bundle.git && \
+    rm -rf netmhc-bundle/netMHCIIpan-3.0 && \
+    rm -rf netmhc-bundle/netMHCIIpan-3.1 && \
+    rm -rf netmhc-bundle/netMHC-3.4 && \
+    rm -rf netmhc-bundle/netMHCpan-2.8 && \
+    rm -rf netmhc-bundle/netMHCpan-4.0 && \
+    rm -rf netmhc-bundle/netMHCstab-1.0 && \
+    rm -rf netmhc-bundle/netchop-3.1 && \
+    mkdir tmp
 ENV NETMHC_BUNDLE_TMPDIR $HOME/tmp
 ENV NETMHC_BUNDLE_HOME $HOME/netmhc-bundle
 ENV PATH $PATH:$NETMHC_BUNDLE_HOME/bin
 ENV KERAS_BACKEND tensorflow
 
-ENTRYPOINT ["./run.sh"]
+ENV PYENSEMBL_CACHE_DIR /outputs/pyensembl-cache
+ENV VAXRANK_REF_PEPTIDES_DIR /outputs/reference-peptides
+
+######## SOME OF THESE ARE LAB-SPECIFIC BITS ########
+# Last in Dockerfile for efficiency reasons: "ADD . $HOME" and everything after it
+# gets rebuilt every time we change anything in this repository.
+
+# Copy the current directory contents into the container
+ADD . $HOME
+
+# snakemake logs get written here (hidden dir)
+RUN sudo chown -R $USER $HOME/.snakemake
+
+# need to link GATK
+RUN $PGV_BIN/gatk-register $HOME/docker/base/GenomeAnalysisTK.jar
+
+# Variant caller setup
+ENV MUTECT $HOME/docker/base/mutect-1.1.7.jar
+ENV STRELKA_CONFIG $HOME/docker/base/strelka_config.txt
+
+ENTRYPOINT ["python", "docker/base/run_snakemake.py"]

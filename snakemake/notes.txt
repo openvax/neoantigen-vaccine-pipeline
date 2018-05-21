@@ -98,3 +98,14 @@ dbsnp.vcf.idx
 transcripts.gtf
 
 Also copy strelka_config.txt to /home/julia/bin/bin.
+
+----------
+
+A pipeline user outside Docker needs to go through the above setup, and also have the following environment variables set:
+- STRELKA_BIN: directory of Strelka installation, must contain configureStrelkaWorkflow.pl
+- STRELKA_CONFIG: path to Strelka config file
+- MUTECT: path to MuTect (v1) jar file
+- JAVA7_BIN: path to directory containing the java 7 executable
+
+Must also set PYENSEMBL_CACHE_DIR, and have it be writeable (see "pyensembl" rule in special_sauce.rules)
+Same for VAXRANK_REF_PEPTIDES_DIR.

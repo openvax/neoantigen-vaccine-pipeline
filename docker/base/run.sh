@@ -1,14 +1,18 @@
 #!/bin/bash
 
+# Usage:
+# - config.json file describing Snakemake pipeline inputs, relative to Docker volume paths
+# - set of Snakemake targets
+
 SNAKEFILE=/pipeline/Snakefile
-CONFIGFILE=/inputs/config.json
-TARGETS=$@
+CONFIGFILE=$1
+TARGETS="${@:2}"
 
 snakemake \
 -s $SNAKEFILE \
---cores=2 \
+--cores=22 \
 --resources mem_mb=100000 \
 --configfile $CONFIGFILE \
 --config workdir=/outputs \
--np \
+-p \
 $TARGETS

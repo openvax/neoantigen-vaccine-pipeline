@@ -2,12 +2,11 @@
 This contains rules for our own data processing libraries.
 """
 
-# TODO(julia): add a rule for setting up Pyensembl cache, for now assuming it exists;
-# will need to do something like
-# export PYENSEMBL_CACHE_DIR='/biokepi/workdir/pyensembl-cache'
-# pyensembl install --release 75 --species "homo sapiens"
-# touch /biokepi/workdir/pyensembl-cache/b37decoy.cached
-# (add this last one as input to the vaxrank rule later)
+rule pyensembl:
+  output:
+    touch("$PYENSEMBL_CACHE_DIR/homo_sapiens_75.cached")
+  shell:
+    "pyensembl install --release 75 --species 'homo sapiens'"
 
 def _get_vaxrank_input_vcfs(wildcards):
     vcf_types = wildcards.vcf_types.split("-")
@@ -17,7 +16,8 @@ rule vaxrank:
   input:
     vcfs = _get_vaxrank_input_vcfs,
     rna = "{prefix}/rna_final_sorted.bam",
-    rna_index = "{prefix}/rna_final_sorted.bam.bai"
+    rna_index = "{prefix}/rna_final_sorted.bam.bai",
+    pyensembl_cache = "$PYENSEMBL_CACHE_DIR/homo_sapiens_75.cached"
   output:
     ascii_report = "{prefix}/vaccine-peptide-report-{vcf_types}.txt",
     json_file = "{prefix}/vaccine-peptide-report-{vcf_types}.json",
@@ -35,9 +35,9 @@ rule vaxrank:
     min_alt_rna_reads = 2,
     mhc_epitope_lengths = "8-11"
   benchmark:
-    "{prefix}/vaxrank_benchmark.txt"
+    "{prefix}/vaxrank-{vcf_types}-benchmark.txt"
   log:
-    "{prefix}/vaxrank.log"
+    "{prefix}/vaxrank-{vcf_types}.log"
   run:
     vcf_input_str = ""
     for vcf in input.vcfs:

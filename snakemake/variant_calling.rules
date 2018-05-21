@@ -10,9 +10,7 @@ rule mutect_per_chr:
   params:
     reference = config["reference"]["genome"],
     cosmic = config["reference"]["cosmic"],
-    dbsnp = config["reference"]["dbsnp"],
-    java = "/home/julia/miniconda3/envs/java17/bin/java",
-    mutect_jar = "/biokepi/workdir/toolkit/mutect-1.1.7.jar"
+    dbsnp = config["reference"]["dbsnp"]
   benchmark:
     "{prefix}/mutect_{chr}_benchmark.txt"
   log:
@@ -20,7 +18,7 @@ rule mutect_per_chr:
   resources:
     mem_mb = 2000
   shell:
-    "{params.java} -Xmx2g -jar {params.mutect_jar} "
+    "$JAVA7_BIN/java -Xmx2g -jar $MUTECT "
     "--analysis_type MuTect "
     "--reference_sequence {params.reference} "
     "--cosmic {params.cosmic} "
@@ -77,6 +75,10 @@ rule mutect2:
 
 # TODO(julia): the logs here print to stdout still, need to figure out what the logs are coming from
 # and print to the logfile instead
+#
+# If not running in a Docker image, user must have these environment variables set:
+# - STRELKA_BIN: directory of Strelka installation, must contain configureStrelkaWorkflow.pl
+# - STRELKA_CONFIG: path to Strelka config file
 rule strelka:
   input:
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
@@ -86,8 +88,6 @@ rule strelka:
     "{prefix}/strelka_output/results/passed.somatic.indels.vcf"
   params:
     reference = config["reference"]["genome"],
-    strelka_bin = config["tools"]["strelka"]["bin"],
-    strelka_config = config["tools"]["strelka"]["config"],
     output_dir = "{prefix}/strelka_output"
   benchmark:
     "{prefix}/strelka_benchmark.txt"
@@ -96,15 +96,15 @@ rule strelka:
   threads: 20
   shell:
     "rm -rf {params.output_dir}; "
-    "{params.strelka_bin}/configureStrelkaWorkflow.pl "
+    "$STRELKA_BIN/configureStrelkaWorkflow.pl "
     "--normal {input.normal} "
     "--tumor {input.tumor} "
     "--ref {params.reference} "
-    "--config {params.strelka_config} "
-    "--output-dir {params.output_dir}; "
+    "--config $STRELKA_CONFIG "
+    "--output-dir {params.output_dir} &> {log}; "
     "cd {params.output_dir}; "
     "make -j {threads} "
-    "2> {log}"
+    ">> {log} 2>&1"
 
 rule strelka_combine:
   input:

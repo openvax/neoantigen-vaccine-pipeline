@@ -37,9 +37,11 @@ rule sambamba_index_bam:
   shell:
     "sambamba index -t {threads} {input} {output} 2> {log}"
 
-CHR = list(range(1, 23)) + ['X', 'Y', 'MT']
-
 # TODO(julia): figure out how to combine with RNA IndelRealigner rules, very similar
+
+# if this rule is triggered with "chr" mapping to a chromosome in the CHR list, it'll be run
+# for that chromosome alone. If "chr" matches any other string, IndelRealigner will run for all
+# chromosomes.
 rule dna_indel_realigner_target_creator_per_chr:
   input:
     expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai", type=["normal", "tumor"]),
@@ -56,13 +58,19 @@ rule dna_indel_realigner_target_creator_per_chr:
     "{prefix}/dna_indel_realigner_target_creator_{chr}.log"
   resources:
     mem_mb = 20000
-  shell:
-    "gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} "
-    "--intervals {wildcards.chr} "
-    "-I {input.normal} -I {input.tumor} -o {output} -nt {threads} "
-    "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
-    "2> {log}"
+  run:
+    intervals_str = _get_intervals_str(wildcards)
+    shell("""
+      gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} \
+      %s \
+      -I {input.normal} -I {input.tumor} -o {output} -nt {threads} \
+      --filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored \
+      2> {log}
+    """ % intervals_str)
 
+# if this rule is triggered with "chr" mapping to a chromosome in the CHR list, it'll be run
+# for that chromosome alone. If "chr" matches any other string, IndelRealigner will run for all
+# chromosomes.
 rule dna_indel_realigner_per_chr:
   input:
     expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai", type=["normal", "tumor"]),
@@ -81,27 +89,49 @@ rule dna_indel_realigner_per_chr:
   resources:
     mem_mb = 20000
   # IndelRealigner writes the output to this directory; need to move the files manually after
-  shell:
-    "gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} "
-    "-I {input.normal} -I {input.tumor} "
-    "-targetIntervals {input.intervals} --intervals {wildcards.chr} "
-    "--filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored "
-    "--nWayOut _indelreal_chr_{wildcards.chr}.bam "
-    "2> {log} && "
-    "mv {{normal,tumor}}_aligned_coordinate_sorted_dups_indelreal_chr_{wildcards.chr}.bam "
-    "{wildcards.prefix} && "
-    "mv {{normal,tumor}}_aligned_coordinate_sorted_dups_indelreal_chr_{wildcards.chr}.bai "
-    "{wildcards.prefix}"
+  run:
+    intervals_str = _get_intervals_str(wildcards)
+    shell("""
+      gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} \
+      -I {input.normal} -I {input.tumor} \
+      -targetIntervals {input.intervals} %s \
+      --filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored \
+      --nWayOut _indelreal_chr_{wildcards.chr}.bam \
+      2> {log} && \
+      mv {{normal,tumor}}_aligned_coordinate_sorted_dups_indelreal_chr_{wildcards.chr}.bam \
+      {wildcards.prefix} && \
+      mv {{normal,tumor}}_aligned_coordinate_sorted_dups_indelreal_chr_{wildcards.chr}.bai \
+      {wildcards.prefix}
+    """ % intervals_str)
 
-rule dna_indel_realigner_merge:
+def _get_dna_indel_realigner_input(wildcards):
+  if _PARALLEL_INDEL_REALIGNER:
+    return ["%s_aligned_coordinate_sorted_dups_indelreal_chr_%s.bam" % (
+        wildcards.prefix, chromosome) for chromosome in CHR]
+  else:
+    return "%s_aligned_coordinate_sorted_dups_indelreal_chr_ALL.bam" % wildcards.prefix
+
+def _get_bai_from_bam_name(bam_input):
+  return 
+
+rule dna_indel_realigner:
   input:
-    expand("{{prefix}}_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam", chr=CHR)
+    bam = _get_dna_indel_realigner_input
   output:
-    "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
+    bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
   benchmark:
-    "{prefix}/dna_indel_realigner_merge_benchmark.txt"
-  shell:
-    "sambamba merge {output} {input}"
+    "{prefix}_indel_realigner_benchmark.txt"
+  log:
+    "{prefix}_indel_realigner.log"
+  run:
+    if _PARALLEL_INDEL_REALIGNER:
+      shell("sambamba merge {output.bam} {input.bam}")
+    else:
+      shell("mv {input.bam} {output.bam}")
+      input_bai = input.bam.replace(".bam", ".bai")
+      output_bai = output.bam.replace(".bam", ".bai")
+      # also need to rename the .bai from the .bam
+      shell("mv %s %s" % (input_bai, output_bai))
 
 rule base_recalibrator:
   input:

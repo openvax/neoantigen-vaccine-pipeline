@@ -141,29 +141,34 @@ rule sort_rna_bam:
     "{input} "
     "2> {log}"
 
-CHR = list(range(1, 23)) + ['X', 'Y', 'MT']
+# run indel realignment on the reads without Ns
 
-# run per-chromosome indel realignment on the reads without Ns
+# if this rule is triggered with "chr" mapping to a chromosome in the CHR list, it'll be run
+# for that chromosome alone. If "chr" matches any other string, IndelRealigner will run for all
+# chromosomes.
 rule rna_indel_realigner_target_creator_per_chr:
   input:
     "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam"
   output:
     "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.intervals"
+  threads: _get_half_cores
   params:
     reference = config["reference"]["genome"]
   benchmark:
     "{prefix}/rna_indel_realigner_target_creator_{chr}_benchmark.txt"
   log:
     "{prefix}/rna_indel_realigner_target_creator_{chr}.log"
-  threads: _get_half_cores
   resources:
     mem_mb = 20000
-  shell:
-    "gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} "
-    "--intervals {wildcards.chr} "
-    "-I {input} -o {output} -nt {threads} "
-    "--filter_mismatching_base_and_quals --filter_bases_not_stored "
-    "2> {log}"
+  run:
+    intervals_str = _get_intervals_str(wildcards)
+    shell("""
+      gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} \
+      %s \
+      -I {input} -o {output} -nt {threads} \
+      --filter_mismatching_base_and_quals --filter_bases_not_stored \
+      2> {log}
+    """ % intervals_str)
 
 rule rna_indel_realigner_per_chr:
   input:
@@ -179,21 +184,36 @@ rule rna_indel_realigner_per_chr:
     "{prefix}/rna_indel_realigner_{chr}.log"
   resources:
     mem_mb = 20000
-  shell:
-    "gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} -I {input.bam} "
-    "-targetIntervals {input.intervals} --intervals {wildcards.chr} -o {output} "
-    "--filter_mismatching_base_and_quals --filter_bases_not_stored "
-    "2> {log}"
+  run:
+    intervals_str = _get_intervals_str(wildcards)
+    shell("""
+      gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} -I {input.bam} \
+      -targetIntervals {input.intervals} %s -o {output} \
+      --filter_mismatching_base_and_quals --filter_bases_not_stored \
+      2> {log}
+    """ % intervals_str)
 
-rule rna_indel_realigner_merge:
+def _get_rna_indel_realigner_input(wildcards):
+  if _PARALLEL_INDEL_REALIGNER:
+    return ["%s/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_%s.bam" % (
+      wildcards.prefix, chromosome) for chromosome in CHR]
+  else:
+    return "%s/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_ALL.bam" % wildcards.prefix
+
+rule rna_indel_realigner:
   input:
-    expand("{{prefix}}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.bam", chr=CHR)
+    _get_rna_indel_realigner_input
   output:
     "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"
   benchmark:
-    "{prefix}/rna_indel_realigner_merge_benchmark.txt"
-  shell:
-    "sambamba merge {output} {input}"
+    "{prefix}/rna_indel_realigner_benchmark.txt"
+  log:
+    "{prefix}/rna_indel_realigner.log"
+  run:
+    if _PARALLEL_INDEL_REALIGNER:
+      shell("sambamba merge {output} {input}")
+    else:
+      shell("mv {input} {output}")
 
 rule merge_all_rna:
   input:

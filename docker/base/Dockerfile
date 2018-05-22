@@ -98,6 +98,7 @@ RUN conda config --add channels r && \
     picard \
     pip \
     sambamba \
+    samtools \
     snakemake \
     star \
     vcftools && \

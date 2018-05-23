@@ -8,34 +8,46 @@ This repo includes the [pip requirements file](https://github.com/openvax/neoant
 ```
 pip install -r requirements.txt
 ```
-### Full setup
 
-If you want to run the pipeline with all its tools, you'll need access to a machine that already has a full pipeline setup. This can be one of:
-- demeter-csmaz11-19 (most frequently used PGV node)
-- demeter-csmaz11-18
-- demeter-csmaz11-16
+### Dockerized pipeline
 
-(Alternatively, follow [these instructions](https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/snakemake/notes.txt) to set up a new Linux machine that will be able to run the full pipeline, but proceed at your own risk - those instructions may be incomplete and assume some tool/data dependencies that aren't fully documented yet. See list below.)
+Note that this relies on a private Docker image which contains the necessary tool dependencies. This is not ready for external users.
 
-Once you SSH into a pipeline-enabled machine, make a new environment from which to run everything:
+Prerequisites for us:
+- Installed Docker (for how to do this on Debian, see https://docs.docker.com/install/linux/docker-ce/debian/#set-up-the-repository)
+- A JSON file containing the private key describing the bhardwaj-lab service account.
+- A machine with at least 16 cores and 1TB free disk space.
+
+Set up service account access to bhardwaj-lab buckets:
 ```
-# this will create a Conda env with bfx dependencies and Python 3.5.4
-conda create --name <env> --file conda-spec-file.txt
-source activate <env>
-pip install -r requirements.txt
+gcloud auth activate-service-account --key-file bhardwaj-lab.json
 ```
 
-An extra step is needed to set up GATK in this new environment. Find the path of the `gatk` binary using `which gatk`, then edit that file  and set the value of `jar_file` to 'GenomeAnalysisTK_37.jar'). After that, run:
+Data downloads:
+- Test data from gs://pgv-test-data: this contains an example Snakemake config as well as a couple of FASTQs you can try running on
+- Reference genome data from gs://reference-genomes. Download this and put in a world-writeable directory (the pipeline will preprocess the reference as needed, and write the results to that same directory)
+
+Make a world-writeable outputs directory; this will contain sample-specific pipeline output.
+
+Add the current user to the docker group, if necessary; then log into Docker Hub (`docker login`) to be able to use the private Docker image.
+
+Example pipeline command (replace these host volume paths with yours):
 ```
-gatk-register /data/biokepi-work-dir/workdir/toolkit/gatk.NOVERSION/GenomeAnalysisTK_37.jar
+docker run \
+-v /home/julia/pipeline_inputs:/inputs \
+-v /home/julia/pipeline_outputs:/outputs \
+-v /home/julia/reference-genomes:/reference-genome \
+julia326/neoantigen-vaccine-pipeline:wip \
+--configfile=/inputs/idh1_config.json
 ```
+
 ## Testing
 
 ### Unit test
 
 You can run a small local unit test which simulates a pipeline dependency graph and does not require bioinformatics tool setup. Once you clone this repo and install the Python requirements, run `nosetests`.
 
-### Data test
+### Data test (deprecated, needs updating; ignore for now)
 
 If you're on a pipeline-enabled machine and you've gone through the environment setup, dry-run the full pipeline on test data:
 ```
@@ -52,7 +64,7 @@ This will print all the commands and list the rules that would be triggered to m
 To run a subset of the pipeline, change the target to an upstream file. For example, to run just BWA alignment and mark dups on normal DNA inputs, run the above command with `/data/pipeline/workdir/idh1-test-sample/normal_aligned_coordinate_sorted_dups.bam` instead of the vaccine peptide report path.
 
 
-## Tool and data dependencies
+## Tool and data dependencies (deprecated, needs updating; ignore for now)
 
 Partial list:
 - MuTect (v1)

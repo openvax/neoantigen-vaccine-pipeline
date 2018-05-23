@@ -22,12 +22,13 @@ def _get_rg(wildcards):
 # NB: this will not work correctly on a paired-end interleaved FASTQ input
 rule bwa_mem_single_end_fastq:
   input:
-    "{prefix}.fastq"
+    r = "{prefix}.fastq",
+    reference_index = rules.bwa_index_reference.output,
+    reference = config["reference"]["genome"]
   output:
     "{prefix}_aligned.sam"
   params:
-    rg = _get_rg,
-    reference = config["reference"]["genome"]
+    rg = _get_rg
   benchmark:
     "{prefix}_bwa_mem_benchmark.txt"
   log:
@@ -35,18 +36,19 @@ rule bwa_mem_single_end_fastq:
   threads: _get_half_cores
   shell:
     "bwa mem -R '{params.rg}' -M -t {threads} -O 6 -E 1 -B 4 "
-    "{params.reference} {input} "
+    "{input.reference} {input.r} "
     "> {output} 2> {log}"
 
 rule bwa_mem_paired_end_split_fastq_gz:
   input:
     r1 = "{prefix}_R1.fastq.gz",
-    r2 = "{prefix}_R2.fastq.gz"
+    r2 = "{prefix}_R2.fastq.gz",
+    reference_index = rules.bwa_index_reference.output,
+    reference = config["reference"]["genome"]
   output:
     "{prefix}_aligned.sam"
   params:
-    rg = _get_rg,
-    reference = config["reference"]["genome"]
+    rg = _get_rg
   benchmark:
     "{prefix}_bwa_mem_benchmark.txt"
   log:
@@ -54,7 +56,7 @@ rule bwa_mem_paired_end_split_fastq_gz:
   threads: _get_half_cores
   shell:
     "bwa mem -R '{params.rg}' -M -t {threads} -O 6 -E 1 -B 4 "
-    "{params.reference} {input.r1} {input.r2} "
+    "{input.reference} {input.r1} {input.r2} "
     "> {output} 2> {log}"
 
 rule convert_alignment_to_sorted_bam:

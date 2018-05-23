@@ -1,0 +1,72 @@
+"""
+This contains rules related to processing the reference genome, for both DNA and RNA.
+
+NOTE: the reference genome directory must be writeable for these rules to work
+"""
+
+import os
+
+# TODO(julia): for these rules, consider outputting logs/benchmark to
+rule star_align_reference:
+  input:
+    reference = config["reference"]["genome"],
+    transcripts = config["reference"]["transcripts"]
+  params:
+    size = _READ_LENGTH,
+    genome_dir = _STAR_GENOME_DIR
+  output:
+    os.path.join(_STAR_GENOME_DIR, "SA")
+  threads: _get_half_cores
+  log:
+    os.path.join(WORKDIR, "star_align_reference.log")
+  benchmark:
+    os.path.join(WORKDIR, "star_align_reference_benchmark.txt")
+  run:
+    if not os.path.exists(params.genome_dir):
+        shell("mkdir {params.genome_dir}")
+    shell("""
+        STAR \
+        --runMode genomeGenerate \
+        --genomeDir {params.genome_dir} \
+        --genomeFastaFiles {input.reference} \
+        --sjdbGTFfile {input.transcripts} \
+        --sjdbOverhang {params.size} \
+        --runThreadN {threads} \
+        >> {log} 2>&1
+    """)
+
+rule bwa_index_reference:
+  input:
+    reference = config["reference"]["genome"]
+  output:
+    expand("%s.{ext}" % config["reference"]["genome"], ext=["amb", "ann", "bwt", "pac", "sa"])
+  benchmark:
+    os.path.join(WORKDIR, "bwa_index_reference_benchmark.txt")
+  log:
+    os.path.join(WORKDIR, "bwa_index_reference.log")
+  shell:
+    "bwa index {input.reference} >> {log} 2>&1"
+
+rule samtools_index_reference:
+  input:
+    reference = config["reference"]["genome"]
+  output:
+    config["reference"]["genome"] + ".fai"
+  benchmark:
+    os.path.join(WORKDIR, "samtools_index_reference_benchmark.txt")
+  log:
+    os.path.join(WORKDIR, "samtools_index_reference.log")
+  shell:
+    "samtools faidx {input.reference} >> {log} 2>&1"
+
+rule picard_sequence_dict_reference:
+  input:
+    reference = config["reference"]["genome"]
+  output:
+    config["reference"]["genome"].replace("fasta", "dict")
+  benchmark:
+    os.path.join(WORKDIR, "picard_sequence_dict_reference_benchmark.txt")
+  log:
+    os.path.join(WORKDIR, "picard_sequence_dict_reference.log")
+  shell:
+    "picard CreateSequenceDictionary R={input.reference} O={output} >> {log} 2>&1"

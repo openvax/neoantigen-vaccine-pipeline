@@ -4,13 +4,12 @@
 rule mutect_per_chr:
   input:
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
-    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
-  output:
-    "{prefix}/mutect_{chr}.vcf"
-  params:
+    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
     reference = config["reference"]["genome"],
     cosmic = config["reference"]["cosmic"],
     dbsnp = config["reference"]["dbsnp"]
+  output:
+    "{prefix}/mutect_{chr}.vcf"
   benchmark:
     "{prefix}/mutect_{chr}_benchmark.txt"
   log:
@@ -20,9 +19,9 @@ rule mutect_per_chr:
   shell:
     "$JAVA7_BIN/java -Xmx2g -jar $MUTECT "
     "--analysis_type MuTect "
-    "--reference_sequence {params.reference} "
-    "--cosmic {params.cosmic} "
-    "--dbsnp {params.dbsnp} "
+    "--reference_sequence {input.reference} "
+    "--cosmic {input.cosmic} "
+    "--dbsnp {input.dbsnp} "
     "--intervals {wildcards.chr} "
     "--input_file:normal {input.normal} "
     "--input_file:tumor {input.tumor} "
@@ -34,7 +33,7 @@ rule mutect_per_chr:
 # is it okay to use vcf-concat and not vcf-merge?
 rule mutect:
   input:
-    expand("{{prefix}}/mutect_{chr}.vcf", chr=CHR)
+    expand("{{prefix}}/mutect_{chr}.vcf", chr=_CHR)
   output:
     "{prefix}/mutect.vcf"
   shell:
@@ -43,13 +42,12 @@ rule mutect:
 rule mutect2_per_chr:
   input:
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
-    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
-  output:
-    "{prefix}/mutect2_{chr}.vcf"
-  params:
+    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
     reference = config["reference"]["genome"],
     cosmic = config["reference"]["cosmic"],
     dbsnp = config["reference"]["dbsnp"]
+  output:
+    "{prefix}/mutect2_{chr}.vcf"
   benchmark:
     "{prefix}/mutect2_{chr}_benchmark.txt"
   log:
@@ -58,16 +56,16 @@ rule mutect2_per_chr:
     "gatk -T MuTect2 "
     "-I:normal {input.normal} "
     "-I:tumor {input.tumor} "
-    "-R {params.reference} "
-    "--dbsnp {params.dbsnp} "
-    "--cosmic {params.cosmic} "
+    "-R {input.reference} "
+    "--dbsnp {input.dbsnp} "
+    "--cosmic {input.cosmic} "
     "--intervals {wildcards.chr} "
     "-o {output} "
     "2> {log}"
 
 rule mutect2:
   input:
-    expand("{{prefix}}/mutect2_{chr}.vcf", chr=CHR)
+    expand("{{prefix}}/mutect2_{chr}.vcf", chr=_CHR)
   output:
     "{prefix}/mutect2.vcf"
   shell:
@@ -82,12 +80,12 @@ rule mutect2:
 rule strelka:
   input:
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
-    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
+    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
+    reference = config["reference"]["genome"]
   output:
     "{prefix}/strelka_output/results/passed.somatic.snvs.vcf",
     "{prefix}/strelka_output/results/passed.somatic.indels.vcf"
   params:
-    reference = config["reference"]["genome"],
     output_dir = "{prefix}/strelka_output"
   benchmark:
     "{prefix}/strelka_benchmark.txt"
@@ -99,7 +97,7 @@ rule strelka:
     "$STRELKA_BIN/configureStrelkaWorkflow.pl "
     "--normal {input.normal} "
     "--tumor {input.tumor} "
-    "--ref {params.reference} "
+    "--ref {input.reference} "
     "--config $STRELKA_CONFIG "
     "--output-dir {params.output_dir} &> {log}; "
     "cd {params.output_dir}; "
@@ -109,11 +107,10 @@ rule strelka:
 rule strelka_combine:
   input:
     snvs = "{prefix}/strelka_output/results/passed.somatic.snvs.vcf",
-    indels = "{prefix}/strelka_output/results/passed.somatic.indels.vcf"
+    indels = "{prefix}/strelka_output/results/passed.somatic.indels.vcf",
+    reference = config["reference"]["genome"]
   output:
     "{prefix}/strelka.vcf"
-  params:
-    reference = config["reference"]["genome"]
   benchmark:
     "{prefix}/strelka_combine_benchmark.txt"
   log:
@@ -122,7 +119,7 @@ rule strelka_combine:
     "gatk -T CombineVariants "
     "--variant:snvs {input.snvs} "
     "--variant:indels {input.indels} "
-    "-R {params.reference} "
+    "-R {input.reference} "
     "-genotypeMergeOptions PRIORITIZE "
     "-o {output} "
     "-priority snvs,indels "

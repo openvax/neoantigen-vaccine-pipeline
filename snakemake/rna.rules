@@ -4,34 +4,14 @@ This contains RNA processing rules.
 
 import os
 
-READ_LENGTH = 124
-STAR_GENOME_DIR = os.path.join(
-    os.path.dirname(config["reference"]["genome"]), "star-genome-%d" % READ_LENGTH)
-
-# TODO(julia): run with a benchmark/log, also consider outputting to workdir rather than the input
-# for where the reference stuff lives
-rule star_align_reference:
+# STAR aligner only works with zipped FASTQs
+rule gzip:
   input:
-  params:
-    size = READ_LENGTH,
-    genome_dir = STAR_GENOME_DIR,
-    reference = config["reference"]["genome"],
-    transcripts = config["reference"]["transcripts"]
+    "{prefix}.fastq"
   output:
-    os.path.join(STAR_GENOME_DIR, "SA")
-  threads: _get_half_cores
-  run:
-    if not os.path.exists(params.genome_dir):
-        shell("mkdir {params.genome_dir}")
-    shell("""
-        STAR \
-        --runMode genomeGenerate \
-        --genomeDir {params.genome_dir} \
-        --genomeFastaFiles {params.reference} \
-        --sjdbGTFfile {params.transcripts} \
-        --sjdbOverhang {params.size} \
-        --runThreadN {threads}
-    """)
+    "{prefix}.fastq.gz"
+  shell:
+    "gzip -c {input} > {output}"
 
 rule star_align_paired_end_split_fastq_gz:
   input:
@@ -41,7 +21,7 @@ rule star_align_paired_end_split_fastq_gz:
   output:
     "{prefix}Aligned.sortedByCoord.out.bam"
   params:
-    genome_dir = STAR_GENOME_DIR,
+    genome_dir = _STAR_GENOME_DIR,
     rg_sm = config["input"]["id"] + "_rna"
   benchmark:
     "{prefix}_star_align_benchmark.txt"
@@ -70,7 +50,7 @@ rule star_align_single_end_fastq:
   output:
     "{prefix}Aligned.sortedByCoord.out.bam"
   params:
-    genome_dir = STAR_GENOME_DIR,
+    genome_dir = _STAR_GENOME_DIR,
     rg_sm = config["input"]["id"] + "_rna"
   benchmark:
     "{prefix}_star_align_benchmark.txt"
@@ -143,17 +123,19 @@ rule sort_rna_bam:
 
 # run indel realignment on the reads without Ns
 
-# if this rule is triggered with "chr" mapping to a chromosome in the CHR list, it'll be run
+# if this rule is triggered with "chr" mapping to a chromosome in the _CHR list, it'll be run
 # for that chromosome alone. If "chr" matches any other string, IndelRealigner will run for all
 # chromosomes.
 rule rna_indel_realigner_target_creator_per_chr:
   input:
-    "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam"
+    "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam.bai",
+    rna = "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam",
+    reference_fai = rules.samtools_index_reference.output,
+    reference_dict = rules.picard_sequence_dict_reference.output,
+    reference = config["reference"]["genome"]
   output:
     "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.intervals"
   threads: _get_half_cores
-  params:
-    reference = config["reference"]["genome"]
   benchmark:
     "{prefix}/rna_indel_realigner_target_creator_{chr}_benchmark.txt"
   log:
@@ -163,9 +145,9 @@ rule rna_indel_realigner_target_creator_per_chr:
   run:
     intervals_str = _get_intervals_str(wildcards)
     shell("""
-      gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} \
+      gatk -Xmx20g -T RealignerTargetCreator -R {input.reference} \
       %s \
-      -I {input} -o {output} -nt {threads} \
+      -I {input.rna} -o {output} -nt {threads} \
       --filter_mismatching_base_and_quals --filter_bases_not_stored \
       2> {log}
     """ % intervals_str)
@@ -173,11 +155,10 @@ rule rna_indel_realigner_target_creator_per_chr:
 rule rna_indel_realigner_per_chr:
   input:
     bam = "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam",
-    intervals = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.intervals"
+    intervals = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.intervals",
+    reference = config["reference"]["genome"]
   output:
     "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.bam"
-  params:
-    reference = config["reference"]["genome"]
   benchmark:
     "{prefix}/rna_indel_realigner_{chr}_benchmark.txt"
   log:
@@ -187,7 +168,7 @@ rule rna_indel_realigner_per_chr:
   run:
     intervals_str = _get_intervals_str(wildcards)
     shell("""
-      gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} -I {input.bam} \
+      gatk -Xmx20g -T IndelRealigner -compress 0 -R {input.reference} -I {input.bam} \
       -targetIntervals {input.intervals} %s -o {output} \
       --filter_mismatching_base_and_quals --filter_bases_not_stored \
       2> {log}
@@ -196,7 +177,7 @@ rule rna_indel_realigner_per_chr:
 def _get_rna_indel_realigner_input(wildcards):
   if _PARALLEL_INDEL_REALIGNER:
     return ["%s/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_%s.bam" % (
-      wildcards.prefix, chromosome) for chromosome in CHR]
+      wildcards.prefix, chromosome) for chromosome in _CHR]
   else:
     return "%s/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_ALL.bam" % wildcards.prefix
 

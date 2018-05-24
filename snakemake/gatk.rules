@@ -39,19 +39,20 @@ rule sambamba_index_bam:
 
 # TODO(julia): figure out how to combine with RNA IndelRealigner rules, very similar
 
-# if this rule is triggered with "chr" mapping to a chromosome in the CHR list, it'll be run
+# if this rule is triggered with "chr" mapping to a chromosome in the _CHR list, it'll be run
 # for that chromosome alone. If "chr" matches any other string, IndelRealigner will run for all
 # chromosomes.
 rule dna_indel_realigner_target_creator_per_chr:
   input:
     expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai", type=["normal", "tumor"]),
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups.bam",
-    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups.bam"
+    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups.bam",
+    reference_fai = rules.samtools_index_reference.output,
+    reference_dict = rules.picard_sequence_dict_reference.output,
+    reference = config["reference"]["genome"]
   output:
     "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals"
   threads: _get_half_cores
-  params:
-    reference = config["reference"]["genome"]
   benchmark:
     "{prefix}/dna_indel_realigner_target_creator_{chr}_benchmark.txt"
   log:
@@ -61,14 +62,14 @@ rule dna_indel_realigner_target_creator_per_chr:
   run:
     intervals_str = _get_intervals_str(wildcards)
     shell("""
-      gatk -Xmx20g -T RealignerTargetCreator -R {params.reference} \
+      gatk -Xmx20g -T RealignerTargetCreator -R {input.reference} \
       %s \
       -I {input.normal} -I {input.tumor} -o {output} -nt {threads} \
       --filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored \
       2> {log}
     """ % intervals_str)
 
-# if this rule is triggered with "chr" mapping to a chromosome in the CHR list, it'll be run
+# if this rule is triggered with "chr" mapping to a chromosome in the _CHR list, it'll be run
 # for that chromosome alone. If "chr" matches any other string, IndelRealigner will run for all
 # chromosomes.
 rule dna_indel_realigner_per_chr:
@@ -76,12 +77,11 @@ rule dna_indel_realigner_per_chr:
     expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai", type=["normal", "tumor"]),
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups.bam",
     tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups.bam",
-    intervals = "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals"
+    intervals = "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals",
+    reference = config["reference"]["genome"]
   output:
     "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam",
     "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam"
-  params:
-    reference = config["reference"]["genome"]
   benchmark:
     "{prefix}/dna_indel_realigner_{chr}_benchmark.txt"
   log:
@@ -92,7 +92,7 @@ rule dna_indel_realigner_per_chr:
   run:
     intervals_str = _get_intervals_str(wildcards)
     shell("""
-      gatk -Xmx20g -T IndelRealigner -compress 0 -R {params.reference} \
+      gatk -Xmx20g -T IndelRealigner -compress 0 -R {input.reference} \
       -I {input.normal} -I {input.tumor} \
       -targetIntervals {input.intervals} %s \
       --filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored \
@@ -107,7 +107,7 @@ rule dna_indel_realigner_per_chr:
 def _get_dna_indel_realigner_input(wildcards):
   if _PARALLEL_INDEL_REALIGNER:
     return ["%s_aligned_coordinate_sorted_dups_indelreal_chr_%s.bam" % (
-        wildcards.prefix, chromosome) for chromosome in CHR]
+        wildcards.prefix, chromosome) for chromosome in _CHR]
   else:
     return "%s_aligned_coordinate_sorted_dups_indelreal_chr_ALL.bam" % wildcards.prefix
 
@@ -135,12 +135,11 @@ rule dna_indel_realigner:
 
 rule base_recalibrator:
   input:
-    "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
-  output:
-    "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table"
-  params:
+    bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam",
     reference = config["reference"]["genome"],
     known_sites = config["reference"]["dbsnp"]
+  output:
+    "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table"
   threads: _get_half_cores
   benchmark:
     "{prefix}_base_recalibrator_benchmark.txt"
@@ -149,17 +148,17 @@ rule base_recalibrator:
   resources:
     mem_mb = 20000
   shell:
-    "gatk -Xmx20g -T BaseRecalibrator -nct {threads} -I {input} -R {params.reference} "
-    "-knownSites {params.known_sites} -o {output} 2> {log}"
+    "gatk -Xmx20g "
+    "-T BaseRecalibrator -nct {threads} -R {input.reference} -I {input.bam} "
+    "-knownSites {input.known_sites} -o {output} 2> {log}"
 
 rule bqsr_print_reads:
   input:
     bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam",
-    bqsr = "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table"
+    bqsr = "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table",
+    reference = config["reference"]["genome"]
   output:
     "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
-  params:
-    reference = config["reference"]["genome"]
   threads: _get_half_cores
   benchmark:
     "{prefix}_base_recalibrator_print_reads_benchmark.txt"
@@ -169,5 +168,5 @@ rule bqsr_print_reads:
     mem_mb = 20000
   shell:
     "gatk -Xmx20g "
-    "-T PrintReads -nct {threads} -R {params.reference} -I {input.bam} -BQSR {input.bqsr} "
+    "-T PrintReads -nct {threads} -R {input.reference} -I {input.bam} -BQSR {input.bqsr} "
     "-o {output} 2> {log}"

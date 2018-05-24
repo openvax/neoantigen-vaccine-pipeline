@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import getpass
 import json
 from nose.tools import ok_
-from os import chdir
+from os import chdir, symlink
 from os.path import dirname, join
 import tempfile
 
@@ -26,19 +27,42 @@ def _get_snakemake_dir_path():
 # This simulates a dry run on the test data, and mostly checks rule graph validity.
 def test_workflow_compiles():
     chdir(_get_snakemake_dir_path())
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        ok_(snakemake.snakemake(
-            'Snakefile',
-            cores=20,
-            resources={'mem_mb': 160000},
-            configfile='idh1_config.json',
-            config={'workdir': tmpdirname},
-            dryrun=True,
-            printshellcmds=True,
-            targets=[
-                join(tmpdirname, 'idh1-test-sample',
-                    'vaccine-peptide-report-mutect-strelka-mutect2.txt'),
-                join(tmpdirname, 'idh1-test-sample',
-                    'vaccine-peptide-report-mutect-strelka.txt'),
-            ],
-        ))
+
+    with tempfile.TemporaryDirectory() as workdir:
+        with tempfile.TemporaryDirectory() as referencedir:
+            # populate reference files with random crap
+            with open(join(referencedir, 'b37decoy.fasta'), 'w') as genome:
+                genome.write('placeholder')
+            with open(join(referencedir, 'transcripts.gtf'), 'w') as transcripts:
+                transcripts.write('placeholder')
+            with open(join(referencedir, 'dbsnp.vcf'), 'w') as dbsnp:
+                dbsnp.write('placeholder')
+            with open(join(referencedir, 'cosmic.vcf'), 'w') as cosmic:
+                cosmic.write('placeholder')
+
+            # kinda gross, but: replace /outputs, /reference-genome paths in config file with
+            # temp dir locations; /inputs with the datagen location in this repo
+            with open('idh1_config.json') as idh1_config_file:
+                contents = idh1_config_file.read().replace(
+                    '/outputs', workdir).replace(
+                    '/reference-genome/b37decoy', referencedir).replace(
+                    '/inputs', '../datagen')
+
+                with tempfile.NamedTemporaryFile(mode='w') as config_tmpfile:
+                    config_tmpfile.write(contents)
+                    config_tmpfile.seek(0)
+                    ok_(snakemake.snakemake(
+                        'Snakefile',
+                        cores=20,
+                        resources={'mem_mb': 160000},
+                        configfile=config_tmpfile.name,
+                        config={'num_threads': 22},
+                        dryrun=True,
+                        printshellcmds=True,
+                        targets=[
+                            join(workdir, 'idh1-test-sample',
+                                'vaccine-peptide-report-mutect-strelka-mutect2.txt'),
+                            join(workdir, 'idh1-test-sample',
+                                'vaccine-peptide-report-mutect-strelka.txt'),
+                        ],
+                    ))

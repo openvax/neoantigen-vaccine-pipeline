@@ -60,6 +60,8 @@ import subprocess
 include:
     "common.rules"
 include:
+    "reference.rules"
+include:
     "gatk.rules"
 include:
     "alignment.rules"
@@ -70,10 +72,6 @@ include:
 include:
     "special_sauce.rules"
 
-SAMPLE_ID = config["input"]["id"]
-WORKDIR = os.path.join(config["workdir"], SAMPLE_ID)
-SUPPORTED_FILETYPES = {".fastq.gz", ".fastq", ".bam"}
-
 # copy all fragments over to the sample-specific workdir, create if it doesn't exist
 if not os.path.exists(WORKDIR):
   os.makedirs(WORKDIR)
@@ -83,7 +81,6 @@ FRAGMENT_IDS = {
   "tumor": set(),
   "rna": set()
 }
-
 
 # support any type of paired-end and single-end input, figure out what kind of input it is,
 # copy over with a predictable name. Naming convention for files in workdir: normal_L1_R1.fastq.gz

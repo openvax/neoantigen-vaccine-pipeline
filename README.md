@@ -18,25 +18,40 @@ Prerequisites for us:
 - A JSON file containing the private key describing the bhardwaj-lab service account.
 - A machine with at least 16 cores and 1TB free disk space.
 
-Set up service account access to bhardwaj-lab buckets:
+1. Set up service account access to bhardwaj-lab buckets:
 ```
-gcloud auth activate-service-account --key-file bhardwaj-lab.json
+gcloud auth activate-service-account --key-file <bhardwaj-lab JSON key file path>
 ```
 
-Data downloads:
-- Test data from gs://pgv-test-data: this contains an example Snakemake config as well as a couple of FASTQs you can try running on
-- Reference genome data from gs://reference-genomes. Download this and put in a world-writeable directory (the pipeline will preprocess the reference as needed, and write the results to that same directory)
+2. Download this data for getting started with the pipeline:
+- gs://pgv-test-data: this contains an example Snakemake config and small test tumor/normal FASTQ files
+- gs://reference-genomes: reference genomes data
 
-Make a world-writeable outputs directory; this will contain sample-specific pipeline output.
+Download this and put in a world-writeable directory (the pipeline will preprocess the reference as needed, and write the results to that same directory)
 
-Add the current user to the docker group, if necessary; then log into Docker Hub (`docker login`) to be able to use the private Docker image.
+3. Create a pipeline outputs directory; this will contain sample-specific pipeline output.
 
-Example pipeline command (replace these host volume paths with yours):
+4. Note that your outputs and reference genomes directory must be recursively world writable:
+```
+chmod -R a+w <reference genomes dir>
+chmod -R a+w <outputs dir>
+```
+This is necessary because the Docker pipeline runs as an internal Docker user and not as you, so it needs write privileges. Data is modified in the outputs directory as well as in the reference genomes: preparing the reference genome for use by BWA/GATK/etc. will save the results to the genome directory.
+
+5. Log into Docker Hub to pull the private Docker image.
+```
+docker login
+```
+You may see an error like "Cannot connect to the Docker daemon at unix:///var/run/docker.sock"; this means your user is not a member of the docker group. Add the user to the group:
+```
+sudo usermod -a -G docker <your username>
+```
+This is an example pipeline command which uses the test Snakemake config you downloaded, and runs the full pipeline including Vaxrank:
 ```
 docker run \
--v /home/julia/pipeline_inputs:/inputs \
--v /home/julia/pipeline_outputs:/outputs \
--v /home/julia/reference-genomes:/reference-genome \
+-v <your inputs dir>:/inputs \
+-v <your outputs dir>:/outputs \
+-v <your reference genomes dir>:/reference-genome \
 julia326/neoantigen-vaccine-pipeline:wip \
 --configfile=/inputs/idh1_config.json
 ```

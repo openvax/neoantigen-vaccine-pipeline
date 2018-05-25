@@ -112,7 +112,7 @@ ENV PATH $PGV_BIN:$PATH
 RUN conda create -n java7 java-jdk==7.0.91 && conda clean --all -y
 
 # Special sauce stuff
-RUN pip install --ignore-installed vaxrank==0.7.12
+RUN pip install --ignore-installed vaxrank==0.8.0
 
 # needed for vaxrank reports to be reasonably formatted, otherwise kerning is off
 RUN curl https://pastebin.com/raw/AmfYN3er > $HOME/.fonts.conf

@@ -41,7 +41,7 @@ rule star_align_paired_end_split_fastq_gz:
     "--outFileNamePrefix {wildcards.prefix} "
     "--readFilesCommand zcat "
     "--readFilesIn {input.r1} {input.r2} "
-    "2> {log}"
+    ">> {log} 2>&1"
 
 rule star_align_single_end_fastq:
   input:
@@ -70,7 +70,7 @@ rule star_align_single_end_fastq:
     "--outFileNamePrefix {wildcards.prefix} "
     "--readFilesCommand zcat "
     "--readFilesIn {input.r} "
-    "2> {log}"
+    ">> {log} 2>&1"
 
 # then we run mark duplicates on the RNA, which can just reuse the mark_dups rule from gatk.rules
 

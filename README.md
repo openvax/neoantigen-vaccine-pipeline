@@ -24,8 +24,8 @@ gcloud auth activate-service-account --key-file <bhardwaj-lab JSON key file path
 ```
 
 2. Download this data for getting started with the pipeline:
-- gs://pgv-test-data: this contains an example Snakemake config and small test tumor/normal FASTQ files
-- gs://reference-genomes: reference genomes data
+- `gs://pgv-test-data`: this contains an example Snakemake config and small test tumor/normal FASTQ files
+- `gs://reference-genomes`: reference genomes data
 
 Download this and put in a world-writeable directory (the pipeline will preprocess the reference as needed, and write the results to that same directory)
 

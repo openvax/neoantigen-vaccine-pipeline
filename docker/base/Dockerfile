@@ -135,8 +135,8 @@ ENV NETMHC_BUNDLE_HOME $HOME/netmhc-bundle
 ENV PATH $PATH:$NETMHC_BUNDLE_HOME/bin
 ENV KERAS_BACKEND tensorflow
 
-ENV PYENSEMBL_CACHE_DIR /outputs/pyensembl-cache
-ENV VAXRANK_REF_PEPTIDES_DIR /outputs/reference-peptides
+ENV PYENSEMBL_CACHE_DIR /reference-genome/pyensembl-cache
+ENV VAXRANK_REF_PEPTIDES_DIR /reference-genome/reference-peptides
 
 ######## SOME OF THESE ARE LAB-SPECIFIC BITS ########
 # Last in Dockerfile for efficiency reasons: "ADD . $HOME" and everything after it

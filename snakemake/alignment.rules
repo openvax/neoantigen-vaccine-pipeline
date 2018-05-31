@@ -2,17 +2,25 @@
 This contains alignment-related processing rules.
 """
 
-def _get_rg(wildcards):
+def _get_read_group_header(wildcards):
   prefix = wildcards.prefix
   basename = os.path.basename(prefix)
   if basename.startswith("normal"):
-    sm = "normal"
+    sample = "normal"
   elif basename.startswith("tumor"):
-    sm = "tumor"
+    sample = "tumor"
   else:
     raise ValueError("Unexpected prefix, cannot extract SM tag: %s" % prefix)
-  return "@RG\\tID:{prefix}.bam\\tSM:{sample_id}_{sm}\\tLB:ga\\tPL:Illumina".format(
-    prefix=prefix, sample_id=config["input"]["id"], sm=sm)
+  patient_id = config["input"]["id"]
+  sample_id = "%s_%s" % (patient_id, sample)
+  library = sample_id
+  return "\\t".join([
+      "@RG",
+      "ID:%s" % prefix,
+      "SM:%s" % sample_id,
+      "LB:%s" % library,
+      "PL:Illumina"
+  ])
 
 # TODO(julia): if we need to bring back alignment for BAMs, make something similar to this and run
 # "samtools fastq <input.bam> | <bwa command>" where the bwa command is identical to this one except
@@ -28,7 +36,7 @@ rule bwa_mem_single_end_fastq:
   output:
     "{prefix}_aligned.sam"
   params:
-    rg = _get_rg
+    rg = _get_read_group_header
   benchmark:
     "{prefix}_bwa_mem_benchmark.txt"
   log:
@@ -48,7 +56,7 @@ rule bwa_mem_paired_end_split_fastq_gz:
   output:
     "{prefix}_aligned.sam"
   params:
-    rg = _get_rg
+    rg = _get_read_group_header
   benchmark:
     "{prefix}_bwa_mem_benchmark.txt"
   log:

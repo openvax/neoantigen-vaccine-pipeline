@@ -234,7 +234,7 @@ Current contents of a reference genome directory, I believe all of these are nee
 * dbsnp.vcf.idx
 * transcripts.gtf
 
-### Configure Strelak
+### Configure Strelka
 
 Create `/home/julia/bin/bin/strelka_config.txt` with the following contents:
 

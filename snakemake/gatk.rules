@@ -111,9 +111,6 @@ def _get_dna_indel_realigner_input(wildcards):
   else:
     return "%s_aligned_coordinate_sorted_dups_indelreal_chr_ALL.bam" % wildcards.prefix
 
-def _get_bai_from_bam_name(bam_input):
-  return 
-
 rule dna_indel_realigner:
   input:
     bam = _get_dna_indel_realigner_input

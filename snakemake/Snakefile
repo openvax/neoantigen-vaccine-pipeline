@@ -1,5 +1,5 @@
 """
-To see how Snakemake behaves with certain commands given the current config.json, 
+To see how Snakemake behaves with certain commands given the current config.json,
 try these examples:
 
 Print jobs (and their shell commands) required to produce an aligned tumor DNA file:

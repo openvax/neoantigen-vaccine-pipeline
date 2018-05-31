@@ -49,6 +49,11 @@ You may see an error like "Cannot connect to the Docker daemon at unix:///var/ru
 sudo usermod -a -G docker <your username>
 ```
 
+#### 6. Pull the Docker image.
+```
+docker pull julia326/neoantigen-vaccine-pipeline:wip
+```
+
 This is an example pipeline command which uses the test Snakemake config you downloaded, and runs the full pipeline including Vaxrank:
 ```
 docker run \
@@ -57,6 +62,15 @@ docker run \
 -v <your reference genomes dir>:/reference-genome \
 julia326/neoantigen-vaccine-pipeline:wip \
 --configfile=/inputs/idh1_config.json
+```
+
+If you want to poke around in the image to execute tools manually, look at tool versions etc.:
+```
+docker run \
+-v <your inputs dir>:/inputs \
+-v <your outputs dir>:/outputs \
+-v <your reference genomes dir>:/reference-genome \
+--entrypoint /bin/bash -it julia326/neoantigen-vaccine-pipeline:wip
 ```
 
 #### Intermediate files

@@ -91,18 +91,18 @@ RUN conda config --add channels r && \
     conda config --add channels conda-forge && \
     conda config --add channels bioconda && \
     conda create -n pgv \
-    bwa \
+    bwa==0.7.17 \
     cython \
     gatk==3.7 \
     java-jdk==8.0.92 \
-    picard \
+    picard==2.18.5 \
     pip \
-    sambamba \
-    samtools \
+    sambamba==0.6.6 \
+    samtools==1.8 \
     snakemake \
-    star \
-    vcftools && \
-    conda clean --all -y
+    star==2.6.0c \
+    vcftools==0.1.15 \
+    && conda clean --all -y
 
 # most of the tools we're using are in the pgv environment; adding to PATH for convenience
 ENV PATH $PGV_BIN:$PATH

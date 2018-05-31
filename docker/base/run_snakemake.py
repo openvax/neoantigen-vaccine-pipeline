@@ -25,27 +25,33 @@ parser.add_argument(
     type=int,
     help="Number of CPU cores to use in this pipeline run")
 
-def compute_vaxrank_targets(config_file_path):
+def get_output_dir(config_file_path):
     """
     configfile: Docker-relative path to a JSON config file
     """
     with open(config_file_path) as configfile:
         config = json.load(configfile)
-        output_dir = os.path.join(config["workdir"], config["input"]["id"])
-        targets = [
-            # TODO(julia): add mutect2 vaxrank report to this
-            os.path.join(output_dir, "vaccine-peptide-report-mutect-strelka.txt"),
-        ]
-        return targets
+    return os.path.join(config["workdir"], config["input"]["id"])
+
+def compute_vaxrank_targets(config_file_path):
+    return [
+        # TODO(julia): add mutect2 vaxrank report to this
+        os.path.join(get_output_dir(config_file_path), "vaccine-peptide-report-mutect-strelka.txt"),
+    ]
 
 if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
 
+    output_dir = get_output_dir(args.configfile)
+
     # check target
     targets = args.target
     if targets is None:
-        targets = compute_vaxrank_targets(args.configfile)
+        targets = [
+            # TODO(julia): add mutect2 vaxrank report to this
+            os.path.join(output_dir, "vaccine-peptide-report-mutect-strelka.txt"),
+        ]
 
     start_time = datetime.datetime.now()
     snakemake.snakemake(
@@ -56,6 +62,9 @@ if __name__ == "__main__":
         config={'num_threads': args.cores},
         printshellcmds=True,
         targets=targets,
+        stats=os.path.join(output_dir, "stats.json"),
+        printd3dag=True,
+        summary=True,
     )
     end_time = datetime.datetime.now()
     print("--- Pipeline running time: %s ---" % (str(end_time - start_time)))

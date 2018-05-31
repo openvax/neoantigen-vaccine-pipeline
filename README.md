@@ -4,7 +4,7 @@ Snakemake implementation of the PGV vaccine pipeline, powering the PGV001 and GB
 
 ## Setup
 
-This repo includes the [pip requirements file](https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/requirements.txt) as well as a [Conda environment spec](https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/conda-spec-file.txt). Note that to get started with pipeline development and rule definition, you just need the Python dependencies:
+To get started with pipeline development and rule definition, you only need the Python dependencies:
 ```
 pip install -r requirements.txt
 ```
@@ -58,6 +58,33 @@ docker run \
 julia326/neoantigen-vaccine-pipeline:wip \
 --configfile=/inputs/idh1_config.json
 ```
+
+#### Intermediate files
+
+As a result of the full pipeline run, many intermediate files are generated in the output directory. In case you want to reuse these for a different pipeline run (e.g. if you have one normal sample and several tumor samples, each of which you want to run against the normal), any intermediate file you copy to the new location will tell Snakemake to not repeat that step (or its substeps, unless they're needed for some other workflow node). For that reason, it's helpful to know the intermediate file paths. You can also run parts of the pipeline used to generate any of the intermediate files, specifying one or more as a target to the Docker run invocation. Example, if you use [the test IDH config](https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/test/idh1_config.json):
+```
+docker run \
+-v <your inputs dir>:/inputs \
+-v <your outputs dir>:/outputs \
+-v <your reference genomes dir>:/reference-genome \
+julia326/neoantigen-vaccine-pipeline:wip \
+--configfile=/inputs/idh1_config.json \
+--target=/outputs/idh1-test-sample/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam \
+--target=/outputs/idh1-test-sample/normal_merged_aligned_coordinate_sorted.bam
+```
+This (somewhat arbitrary) example will run alignment on normal DNA, and alignment + full GATK process on the tumor DNA.
+
+Here are some of the intermediate file names you might use as targets, in a sample's output directory. Listed in "chronological" order:
+- `{normal,tumor,rna}_merged_aligned_coordinate_sorted.bam`: after BWA alignment, merging of lanes if necessary
+- `{normal,tumor,rna}_aligned_coordinate_sorted_dups.bam`: after GATK MarkDups
+- `{normal,tumor}_aligned_coordinate_sorted_dups_indelreal.bam`: after GATK IndelRealigner
+- `{normal,tumor}_aligned_coordinate_sorted_dups_indelreal_bqsr.bam`: after GATK BQSR. These are inputs to variant callers.
+- `rna_aligned_coordinate_sorted_dups_cigar_N_filtered.bam`: after GATK MarkDups, filtered to all tumor RNA reads with Ns in the CIGAR string (will not run IndelRealigner on these)
+- `rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered.bam`: after GATK MarkDups, all tumor RNA reads without Ns
+- `rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam`: tumor RNA after GATK IndelRealigner
+- `rna_final_sorted.bam`. This is RNA after all processing; used as input to `vaxrank`.
+- `{mutect,mutect2,strelka}.vcf`: merged (all-contig) VCF from corresponding variant caller. Use e.g. `mutect_10.vcf` to only call Mutect variants in chromosome 10.
+- `vaccine-peptide-report-mutect.vcf`: run `vaxrank` with only Mutect variants. The pipeline supports running `vaxrank` with any combination of Mutect/Mutect2/Strelka. To specify this, use `mutect`, `strelka`, `mutect2` separated by a dash - e.g. to run with all 3 variant callers, use `vaccine-peptide-report-mutect-strelka-mutect2.vcf`.
 
 ## Testing
 
@@ -236,7 +263,7 @@ Current contents of a reference genome directory, I believe all of these are nee
 
 ### Configure Strelka
 
-Create `/home/julia/bin/bin/strelka_config.txt` with the following contents:
+Create a Strelka config file with the following contents, and use it in the Strelka invocation:
 
 ```
 [user]

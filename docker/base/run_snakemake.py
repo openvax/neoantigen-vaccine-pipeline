@@ -53,24 +53,24 @@ def check_inputs(config):
                 for read_num in ["r1", "r2"]:
                     r = fragment[read_num]
                     if not (isfile(r) and access(r, R_OK)):
-                        raise ValueError("File %s does not exist or is unreadable", r)
+                        raise ValueError("File %s does not exist or is unreadable" % r)
             elif fragment["type"] == "single-end":
                 r = fragment["r"]
                 if not (isfile(r) and access(r, R_OK)):
-                    raise ValueError("File %s does not exist or is unreadable", r)
+                    raise ValueError("File %s does not exist or is unreadable" % r)
             else:
-                raise ValueError("Unsupported fragment type: %s", fragment["type"])
+                raise ValueError("Unsupported fragment type: %s" % fragment["type"])
 
     # check reference genome files
     for key in config["reference"]:
         ref_file = config["reference"][key]
         if not (isfile(ref_file) and access(ref_file, R_OK)):
-            raise ValueError("Reference genome file %s does not exist or is unreadable", ref_file)
+            raise ValueError("Reference genome file %s does not exist or is unreadable" % ref_file)
 
     # check that the workdir exists and is writable
     workdir = config["workdir"]
     if not access(workdir, W_OK):
-        raise ValueError("Workdir %s does not exist or is not writable", workdir)
+        raise ValueError("Workdir %s does not exist or is not writable" % workdir)
 
 
 def run():
@@ -94,7 +94,7 @@ def run():
     # check that target starts with the output directory
     for target in targets:
         if not target.startswith(output_dir):
-            raise ValueError("Invalid target: %s", target)
+            raise ValueError("Invalid target: %s" % target)
 
     start_time = datetime.datetime.now()
     snakemake.snakemake(

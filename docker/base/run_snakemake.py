@@ -91,6 +91,11 @@ def run():
             join(output_dir, "vaccine-peptide-report-mutect-strelka.txt"),
         ]
 
+    # check that target starts with the output directory
+    for target in targets:
+        if not target.startswith(output_dir):
+            raise ValueError("Invalid target: %s", target)
+
     start_time = datetime.datetime.now()
     snakemake.snakemake(
         args.snakefile,

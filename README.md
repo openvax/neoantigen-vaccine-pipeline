@@ -67,7 +67,7 @@ You will need to log out and log back in for this to take effect.
 
 #### 6. Pull the Docker image.
 ```
-docker pull julia326/neoantigen-vaccine-pipeline:wip
+docker pull julia326/neoantigen-vaccine-pipeline:latest
 ```
 
 This is an example pipeline command which uses the test Snakemake config you downloaded, and runs the full pipeline including Vaxrank:
@@ -76,7 +76,7 @@ docker run \
 -v <your inputs dir>:/inputs \
 -v <your outputs dir>:/outputs \
 -v <your reference genome dir>:/reference-genome \
-julia326/neoantigen-vaccine-pipeline:wip \
+julia326/neoantigen-vaccine-pipeline:latest \
 --configfile=/inputs/idh1_config.json
 ```
 
@@ -86,7 +86,7 @@ docker run \
 -v <your inputs dir>:/inputs \
 -v <your outputs dir>:/outputs \
 -v <your reference genome dir>:/reference-genome \
---entrypoint /bin/bash -it julia326/neoantigen-vaccine-pipeline:wip
+--entrypoint /bin/bash -it julia326/neoantigen-vaccine-pipeline:latest
 ```
 
 #### Intermediate files

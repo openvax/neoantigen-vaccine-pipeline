@@ -74,4 +74,5 @@ def test_workflow_compiles():
                             'idh1-test-sample',
                             'vaccine-peptide-report-mutect-strelka.txt'),
                         ],
+                    stats=join(workdir, 'idh1-test-sample', 'stats.json')
                 ))

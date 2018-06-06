@@ -48,16 +48,18 @@ def check_inputs(config):
     for sample_type in ["tumor", "normal", "rna"]:
         if sample_type not in config["input"]:
             continue
-        fragment = config["input"][sample_type]
-        if fragment["type"] == "paired-end":
-            for read_num in ["r1", "r2"]:
-                r = fragment[read_num]
+        for fragment in config["input"][sample_type]:
+            if fragment["type"] == "paired-end":
+                for read_num in ["r1", "r2"]:
+                    r = fragment[read_num]
+                    if not (isfile(r) and access(r, R_OK)):
+                        raise ValueError("File %s does not exist or is unreadable", r)
+            elif fragment["type"] == "single-end":
+                r = fragment["r"]
                 if not (isfile(r) and access(r, R_OK)):
                     raise ValueError("File %s does not exist or is unreadable", r)
-        elif fragment["type"] == "single-end":
-            r = fragment["r"]
-            if not (isfile(r) and access(r, R_OK)):
-                raise ValueError("File %s does not exist or is unreadable", r)
+            else:
+                raise ValueError("Unsupported fragment type: %s", fragment["type"])
 
     # check reference genome files
     for key in config["reference"]:
@@ -100,8 +102,6 @@ def run():
         dryrun=args.dry_run,
         targets=targets,
         stats=join(output_dir, "stats.json"),
-        printd3dag=True,
-        summary=True,
     )
     end_time = datetime.datetime.now()
     print("--- Pipeline running time: %s ---" % (str(end_time - start_time)))

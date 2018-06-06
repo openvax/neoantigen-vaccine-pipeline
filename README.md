@@ -11,12 +11,27 @@ pip install -r requirements.txt
 
 ### Dockerized pipeline
 
-Note that this relies on a private Docker image which contains the necessary tool dependencies. This is not ready for external users.
+#### Prerequisites
+
+Note that this currently relies on a private Docker image which contains the necessary tool dependencies. This is not ready for external users.
 
 Prerequisites for us:
-- Installed Docker (for how to do this on Debian, see https://docs.docker.com/install/linux/docker-ce/debian/#set-up-the-repository)
+- Installed Docker
 - A JSON file containing the private key describing the bhardwaj-lab service account.
 - A machine with at least 16 cores and 1TB free disk space.
+
+Also please note that the Docker setup is supported for the following Debian distributions:
+- Buster 10 (Docker CE 17.11 Edge only)
+- Stretch 9 (stable) / Raspbian Stretch
+- Jessie 8 (LTS) / Raspbian Jessie
+- Wheezy 7.7 (LTS)
+
+And the following Ubuntu distributions:
+- Artful 17.10 (Docker CE 17.11 Edge and higher only)
+- Xenial 16.04 (LTS)
+- Trusty 14.04 (LTS)
+
+For how to install Docker on Debian, see https://docs.docker.com/install/linux/docker-ce/debian/#set-up-the-repository.
 
 #### 1. Set up service account access to bhardwaj-lab buckets:
 
@@ -33,12 +48,12 @@ Download this and put in a world-writeable directory (the pipeline will preproce
 
 #### 3. Create a pipeline outputs directory; this will contain sample-specific pipeline output.
 
-#### 4. Note that your outputs and reference genomes directory must be recursively world writable:
+#### 4. Note that your outputs and reference genome directory must be recursively world writable:
 ```
-chmod -R a+w <reference genomes dir>
+chmod -R a+w <reference genome dir>
 chmod -R a+w <outputs dir>
 ```
-This is necessary because the Docker pipeline runs as an internal Docker user and not as you, so it needs write privileges. Data is modified in the outputs directory as well as in the reference genomes: preparing the reference genome for use by BWA/GATK/etc. will save the results to the genome directory.
+This is necessary because the Docker pipeline runs as an internal Docker user and not as you, so it needs write privileges. Data is modified in the outputs directory as well as in the reference genome: preparing the reference genome for use by BWA/GATK/etc. will save the results to the genome directory.
 
 #### 5. Log into Docker Hub to pull the private Docker image.
 ```
@@ -46,8 +61,9 @@ docker login
 ```
 You may see an error like "Cannot connect to the Docker daemon at unix:///var/run/docker.sock"; this means your user is not a member of the docker group. Add the user to the group:
 ```
-sudo usermod -a -G docker <your username>
+sudo usermod -a -G docker $USER
 ```
+You will need to log out and log back in for this to take effect.
 
 #### 6. Pull the Docker image.
 ```
@@ -59,7 +75,7 @@ This is an example pipeline command which uses the test Snakemake config you dow
 docker run \
 -v <your inputs dir>:/inputs \
 -v <your outputs dir>:/outputs \
--v <your reference genomes dir>:/reference-genome \
+-v <your reference genome dir>:/reference-genome \
 julia326/neoantigen-vaccine-pipeline:wip \
 --configfile=/inputs/idh1_config.json
 ```
@@ -69,7 +85,7 @@ If you want to poke around in the image to execute tools manually, look at tool 
 docker run \
 -v <your inputs dir>:/inputs \
 -v <your outputs dir>:/outputs \
--v <your reference genomes dir>:/reference-genome \
+-v <your reference genome dir>:/reference-genome \
 --entrypoint /bin/bash -it julia326/neoantigen-vaccine-pipeline:wip
 ```
 
@@ -80,7 +96,7 @@ As a result of the full pipeline run, many intermediate files are generated in t
 docker run \
 -v <your inputs dir>:/inputs \
 -v <your outputs dir>:/outputs \
--v <your reference genomes dir>:/reference-genome \
+-v <your reference genome dir>:/reference-genome \
 julia326/neoantigen-vaccine-pipeline:wip \
 --configfile=/inputs/idh1_config.json \
 --target=/outputs/idh1-test-sample/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam \

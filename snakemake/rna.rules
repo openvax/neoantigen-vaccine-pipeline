@@ -4,16 +4,7 @@ This contains RNA processing rules.
 
 import os
 
-# STAR aligner only works with zipped FASTQs
-rule gzip:
-  input:
-    "{prefix}.fastq"
-  output:
-    "{prefix}.fastq.gz"
-  shell:
-    "gzip -c {input} > {output}"
-
-rule star_align_paired_end_split_fastq_gz:
+rule star_align_paired_end:
   input:
     r1 = "{prefix}_R1.fastq.gz",
     r2 = "{prefix}_R2.fastq.gz",
@@ -43,7 +34,7 @@ rule star_align_paired_end_split_fastq_gz:
     "--readFilesIn {input.r1} {input.r2} "
     ">> {log} 2>&1"
 
-rule star_align_single_end_fastq:
+rule star_align_single_end:
   input:
     r = "{prefix}.fastq.gz",
     genome_alignment = rules.star_align_reference.output

@@ -9,21 +9,21 @@
             {
                 "fragment_id": "L001",
                 "type": "single-end",
-                "r": "/inputs/idh1_r132h_normal.fastq"
+                "r": "/inputs/idh1_r132h_normal.fastq.gz"
             }
         ],
         "tumor": [
             {
                 "fragment_id": "L001",
                 "type": "single-end",
-                "r": "/inputs/idh1_r132h_tumor.fastq"
+                "r": "/inputs/idh1_r132h_tumor.fastq.gz"
             }
         ],
         "rna": [
             {
                 "fragment_id": "L001",
                 "type": "single-end",
-                "r": "/inputs/idh1_r132h_tumor.fastq"
+                "r": "/inputs/idh1_r132h_tumor.fastq.gz"
             }
         ]
     },

@@ -37,7 +37,7 @@ def get_output_dir(config):
 def compute_vaxrank_targets(config):
     return [
         # TODO(julia): add mutect2 vaxrank report to this
-        join(get_output_dir(config), "vaccine-peptide-report-mutect-strelka.txt"),
+        join(get_output_dir(config), "vaccine-peptide-report_netmhcpan_mutect-strelka.txt"),
     ]
 
 def check_inputs(config):

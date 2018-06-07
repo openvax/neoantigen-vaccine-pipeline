@@ -68,11 +68,11 @@ def test_workflow_compiles():
                         join(
                             workdir, 
                             'idh1-test-sample',
-                            'vaccine-peptide-report-mutect-strelka-mutect2.txt'),
+                            'vaccine-peptide-report_netmhcpan-iedb_mutect-strelka-mutect2.txt'),
                         join(
                             workdir,
                             'idh1-test-sample',
-                            'vaccine-peptide-report-mutect-strelka.txt'),
+                            'vaccine-peptide-report_netmhccons_mutect-strelka.txt'),
                         ],
                     stats=join(workdir, 'idh1-test-sample', 'stats.json')
                 ))

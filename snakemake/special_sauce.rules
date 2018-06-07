@@ -19,14 +19,13 @@ rule vaxrank:
     rna_index = "{prefix}/rna_final_sorted.bam.bai",
     pyensembl_cache = "$PYENSEMBL_CACHE_DIR/homo_sapiens_75.cached"
   output:
-    ascii_report = "{prefix}/vaccine-peptide-report-{vcf_types}.txt",
-    json_file = "{prefix}/vaccine-peptide-report-{vcf_types}.json",
-    pdf_report = "{prefix}/vaccine-peptide-report-{vcf_types}.pdf",
-    xlsx_report = "{prefix}/vaccine-peptide-report-{vcf_types}.xlsx"
+    ascii_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.txt",
+    json_file = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.json",
+    pdf_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.pdf",
+    xlsx_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.xlsx"
   params:
     mhc_alleles = config["input"]["mhc_alleles"],
     patient_id = config["input"]["id"],
-    mhc_predictor = "netmhcpan",
     vaccine_peptide_length = 25,
     padding_around_mutation = 5,
     max_vaccine_peptides_per_mutation = 3,
@@ -35,9 +34,9 @@ rule vaxrank:
     min_alt_rna_reads = 2,
     mhc_epitope_lengths = "8-11"
   benchmark:
-    "{prefix}/vaxrank-{vcf_types}-benchmark.txt"
+    "{prefix}/vaxrank_{mhc_predictor}_{vcf_types}_benchmark.txt"
   log:
-    "{prefix}/vaxrank-{vcf_types}.log"
+    "{prefix}/vaxrank_{mhc_predictor}_{vcf_types}.log"
   run:
     vcf_input_str = ""
     for vcf in input.vcfs:
@@ -45,7 +44,7 @@ rule vaxrank:
     shell("""
         vaxrank %s \
         --bam {input.rna} \
-        --mhc-predictor {params.mhc_predictor} \
+        --mhc-predictor {output.mhc_predictor} \
         --mhc-alleles %s \
         --output-ascii-report {output.ascii_report} \
         --output-pdf-report {output.pdf_report} \

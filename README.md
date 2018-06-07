@@ -89,6 +89,13 @@ docker run \
 --entrypoint /bin/bash -it julia326/neoantigen-vaccine-pipeline:latest
 ```
 
+#### Releasing
+After you pushed some changes to the code (that you've tested!) and incremented the version, switch back into the master branch, rebase, and run:
+```
+./build-and-release.sh <GitHub password for mhcbundle user>
+```
+This will build a new Docker image, tagged with the version in the VERSION file, and push that to DockerHub as well as a GitHub repo release with that same version. You must pass an argument to the script that is the GitHub password for the "mhcbundle" user, as that's used to build the Docker image.
+
 #### Intermediate files
 
 As a result of the full pipeline run, many intermediate files are generated in the output directory. In case you want to reuse these for a different pipeline run (e.g. if you have one normal sample and several tumor samples, each of which you want to run against the normal), any intermediate file you copy to the new location will tell Snakemake to not repeat that step (or its substeps, unless they're needed for some other workflow node). For that reason, it's helpful to know the intermediate file paths. You can also run parts of the pipeline used to generate any of the intermediate files, specifying one or more as a target to the Docker run invocation. Example, if you use [the test IDH config](https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/test/idh1_config.json):

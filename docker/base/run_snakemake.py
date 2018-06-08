@@ -28,7 +28,7 @@ parser.add_argument(
 
 parser.add_argument(
     "--cores",
-    default=psutil.cpu_count(),
+    default=min(1, psutil.cpu_count() - 1),
     type=int,
     help="Number of CPU cores to use in this pipeline run (default %(default)s)")
 

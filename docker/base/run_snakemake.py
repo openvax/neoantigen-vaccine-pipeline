@@ -9,7 +9,8 @@ import psutil
 import snakemake
 
 def total_memory_gb():
-    return psutil.virtual_memory().total / 1024 / 1024 / 1024
+    n_bytes = psutil.virtual_memory().total
+    return n_bytes / (1024 * 1024 * 1024)
 
 parser = ArgumentParser()
 

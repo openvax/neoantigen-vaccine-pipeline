@@ -8,6 +8,8 @@ from os.path import isfile, join
 import psutil
 import snakemake
 
+def total_memory_gb():
+    return psutil.virtual_memory().total / 1024 / 1024 / 1024
 
 parser = ArgumentParser()
 
@@ -34,9 +36,9 @@ parser.add_argument(
 
 
 parser.add_argument(
-    "--default-memory-per-task",
-    default=16,
-    type=int,
+    "--memory",
+    default=min(1.0, total_memory_gb() - 1),
+    type=float,
     help="Memory (in GB) to assume each task will require (default %(default)s)")
 
 parser.add_argument(
@@ -111,7 +113,7 @@ def run():
     snakemake.snakemake(
         args.snakefile,
         cores=args.cores,
-        resources={'mem_mb': 1024 * args.default_memory_per_task},
+        resources={'mem_mb': int(1024 * args.default_memory_per_task)},
         configfile=args.configfile,
         config={'num_threads': args.cores},
         printshellcmds=True,

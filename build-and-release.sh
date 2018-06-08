@@ -14,16 +14,16 @@ USERNAME=julia326
 # image name
 IMAGE=neoantigen-vaccine-pipeline
 
+./build.sh
+
 # Get latest version
-version=`cat docker/base/VERSION`
+version=`cat docker/VERSION`
 echo "version: $version"
-# Build image
-docker build --build-arg MHCBUNDLE_PASS=$1 -t $USERNAME/$IMAGE:latest -f docker/base/Dockerfile .
 
 git tag -a "$version" -m "version $version"
 git push
 git push --tags
 
-docker tag $USERNAME/$IMAGE:latest $USERNAME/$IMAGE:$version
-docker push $USERNAME/$IMAGE:latest
+docker tag $USERNAME/$IMAGE:public $USERNAME/$IMAGE:$version
+docker push $USERNAME/$IMAGE:public
 docker push $USERNAME/$IMAGE:$version

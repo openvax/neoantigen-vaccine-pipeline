@@ -44,7 +44,7 @@ rule vaxrank:
     shell("""
         vaxrank %s \
         --bam {input.rna} \
-        --mhc-predictor {output.mhc_predictor} \
+        --mhc-predictor {wildcards.mhc_predictor} \
         --mhc-alleles %s \
         --output-ascii-report {output.ascii_report} \
         --output-pdf-report {output.pdf_report} \

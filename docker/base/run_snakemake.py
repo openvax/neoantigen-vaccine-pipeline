@@ -5,27 +5,43 @@ import json
 from os import access, R_OK, W_OK
 from os.path import isfile, join
 
+import psutil
 import snakemake
 
+def total_memory_gb():
+    n_bytes = psutil.virtual_memory().total
+    return n_bytes / (1024 * 1024 * 1024)
 
 parser = ArgumentParser()
+
 parser.add_argument(
     "--configfile",
     default="",
     help="Docker-relative Snakemake JSON config file path")
+
 parser.add_argument(
     "--target",
     action="append",
     help="Snakemake target(s). For multiple targets, can specify --target t1 --target t2 ...")
+
 parser.add_argument(
     "--snakefile",
     default="snakemake/Snakefile",
     help="Docker-relative path to Snakefile")
+
 parser.add_argument(
     "--cores",
-    default=22,
+    default=min(1, psutil.cpu_count() - 1),
     type=int,
-    help="Number of CPU cores to use in this pipeline run")
+    help="Number of CPU cores to use in this pipeline run (default %(default)s)")
+
+
+parser.add_argument(
+    "--memory",
+    default=min(1.0, total_memory_gb() - 1),
+    type=float,
+    help="Memory (in GB) to assume each task will require (default %(default)s)")
+
 parser.add_argument(
     "--dry-run",
     help="If this argument is present, Snakemake will do a dry run of the pipeline",
@@ -34,10 +50,12 @@ parser.add_argument(
 def get_output_dir(config):
     return join(config["workdir"], config["input"]["id"])
 
-def compute_vaxrank_targets(config):
+def default_vaxrank_targets(config):
     return [
         # TODO(julia): add mutect2 vaxrank report to this
-        join(get_output_dir(config), "vaccine-peptide-report_netmhcpan_mutect-strelka.txt"),
+        join(
+            get_output_dir(config),
+            "vaccine-peptide-report_netmhcpan_mutect-strelka.txt"),
     ]
 
 def check_inputs(config):
@@ -85,11 +103,7 @@ def run():
     # check target
     targets = args.target
     if targets is None:
-        targets = compute_vaxrank_targets(config)
-        targets = [
-            # TODO(julia): add mutect2 vaxrank report to this
-            join(output_dir, "vaccine-peptide-report-mutect-strelka.txt"),
-        ]
+        targets = default_vaxrank_targets(config)
 
     # check that target starts with the output directory
     for target in targets:
@@ -100,7 +114,7 @@ def run():
     snakemake.snakemake(
         args.snakefile,
         cores=args.cores,
-        resources={'mem_mb': 160000},
+        resources={'mem_mb': int(1024 * args.default_memory_per_task)},
         configfile=args.configfile,
         config={'num_threads': args.cores},
         printshellcmds=True,

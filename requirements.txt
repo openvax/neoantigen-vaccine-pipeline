@@ -1,2 +1,3 @@
+psutil
 snakemake
 vaxrank==0.7.12

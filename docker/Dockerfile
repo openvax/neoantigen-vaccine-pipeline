@@ -1,8 +1,4 @@
-# User must:
-# - copy GenomeAnalysisTK.jar to this directory: need to download GATK 3.7
-# - copy mutect-1.1.7.jar to this directory: can download from https://software.broadinstitute.org/gatk/download/archive
-
-# Build with: docker build -t pipeline/base:<tag> docker/base/
+# Build with: docker build -t julia326/neoantigen-vaccine-pipeline:public -f docker/Dockerfile .
 
 FROM ubuntu:16.04
 
@@ -28,7 +24,9 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
         python3.5-dev \
         rsync \
         sudo \
+        tar \
         tcsh \
+        unzip \
         wget \
         xvfb \
         zlib1g-dev && \
@@ -111,48 +109,37 @@ ENV PATH $PGV_BIN:$PATH
 # Dealing with this by setting up a separate Conda environment, specifically for Java 7
 RUN conda create -n java7 java-jdk==7.0.91 && conda clean --all -y
 
-# Special sauce stuff
-RUN pip install --ignore-installed vaxrank==0.8.0
+# Set up MuTect 1.1.7
+RUN wget --content-disposition https://software.broadinstitute.org/gatk/download/auth?package=M1 \
+    && unzip mutect-1.1.7.jar.zip && rm mutect-1.1.7.jar.zip
+ENV MUTECT $HOME/mutect-1.1.7.jar
 
-# needed for vaxrank reports to be reasonably formatted, otherwise kerning is off
-RUN curl https://pastebin.com/raw/AmfYN3er > $HOME/.fonts.conf
+# Set up GATK 3.7; need to link with gatk-register
+RUN wget --content-disposition "https://software.broadinstitute.org/gatk/download/auth?package=GATK-archive&version=3.7-0-gcfedb67" \
+    && tar -xvjf GenomeAnalysisTK-3.7-0-gcfedb67.tar.bz2 \
+    && rm -rf resources/ GenomeAnalysisTK-3.7-0-gcfedb67.tar.bz2
+RUN $PGV_BIN/gatk-register $HOME/GenomeAnalysisTK.jar
 
-######## THESE ARE LAB-SPECIFIC BITS ########
+# Copy and install Vaxrank and other python dependencies; they won't change very often,
+# so we want to do this before any further COPY commands in this Dockerfile.
+# See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#add-or-copy
+COPY requirements.txt $HOME
+RUN pip install --ignore-installed -r $HOME/requirements.txt
 
-# NetMHC setup
-ARG MHCBUNDLE_PASS
-RUN git clone https://mhcbundle:$MHCBUNDLE_PASS@github.com/openvax/netmhc-bundle.git && \
-    rm -rf netmhc-bundle/netMHCIIpan-3.0 && \
-    rm -rf netmhc-bundle/netMHCIIpan-3.1 && \
-    rm -rf netmhc-bundle/netMHC-3.4 && \
-    rm -rf netmhc-bundle/netMHCpan-2.8 && \
-    rm -rf netmhc-bundle/netMHCpan-4.0 && \
-    rm -rf netmhc-bundle/netMHCstab-1.0 && \
-    rm -rf netmhc-bundle/netchop-3.1 && \
-    mkdir tmp
-ENV NETMHC_BUNDLE_TMPDIR $HOME/tmp
-ENV NETMHC_BUNDLE_HOME $HOME/netmhc-bundle
-ENV PATH $PATH:$NETMHC_BUNDLE_HOME/bin
+# Vaxrank-required env variables and setup
 ENV KERAS_BACKEND tensorflow
-
 ENV PYENSEMBL_CACHE_DIR /reference-genome/pyensembl-cache
 ENV VAXRANK_REF_PEPTIDES_DIR /reference-genome/reference-peptides
-
-######## SOME OF THESE ARE LAB-SPECIFIC BITS ########
-# Last in Dockerfile for efficiency reasons: "ADD . $HOME" and everything after it
-# gets rebuilt every time we change anything in this repository.
+# this is needed for Vaxrank reports to be reasonably formatted, otherwise kerning is off
+RUN curl https://pastebin.com/raw/AmfYN3er > $HOME/.fonts.conf
 
 # Copy the current directory contents into the container
-ADD . $HOME
+COPY . $HOME
+
+# Strelka setup
+ENV STRELKA_CONFIG $HOME/docker/strelka_config.txt
 
 # snakemake logs get written here (hidden dir)
 RUN sudo chown -R $USER $HOME/.snakemake
 
-# need to link GATK
-RUN $PGV_BIN/gatk-register $HOME/docker/base/GenomeAnalysisTK.jar
-
-# Variant caller setup
-ENV MUTECT $HOME/docker/base/mutect-1.1.7.jar
-ENV STRELKA_CONFIG $HOME/docker/base/strelka_config.txt
-
-ENTRYPOINT ["python", "docker/base/run_snakemake.py"]
+ENTRYPOINT ["python", "docker/run_snakemake.py"]

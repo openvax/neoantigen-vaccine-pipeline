@@ -138,3 +138,31 @@ rule strelka_combine:
     "-o {output} "
     "-priority snvs,indels "
     "2> {log}"
+
+rule haplotype_caller_per_chr:
+  input:
+    normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
+    reference = config["reference"]["genome"],
+    dbsnp = config["reference"]["dbsnp"]
+  output:
+    "{prefix}/normal_germline_snps_indels_{chr}.vcf"
+  benchmark:
+    "{prefix}/haplotype_caller_benchmark_{chr}.txt"
+  log:
+    "{prefix}/haplotype_caller_{chr}.log"
+  shell:
+    "gatk -T HaplotypeCaller "
+    "-R {input.reference} "
+    "-I {input.normal} "
+    "--dbsnp {input.dbsnp} "
+    "--intervals {wildcards.chr} "
+    "-o {output} "
+    ">> {log} 2>&1"
+
+rule haplotype_caller:
+  input:
+    expand("{{prefix}}/normal_germline_snps_indels_{chr}.vcf", chr=_CHR)
+  output:
+    "{prefix}/normal_germline_snps_indels.vcf"
+  shell:
+    "vcf-concat {input} > {output}"

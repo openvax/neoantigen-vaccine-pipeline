@@ -24,6 +24,7 @@ rule vaxrank:
     pdf_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.pdf",
     xlsx_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.xlsx"
   params:
+    mhc_predictor = config["mhc_predictor"],
     mhc_alleles = config["input"]["mhc_alleles"],
     patient_id = config["input"]["id"],
     vaccine_peptide_length = 25,
@@ -41,10 +42,14 @@ rule vaxrank:
     vcf_input_str = ""
     for vcf in input.vcfs:
         vcf_input_str += "--vcf %s " % vcf
+    print("WHEEEEEEEEEEE")
+    if wildcards.mhc_predictor != params.mhc_predictor:
+        raise ValueError("Output filenames must match config predictor: %s" % params.mhc_predictor)
+    assert False
     shell("""
         vaxrank %s \
         --bam {input.rna} \
-        --mhc-predictor {wildcards.mhc_predictor} \
+        --mhc-predictor {params.mhc_predictor} \
         --mhc-alleles %s \
         --output-ascii-report {output.ascii_report} \
         --output-pdf-report {output.pdf_report} \

@@ -33,5 +33,6 @@
         "cosmic": "/reference-genome/b37decoy/cosmic.vcf",
         "transcripts": "/reference-genome/b37decoy/transcripts.gtf"
     },
-    "parallel_indel_realigner": false
+    "parallel_indel_realigner": false,
+    "mhc_predictor": "netmhcpan-iedb"
 }

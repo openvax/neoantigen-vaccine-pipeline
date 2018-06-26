@@ -50,11 +50,13 @@ def get_output_dir(config):
     return join(config["workdir"], config["input"]["id"])
 
 def default_vaxrank_targets(config):
+    mhc_predictor = config["mhc_predictor"]
+    # TODO(julia): consider adding mutect2 vaxrank report to this
+    vcfs = "mutect-strelka"
     return [
-        # TODO(julia): add mutect2 vaxrank report to this
         join(
             get_output_dir(config),
-            "vaccine-peptide-report_netmhcpan_mutect-strelka.txt"),
+            "vaccine-peptide-report_%s_%s.txt" % (mhc_predictor, vcfs)),
     ]
 
 def check_inputs(config):

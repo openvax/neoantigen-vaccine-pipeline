@@ -3,9 +3,6 @@
 # This script will build the Docker image, tag it with the version currently specified in the
 # VERSION file and push the new image to DockerHub. It will also push a release to GitHub with a tag
 # matching the version.
-#
-# Usage:
-# ./release.sh <mhcbundle GitHub password>
 
 set -ex
 
@@ -24,6 +21,6 @@ git tag -a "$version" -m "version $version"
 git push
 git push --tags
 
-docker tag $USERNAME/$IMAGE:public $USERNAME/$IMAGE:$version
-docker push $USERNAME/$IMAGE:public
+docker tag $USERNAME/$IMAGE:latest $USERNAME/$IMAGE:$version
+docker push $USERNAME/$IMAGE:latest
 docker push $USERNAME/$IMAGE:$version

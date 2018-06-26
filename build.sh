@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script will build the public Docker image.
+# This script will build the public Docker image, tagging it as latest.
 
 set -ex
 
@@ -10,4 +10,4 @@ USERNAME=julia326
 IMAGE=neoantigen-vaccine-pipeline
 
 # Build image
-docker build -t $USERNAME/$IMAGE:public -f docker/Dockerfile .
+docker build -t $USERNAME/$IMAGE:latest -f docker/Dockerfile .

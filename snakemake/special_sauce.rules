@@ -42,10 +42,8 @@ rule vaxrank:
     vcf_input_str = ""
     for vcf in input.vcfs:
         vcf_input_str += "--vcf %s " % vcf
-    print("WHEEEEEEEEEEE")
     if wildcards.mhc_predictor != params.mhc_predictor:
-        raise ValueError("Output filenames must match config predictor: %s" % params.mhc_predictor)
-    assert False
+        raise ValueError("Vaccine peptide report output filenames must match MHC predictor specified in config: %s" % params.mhc_predictor)
     shell("""
         vaxrank %s \
         --bam {input.rna} \

@@ -1,8 +1,10 @@
 #!/bin/bash
-
+#
 # This script will build the Docker image, tag it with the version currently specified in the
 # VERSION file and push the new image to DockerHub. It will also push a release to GitHub with a tag
 # matching the version.
+#
+# Note that if a GitHub release already exists with this version tag, this script will error.
 
 set -ex
 

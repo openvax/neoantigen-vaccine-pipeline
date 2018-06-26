@@ -1,4 +1,4 @@
-# Build with: docker build -t julia326/neoantigen-vaccine-pipeline:public -f docker/Dockerfile .
+# Build with: docker build -f docker/Dockerfile .
 
 FROM ubuntu:16.04
 

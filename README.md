@@ -1,6 +1,6 @@
 # neoantigen-vaccine-pipeline
 
-This repository is the public version of the bioinformatics pipeline for selecting patient-specific cancer neoantigen vaccines developed by the [openvax](https://www.openvax.org/) group at [Mount Sinai](http://icahn.mssm.edu/). This pipeline is currently the basis for two phase I clinical trials using synthetic long peptides, PGV001 ([NCT02721043](https://clinicaltrials.gov/ct2/show/NCT02721043)) and MTA ([NCT03223103](https://clinicaltrials.gov/ct2/show/NCT03223103)).
+This repository is the public version of the bioinformatics pipeline for selecting patient-specific cancer neoantigen vaccines developed by the [openvax](https://www.openvax.org/) group at [Mount Sinai](http://icahn.mssm.edu/). This pipeline is currently the basis for two phase I clinical trials using synthetic long peptides, [NCT02721043](https://clinicaltrials.gov/ct2/show/NCT02721043) and [NCT03223103](https://clinicaltrials.gov/ct2/show/NCT03223103).
 
 The pipeline used for these trials differs slightly from the version given here due to licensing restrictions on the [NetMHC](http://www.cbs.dtu.dk/services/NetMHC/) suite of tools, which prevent their inclusion in the provided docker image. To circumvent this issue, the open source pipeline performs MHC binding prediction using the IEDB web interface to these tools. This may be slower but should give the same results. If you have a license to the NetMHC tools (free for non-commerical use) and wish to run these tools locally in the pipeline, please contact us or file an issue.
 
@@ -13,11 +13,11 @@ This pipeline assumes you have the following datasets.
 * Tumor and normal whole exome sequencing. In our trials, we target 300X tumor coverage, 150X normal.
 * Tumor RNA sequencing. We target 100M reads for fresh samples (using poly-A capture) and 300M reads for FFPE samples (using Ribo-Zero).
 * List of MHC class I alleles for the individual
-* Reference genome and associated files (COSMIC and dbSNP). As a convenience, we provide these files for grch37. 
+* Reference genome and associated files (COSMIC and dbSNP). As a convenience, we provide these files for GRCh37. 
 
 The steps performed by the workflow are as follows.
 
-* Tumor and normal whole exome sequencing fastq files are aligned to [grch37](https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.13/) using [bwa mem](http://bio-bwa.sourceforge.net/). RNA-seq of the tumor sample is aligned by [STAR](https://academic.oup.com/bioinformatics/article/29/1/15/272537) to grch37.
+* Tumor and normal whole exome sequencing fastq files are aligned to GRCh37 (b37decoy) using [bwa mem](http://bio-bwa.sourceforge.net/). RNA-seq of the tumor sample is aligned by [STAR](https://academic.oup.com/bioinformatics/article/29/1/15/272537) to GRCh37.
 * Aligned tumor and normal exome reads pass through several steps using GATK 3.7: MarkDuplicates, IndelRealignment, BQSR.
 * Aligned RNA-seq reads are grouped into two sets: those spanning introns and those aligning entirely within an exon (determined based on the CIGAR string). The latter group is passed through IndelAligner, and the two groups of reads are merged.
 * Variant calling is performed using Mutect 1.1.7 and Strelka version 1. The pipeline supports running Mutect 2 but by default it is disabled.
@@ -31,7 +31,7 @@ The pipeline is run by invoking a docker entrypoint in the image while providing
 
 Note that all three directories and their contents must be world writable. This is necessary because the Docker pipeline runs as an unprivileged user and not as you. Data is modified in the `outputs` directory as well as in the `reference-genome` directory, since indexing the reference genome for use by aligners and other tools requires writing results to this directory.
 
-First we will download the reference data for grch37 (b37).
+First we will download the reference data for GRCh37+decoy (b37decoy).
 
 ```sh
 mkdir -p reference-genome/b37decoy

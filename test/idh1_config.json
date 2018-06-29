@@ -1,5 +1,4 @@
 {
-    "workdir": "/outputs",
     "input": {
         "id": "idh1-test-sample",
         "mhc_alleles": [
@@ -27,12 +26,17 @@
             }
         ]
     },
+    "workdir": "/outputs",
     "reference": {
-        "genome": "/reference-genome/b37decoy/b37decoy.fasta",
-        "dbsnp": "/reference-genome/b37decoy/dbsnp.vcf",
+        "genome": "/reference-genome/b37decoy/b37decoy.fasta.gz",
+        "dbsnp": "/reference-genome/b37decoy/dbsnp.vcf.gz",
         "cosmic": "/reference-genome/b37decoy/cosmic.vcf",
-        "transcripts": "/reference-genome/b37decoy/transcripts.gtf"
+        "transcripts": "/reference-genome/b37decoy/transcripts.gtf.gz"
     },
     "parallel_indel_realigner": false,
-    "mhc_predictor": "netmhcpan-iedb"
+    "mhc_predictor": "netmhcpan-iedb",
+    "variant_callers": [
+        "mutect",
+        "strelka"
+    ]
 }

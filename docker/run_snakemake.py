@@ -51,13 +51,11 @@ def get_output_dir(config):
 
 def default_vaxrank_targets(config):
     mhc_predictor = config["mhc_predictor"]
-    # TODO(julia): consider adding mutect2 vaxrank report to this
-    vcfs = "mutect-strelka"
-    return [
-        join(
+    vcfs = "-".join(config["variant_callers"])
+    path_without_ext = join(
             get_output_dir(config),
-            "vaccine-peptide-report_%s_%s.txt" % (mhc_predictor, vcfs)),
-    ]
+            "vaccine-peptide-report_%s_%s" % (mhc_predictor, vcfs)),
+    return ['%s.%s' % (path_without_ext, ext) for ext in ('txt', 'json', 'pdf', 'xlsx')]
 
 def check_inputs(config):
     """
@@ -91,28 +89,39 @@ def check_inputs(config):
     if not access(workdir, W_OK):
         raise ValueError("Workdir %s does not exist or is not writable" % workdir)
 
+def check_targets(targets, config):
+    # make sure they all start with output dir
+    if len(targets) == 0:
+        raise ValueError("Must specify at least one target")
+    default_targets = default_vaxrank_targets(config)
+    for target in targets:
+        if not target.startswith(get_output_dir(config)):
+            raise ValueError("Invalid target, must start with output directory: %s" % target)
+        # if any of the targets are vaxrank report outputs, make sure they match config specs
+        if 'vaccine-peptide-report' in target:
+            if not target in default_targets:
+                raise ValueError(
+                    "Invalid target, vaccine peptide report output must match config file specs")
 
-def run():
-    args = parser.parse_args()
+def main(args_list=None):
+    if args_list is None:
+        args_list = sys.argv[1:]
+    args = parser.parse_args(args_list)
     print(args)
 
     with open(args.configfile) as configfile:
         config = json.load(configfile)
     output_dir = get_output_dir(config)
 
-    check_inputs(config)
-    # check target
     targets = args.target
     if targets is None:
         targets = default_vaxrank_targets(config)
 
-    # check that target starts with the output directory
-    for target in targets:
-        if not target.startswith(output_dir):
-            raise ValueError("Invalid target: %s" % target)
+    check_inputs(config)
+    check_targets(targets, config)
 
     start_time = datetime.datetime.now()
-    snakemake.snakemake(
+    if not snakemake.snakemake(
         args.snakefile,
         cores=args.cores,
         resources={'mem_mb': int(1024 * args.memory)},
@@ -122,10 +131,12 @@ def run():
         dryrun=args.dry_run,
         targets=targets,
         stats=join(output_dir, "stats.json"),
-    )
+    ):
+        raise ValueError("Pipeline failed, see Snakemake error message for details")
+
     end_time = datetime.datetime.now()
     print("--- Pipeline running time: %s ---" % (str(end_time - start_time)))
 
 
 if __name__ == "__main__":
-    run()
+    main()

@@ -9,8 +9,15 @@ rule pyensembl:
     "pyensembl install --release 75 --species 'homo sapiens'"
 
 def _get_vaxrank_input_vcfs(wildcards):
-    vcf_types = wildcards.vcf_types.split("-")
-    return ["%s/%s.vcf" % (wildcards.prefix, vcf_type) for vcf_type in vcf_types]
+    return ["%s/%s.vcf" % (wildcards.prefix, vcf_type) for vcf_type in config["variant_callers"]]
+
+def _check_vaxrank_wildcards(wildcards):
+    if wildcards.mhc_predictor != config["mhc_predictor"]:
+        raise ValueError("Vaccine peptide report output filenames must match MHC predictor "
+            "specified in config: %s" % config["mhc_predictor"])
+    if wildcards.vcf_types != "-".join(config["variant_callers"]):
+        raise ValueError("Vaccine peptide report output filenames must match variant callers "
+            "specified in config: %s" % config["variant_callers"])
 
 rule vaxrank:
   input:
@@ -24,7 +31,6 @@ rule vaxrank:
     pdf_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.pdf",
     xlsx_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.xlsx"
   params:
-    mhc_predictor = config["mhc_predictor"],
     mhc_alleles = config["input"]["mhc_alleles"],
     patient_id = config["input"]["id"],
     vaccine_peptide_length = 25,
@@ -39,15 +45,12 @@ rule vaxrank:
   log:
     "{prefix}/vaxrank_{mhc_predictor}_{vcf_types}.log"
   run:
-    vcf_input_str = ""
-    for vcf in input.vcfs:
-        vcf_input_str += "--vcf %s " % vcf
-    if wildcards.mhc_predictor != params.mhc_predictor:
-        raise ValueError("Vaccine peptide report output filenames must match MHC predictor specified in config: %s" % params.mhc_predictor)
+    _check_vaxrank_wildcards(wildcards)
+    vcf_input_str = ' '.join(['--vcf %s' % x for x in input.vcfs])
     shell("""
         vaxrank %s \
         --bam {input.rna} \
-        --mhc-predictor {params.mhc_predictor} \
+        --mhc-predictor {wildcards.mhc_predictor} \
         --mhc-alleles %s \
         --output-ascii-report {output.ascii_report} \
         --output-pdf-report {output.pdf_report} \

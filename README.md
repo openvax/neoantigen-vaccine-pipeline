@@ -1,75 +1,87 @@
 # neoantigen-vaccine-pipeline
 
-Snakemake implementation of the PGV vaccine pipeline.
+This repository is the public version of the bioinformatics pipeline for selecting patient-specific cancer neoantigen vaccines developed by the [openvax](https://www.openvax.org/) group at [Mount Sinai](http://icahn.mssm.edu/). This pipeline is currently the basis for two phase I clinical trials using synthetic long peptides, [NCT02721043](https://clinicaltrials.gov/ct2/show/NCT02721043) and [NCT03223103](https://clinicaltrials.gov/ct2/show/NCT03223103).
 
-## Setup
+The pipeline used for these trials differs slightly from the version given here due to licensing restrictions on the [NetMHC](http://www.cbs.dtu.dk/services/NetMHC/) suite of tools, which prevent their inclusion in the provided docker image. To circumvent this issue, the open source pipeline performs MHC binding prediction using the IEDB web interface to these tools. This may be slower but should give the same results. If you have a license to the NetMHC tools (free for non-commerical use) and wish to run these tools locally in the pipeline, please contact us or file an issue.
 
-To get started with pipeline development and rule definition, you only need the Python dependencies:
+The pipeline is implemented using the [Snakemake](https://snakemake.readthedocs.io/en/stable/) workflow management system. We recommend running it using our provided [docker image](https://hub.docker.com/r/julia326/neoantigen-vaccine-pipeline/), which includes all needed dependencies.
+
+# Overview
+
+This pipeline assumes you have the following datasets.
+
+* Tumor and normal whole exome sequencing. In our trials, we target 300X tumor coverage, 150X normal.
+* Tumor RNA sequencing. We target 100M reads for fresh samples (using poly-A capture) and 300M reads for FFPE samples (using Ribo-Zero).
+* List of MHC class I alleles for the individual
+* Reference genome and associated files (COSMIC and dbSNP). As a convenience, we provide these files for GRCh37. 
+
+The steps performed by the workflow are as follows.
+
+* Tumor and normal whole exome sequencing fastq files are aligned to GRCh37 (b37decoy) using [bwa mem](http://bio-bwa.sourceforge.net/). RNA-seq of the tumor sample is aligned by [STAR](https://academic.oup.com/bioinformatics/article/29/1/15/272537) to GRCh37.
+* Aligned tumor and normal exome reads pass through several steps using GATK 3.7: MarkDuplicates, IndelRealignment, BQSR.
+* Aligned RNA-seq reads are grouped into two sets: those spanning introns and those aligning entirely within an exon (determined based on the CIGAR string). The latter group is passed through IndelAligner, and the two groups of reads are merged.
+* Variant calling is performed using Mutect 1.1.7 and Strelka version 1. The pipeline supports running Mutect 2 but by default it is disabled.
+* [Vaxrank](https://github.com/openvax/vaxrank) is run, using the combined VCFs from all variant callers and the aligned RNA reads.
+
+## Running using docker
+
+You will need a machine with at least 16 cores and 1TB free disk space, and docker [installed](https://docs.docker.com/install/).
+
+The pipeline is run by invoking a docker entrypoint in the image while providing three directories as mounted docker [volumes](https://docs.docker.com/storage/volumes/): `/inputs` (fastq files and a configuration JSON), `/outputs` (directory to write results to), and `/reference-genome` (data shared across patients, such as the genome reference).
+
+Note that all three directories and their contents must be world writable. This is necessary because the Docker pipeline runs as an unprivileged user and not as you. Data is modified in the `outputs` directory as well as in the `reference-genome` directory, since indexing the reference genome for use by aligners and other tools requires writing results to this directory.
+
+First we will download the reference data for GRCh37+decoy (b37decoy).
+
+```sh
+mkdir -p reference-genome/b37decoy
+cd reference-genome/b37decoy
+wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/pre-public/b37decoy.fasta.gz
+wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/pre-public/cosmic.vcf
+wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/pre-public/dbsnp.vcf.gz
+wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/pre-public/transcripts.gtf.gz
+cd ../..
+chmod -R a+w reference-genome
 ```
-pip install -r requirements.txt
+
+Now we will download a test sequencing dataset, consisting of a JSON config file and two small fastq files of reads overlapping a single somatic mutation. For this simple test, we will re-use the tumor DNA sequencing as our RNA reads.
+
+```sh
+mkdir inputs
+cd inputs
+wget https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/test/idh1_config.json?raw=true
+wget https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/datagen/idh1_r132h_normal.fastq.gz?raw=true
+wget https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/datagen/idh1_r132h_tumor.fastq.gz?raw=true
+cd ..
+chmod -R a+w inputs
 ```
-## Testing
 
-You can run a small local unit test which simulates a pipeline dependency graph and does not require Docker. Once you clone this repo and install the Python requirements, run:
+And we’ll make an empty output directory:
+
+```sh
+mkdir outputs
+chmod -R a+w outputs
 ```
-nosetests
-```
 
-## Dockerized pipeline
+Now we may run the pipeline. Note that the docker volume option (`-v`) requires absolute paths. We use `$(realpath <dirname>)` to get the absolute path to the directories created above on the host machine. You can also just replace those with absolute paths.
 
-### Prerequisites
-
-Make sure to have the following:
-- A machine with at least 16 cores and 1TB free disk space
-- Docker installed on that machine
-
-Also please note that the Docker setup is supported for the following Debian distributions:
-- Buster 10 (Docker CE 17.11 Edge only)
-- Stretch 9 (stable) / Raspbian Stretch
-- Jessie 8 (LTS) / Raspbian Jessie
-- Wheezy 7.7 (LTS)
-
-And the following Ubuntu distributions:
-- Artful 17.10 (Docker CE 17.11 Edge and higher only)
-- Xenial 16.04 (LTS)
-- Trusty 14.04 (LTS)
-
-For how to install Docker on Debian, see https://docs.docker.com/install/linux/docker-ce/debian/#set-up-the-repository.
-
-### 1. Download this data for getting started with the pipeline:
-
-- `gs://pgv-test-data`: this contains an example Snakemake config and small test tumor/normal FASTQ files
-- `gs://reference-genomes`: reference genomes data
-
-Download this and put in a world-writeable directory (the pipeline will preprocess the reference as needed, and write the results to that same directory)
-
-### 2. Create a pipeline outputs directory; this will contain sample-specific pipeline output.
-
-### 3. Note that your outputs and reference genome directory must be recursively world writable:
-```
-chmod -R a+w <reference genome dir>
-chmod -R a+w <outputs dir>
-```
-This is necessary because the Docker pipeline runs as an internal Docker user and not as you, so it needs write privileges. Data is modified in the outputs directory as well as in the reference genome: preparing the reference genome for use by BWA/GATK/etc. will save the results to the genome directory.
-
-### 4. Run the Docker pipeline.
-
-This is an example pipeline command which uses the test Snakemake config you downloaded, and runs the full pipeline including Vaxrank:
 ```
 docker run \
--v <your inputs dir>:/inputs \
--v <your outputs dir>:/outputs \
--v <your reference genome dir>:/reference-genome \
+-v $(realpath inputs):/inputs \
+-v $(realpath outputs):/outputs \
+-v $(realpath reference-genome):/reference-genome \
 julia326/neoantigen-vaccine-pipeline:latest \
---configfile=/inputs/idh1_config.json
+--configfile=/inputs/idh1_r132h_config.json
 ```
 
-If you want to poke around in the image to execute tools manually, look at tool versions, etc.:
+This should create the final results as well as many intermediate files in the output directory.
+
+If you want to poke around in the image to execute tools manually or inspect versions:
 ```
 docker run \
--v <your inputs dir>:/inputs \
--v <your outputs dir>:/outputs \
--v <your reference genome dir>:/reference-genome \
+-v $(realpath inputs):/inputs \
+-v $(realpath outputs):/outputs \
+-v $(realpath reference-genome):/reference-genome \
 --entrypoint /bin/bash -it \
 julia326/neoantigen-vaccine-pipeline:latest
 ```
@@ -100,3 +112,17 @@ Here are some of the intermediate file names you might use as targets, in a samp
 - `rna_final_sorted.bam`. This is RNA after all processing; used as input to `vaxrank`.
 - `{mutect,mutect2,strelka}.vcf`: merged (all-contig) VCF from corresponding variant caller. Use e.g. `mutect_10.vcf` to only call Mutect variants in chromosome 10.
 - `vaccine-peptide-report-mutect.vcf`: run `vaxrank` with only Mutect variants. The pipeline supports running `vaxrank` with any combination of Mutect/Mutect2/Strelka. To specify this, use `mutect`, `strelka`, `mutect2` separated by a dash - e.g. to run with all 3 variant callers, use `vaccine-peptide-report-mutect-strelka-mutect2.vcf`.
+
+
+## Running without docker
+
+To get started with pipeline development and rule definition, install the Python dependencies:
+```
+pip install -r requirements.txt
+```
+## Testing
+
+You can run a small local unit test which simulates a pipeline dependency graph and does not require Docker. Once you clone this repo and install the Python requirements, run:
+```
+nosetests
+```

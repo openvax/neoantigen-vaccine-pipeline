@@ -7,6 +7,7 @@ from os.path import isfile, join
 
 import psutil
 import snakemake
+import yaml
 
 def total_memory_gb():
     n_bytes = psutil.virtual_memory().total
@@ -17,7 +18,7 @@ parser = ArgumentParser()
 parser.add_argument(
     "--configfile",
     default="",
-    help="Docker-relative Snakemake JSON config file path")
+    help="Docker-relative Snakemake YAML config file path")
 
 parser.add_argument(
     "--target",
@@ -110,7 +111,7 @@ def main(args_list=None):
     print(args)
 
     with open(args.configfile) as configfile:
-        config = json.load(configfile)
+        config = yaml.load(configfile)
     output_dir = get_output_dir(config)
 
     targets = args.target

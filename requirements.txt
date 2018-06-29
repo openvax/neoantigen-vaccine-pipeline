@@ -1,3 +1,5 @@
+cython
 psutil
+pyyaml
 snakemake
 vaxrank==0.8.0

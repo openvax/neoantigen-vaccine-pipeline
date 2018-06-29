@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import getpass
-import json
 import glob
 from os import chdir, listdir
 from os.path import dirname, join
@@ -59,7 +58,7 @@ class TestPipeline(unittest.TestCase):
 
     @classmethod
     def make_test_config(cls):
-        with open(join(cls._get_test_dir_path(), 'idh1_config.json'), 'r') as idh1_config_file:
+        with open(join(cls._get_test_dir_path(), 'idh1_config.yaml'), 'r') as idh1_config_file:
             config_file_contents = idh1_config_file.read()
         # kinda gross, but: replace /outputs, /reference-genome, /inputs paths in config file with
         # temp dir locations

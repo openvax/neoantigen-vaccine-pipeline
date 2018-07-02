@@ -56,7 +56,7 @@ def default_vaxrank_targets(config):
     vcfs = "-".join(config["variant_callers"])
     path_without_ext = join(
             get_output_dir(config),
-            "vaccine-peptide-report_%s_%s" % (mhc_predictor, vcfs)),
+            "vaccine-peptide-report_%s_%s" % (mhc_predictor, vcfs))
     return ['%s.%s' % (path_without_ext, ext) for ext in ('txt', 'json', 'pdf', 'xlsx')]
 
 def check_inputs(config):

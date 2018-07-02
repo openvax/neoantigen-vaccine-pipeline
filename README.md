@@ -74,7 +74,7 @@ docker run -it \
 -v $(realpath outputs):/outputs \
 -v $(realpath reference-genome):/reference-genome \
 julia326/neoantigen-vaccine-pipeline:latest \
---configfile=/inputs/idh1_r132h_config.yaml
+--configfile=/inputs/idh1_config.yaml
 ```
 
 This should create the final results as well as many intermediate files in the output directory.

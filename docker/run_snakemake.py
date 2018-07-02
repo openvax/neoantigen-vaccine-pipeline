@@ -4,6 +4,7 @@ import datetime
 import json
 from os import access, R_OK, W_OK
 from os.path import isfile, join
+import sys
 
 import psutil
 import snakemake

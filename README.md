@@ -31,7 +31,7 @@ The pipeline is run by invoking a Docker entrypoint in the image while providing
 
 Note that all three directories and their contents must be world writable. This is necessary because the Docker pipeline runs as an unprivileged user and not as you. Data is modified in the `outputs` directory as well as in the `reference-genome` directory, since indexing the reference genome for use by aligners and other tools requires writing results to this directory.
 
-First we will download the reference data for b37decoy.
+First we will download and uncompress the reference data for b37decoy.
 
 ```sh
 mkdir -p reference-genome/b37decoy
@@ -40,6 +40,9 @@ wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/pr
 wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/pre-public/cosmic.vcf
 wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/pre-public/dbsnp.vcf.gz
 wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/pre-public/transcripts.gtf.gz
+gunzip b37decoy.fasta.gz
+gunzip dbsnp.vcf.gz
+gunzip transcripts.gtf.gz
 cd ../..
 chmod -R a+w reference-genome
 ```

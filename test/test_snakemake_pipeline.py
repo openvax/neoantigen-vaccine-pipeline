@@ -44,11 +44,11 @@ class TestPipeline(unittest.TestCase):
     @classmethod
     def populate_test_files(cls):
         # populate reference files with random crap
-        with open(join(cls.referencedir.name, 'b37decoy.fasta.gz'), 'w') as genome:
+        with open(join(cls.referencedir.name, 'b37decoy.fasta'), 'w') as genome:
             genome.write('placeholder')
-        with open(join(cls.referencedir.name, 'transcripts.gtf.gz'), 'w') as transcripts:
+        with open(join(cls.referencedir.name, 'transcripts.gtf'), 'w') as transcripts:
             transcripts.write('placeholder')
-        with open(join(cls.referencedir.name, 'dbsnp.vcf.gz'), 'w') as dbsnp:
+        with open(join(cls.referencedir.name, 'dbsnp.vcf'), 'w') as dbsnp:
             dbsnp.write('placeholder')
         with open(join(cls.referencedir.name, 'cosmic.vcf'), 'w') as cosmic:
             cosmic.write('placeholder')
@@ -85,7 +85,7 @@ class TestPipeline(unittest.TestCase):
             cores=20,
             resources={'mem_mb': 160000},
             configfile=self.config_tmpfile.name,
-            config={'num_threads': 22},
+            config={'num_threads': 22, 'mem_gb': 160},
             dryrun=True,
             printshellcmds=True,
             targets=[

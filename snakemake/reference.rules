@@ -62,6 +62,10 @@ rule samtools_index_reference:
 rule picard_sequence_dict_reference:
   input:
     reference = config["reference"]["genome"]
+  params:
+    mem_gb = config["mem_gb"]
+  resources:
+    mem_mb = int(config["mem_gb"]) * 1024
   output:
     config["reference"]["genome"].replace("fasta", "dict")
   benchmark:
@@ -69,4 +73,5 @@ rule picard_sequence_dict_reference:
   log:
     os.path.join(WORKDIR, "picard_sequence_dict_reference.log")
   shell:
-    "picard CreateSequenceDictionary R={input.reference} O={output} >> {log} 2>&1"
+    "picard -Xmx{params.mem_gb}g "
+    "CreateSequenceDictionary R={input.reference} O={output} >> {log} 2>&1"

@@ -41,7 +41,7 @@ parser.add_argument(
     "--memory",
     default=max(1.0, total_memory_gb() - 1),
     type=float,
-    help="Memory (in GB) to assume each task will require (default %(default)s)")
+    help="Total memory (in GB) allowed for use by the Snakemake scheduler (default %(default)s)")
 
 parser.add_argument(
     "--dry-run",
@@ -128,7 +128,7 @@ def main(args_list=None):
         cores=args.cores,
         resources={'mem_mb': int(1024 * args.memory)},
         configfile=args.configfile,
-        config={'num_threads': args.cores},
+        config={'num_threads': args.cores, 'mem_gb': args.memory},
         printshellcmds=True,
         dryrun=args.dry_run,
         targets=targets,

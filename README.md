@@ -69,7 +69,7 @@ chmod -R a+w outputs
 Now we may run the pipeline. Note that the Docker volume option (`-v`) requires absolute paths. We use `$(realpath <dirname>)` to get the absolute path to the directories created above on the host machine. You can also just replace those with absolute paths.
 
 ```
-docker run \
+docker run -it \
 -v $(realpath inputs):/inputs \
 -v $(realpath outputs):/outputs \
 -v $(realpath reference-genome):/reference-genome \
@@ -81,11 +81,11 @@ This should create the final results as well as many intermediate files in the o
 
 If you want to poke around in the image to execute tools manually or inspect versions:
 ```
-docker run \
+docker run -it \
 -v $(realpath inputs):/inputs \
 -v $(realpath outputs):/outputs \
 -v $(realpath reference-genome):/reference-genome \
---entrypoint /bin/bash -it \
+--entrypoint /bin/bash \
 julia326/neoantigen-vaccine-pipeline:latest
 ```
 
@@ -101,7 +101,7 @@ Please note:
 
 As a result of the full pipeline run, many intermediate files are generated in the output directory. In case you want to reuse these for a different pipeline run (e.g. if you have one normal sample and several tumor samples, each of which you want to run against the normal), any intermediate file you copy to the new location will tell Snakemake to not repeat that step (or its substeps, unless they're needed for some other workflow node). For that reason, it's helpful to know the intermediate file paths. You can also run parts of the pipeline used to generate any of the intermediate files, specifying one or more as a target to the Docker run invocation. Example, if you use [the test IDH config](https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/test/idh1_config.yaml):
 ```
-docker run \
+docker run -it \
 -v <your inputs dir>:/inputs \
 -v <your outputs dir>:/outputs \
 -v <your reference genome dir>:/reference-genome \

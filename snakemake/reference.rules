@@ -63,7 +63,7 @@ rule picard_sequence_dict_reference:
   input:
     reference = config["reference"]["genome"]
   params:
-    mem_gb = config["mem_gb"]
+    mem_gb = int(config["mem_gb"])
   resources:
     mem_mb = int(config["mem_gb"]) * 1024
   output:

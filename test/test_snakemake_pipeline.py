@@ -13,66 +13,123 @@
 # limitations under the License.
 
 import getpass
-import json
-from nose.tools import ok_
-from os import chdir, symlink
+import glob
+from os import chdir, listdir
 from os.path import dirname, join
+from shutil import copy2
 import tempfile
+import unittest
 
 import snakemake
 
-def _get_test_dir_path():
-    return dirname(__file__)
+from docker.run_snakemake import main as docker_entrypoint, default_vaxrank_targets
 
-def _get_snakemake_dir_path():
-    return join(_get_test_dir_path(), '..', 'snakemake')
+class TestPipeline(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.workdir = tempfile.TemporaryDirectory()
+        cls.referencedir = tempfile.TemporaryDirectory()
+        cls.inputdir = tempfile.TemporaryDirectory()
+        cls.config_tmpfile = tempfile.NamedTemporaryFile(mode='w', delete=True)
+        cls.make_test_config()
+        cls.populate_test_files()
 
-# This simulates a dry run on the test data, and mostly checks rule graph validity.
-def test_workflow_compiles():
-    with open(join(_get_test_dir_path(), 'idh1_config.json'), 'r') as idh1_config_file:
-        config_file_contents = idh1_config_file.read()
-    
-    chdir(_get_snakemake_dir_path())
+    @classmethod
+    def tearDownClass(cls):
+        cls.referencedir.cleanup()
+        cls.workdir.cleanup()
+        cls.inputdir.cleanup()
+        cls.config_tmpfile.close()
 
-    with tempfile.TemporaryDirectory() as workdir:
-        with tempfile.TemporaryDirectory() as referencedir:
-            # populate reference files with random crap
-            with open(join(referencedir, 'b37decoy.fasta'), 'w') as genome:
-                genome.write('placeholder')
-            with open(join(referencedir, 'transcripts.gtf'), 'w') as transcripts:
-                transcripts.write('placeholder')
-            with open(join(referencedir, 'dbsnp.vcf'), 'w') as dbsnp:
-                dbsnp.write('placeholder')
-            with open(join(referencedir, 'cosmic.vcf'), 'w') as cosmic:
-                cosmic.write('placeholder')
+    @classmethod
+    def populate_test_files(cls):
+        # populate reference files with random crap
+        with open(join(cls.referencedir.name, 'b37decoy.fasta.gz'), 'w') as genome:
+            genome.write('placeholder')
+        with open(join(cls.referencedir.name, 'transcripts.gtf.gz'), 'w') as transcripts:
+            transcripts.write('placeholder')
+        with open(join(cls.referencedir.name, 'dbsnp.vcf.gz'), 'w') as dbsnp:
+            dbsnp.write('placeholder')
+        with open(join(cls.referencedir.name, 'cosmic.vcf'), 'w') as cosmic:
+            cosmic.write('placeholder')
+        for path in glob.glob('datagen/*.fastq.gz'):
+            copy2(path, cls.inputdir.name)
 
 
-            # kinda gross, but: replace /outputs, /reference-genome paths in config file with
-            # temp dir locations; /inputs with the datagen location in this repo
-            config_file_contents = config_file_contents.replace(
-                '/outputs', workdir).replace(
-                '/reference-genome/b37decoy', referencedir).replace(
-                '/inputs', '../datagen')
-            with tempfile.NamedTemporaryFile(mode='w') as config_tmpfile:
-                config_tmpfile.write(config_file_contents)
-                config_tmpfile.seek(0)
-                ok_(snakemake.snakemake(
-                    'Snakefile',
-                    cores=20,
-                    resources={'mem_mb': 160000},
-                    configfile=config_tmpfile.name,
-                    config={'num_threads': 22},
-                    dryrun=True,
-                    printshellcmds=True,
-                    targets=[
-                        join(
-                            workdir, 
-                            'idh1-test-sample',
-                            'vaccine-peptide-report_netmhcpan-iedb_mutect-strelka-mutect2.txt'),
-                        join(
-                            workdir,
-                            'idh1-test-sample',
-                            'vaccine-peptide-report_netmhccons_mutect-strelka.txt'),
-                        ],
-                    stats=join(workdir, 'idh1-test-sample', 'stats.json')
-                ))
+    @classmethod
+    def make_test_config(cls):
+        with open(join(cls._get_test_dir_path(), 'idh1_config.yaml'), 'r') as idh1_config_file:
+            config_file_contents = idh1_config_file.read()
+        # kinda gross, but: replace /outputs, /reference-genome, /inputs paths in config file with
+        # temp dir locations
+        config_file_contents = config_file_contents.replace(
+            '/outputs', cls.workdir.name).replace(
+            '/reference-genome/b37decoy', cls.referencedir.name).replace(
+            '/inputs', cls.inputdir.name)
+        cls.config_tmpfile.write(config_file_contents)
+        cls.config_tmpfile.seek(0)
+
+    @classmethod
+    def _get_test_dir_path(cls):
+        return dirname(__file__)
+
+    @classmethod
+    def _get_snakemake_dir_path(cls):
+        return join(cls._get_test_dir_path(), '..', 'snakemake')
+
+    # This simulates a dry run on the test data, and mostly checks rule graph validity.
+    def test_workflow_compiles(self):
+        chdir(self._get_snakemake_dir_path())
+        self.assertTrue(snakemake.snakemake(
+            'Snakefile',
+            cores=20,
+            resources={'mem_mb': 160000},
+            configfile=self.config_tmpfile.name,
+            config={'num_threads': 22},
+            dryrun=True,
+            printshellcmds=True,
+            targets=[
+                join(
+                    self.workdir.name, 
+                    'idh1-test-sample',
+                    'vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.txt'),
+                join(
+                    self.workdir.name,
+                    'idh1-test-sample',
+                    'rna_final.bam'),
+                ],
+            stats=join(self.workdir.name, 'idh1-test-sample', 'stats.json')
+        ))
+
+    def test_docker_entrypoint_script(self):
+        cli_args = [
+            '--configfile', self.config_tmpfile.name,
+            '--dry-run',
+            '--target', join(
+                self.workdir.name, 
+                'idh1-test-sample',
+                'rna_final.bam'),  # valid target
+        ]
+        # run to make sure it doesn't crash
+        docker_entrypoint(cli_args)
+
+        # check that invalid target fails
+        fake_target_cli_args = [
+            '--configfile', self.config_tmpfile.name,
+            '--dry-run',
+            '--target', join(
+                self.workdir.name, 
+                'idh1-test-sample',
+                'fakey_fakerson'),
+        ]
+        self.assertRaises(ValueError, docker_entrypoint, fake_target_cli_args)
+
+        bad_vaxrank_target_cli_args = [
+            '--configfile', self.config_tmpfile.name,
+            '--dry-run',
+            '--target', join(
+                self.workdir.name, 
+                'idh1-test-sample',
+                'vaccine-peptide-report_netmhcpan-iedb_mutect-strelka-mutect2.txt'),
+        ]
+        self.assertRaises(ValueError, docker_entrypoint, bad_vaxrank_target_cli_args)

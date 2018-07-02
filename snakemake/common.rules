@@ -17,7 +17,7 @@ _STAR_GENOME_DIR = os.path.join(
 # Common functions
 
 def _get_half_cores(_):
-  return int(config["num_threads"]/2)
+  return max(1, int(config["num_threads"]/2))
 
 def _get_all_cores(_):
   return int(config["num_threads"])

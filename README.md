@@ -77,7 +77,7 @@ julia326/neoantigen-vaccine-pipeline:latest \
 --configfile=/inputs/idh1_config.yaml
 ```
 
-This should create the final results as well as many intermediate files in the output directory.
+This should create the final results as well as many intermediate files in the output directory. To print the pipeline commands without running the pipeline (a dry run), execute the above `docker run` command with the additional argument `--dry-run`. 
 
 If you want to poke around in the image to execute tools manually or inspect versions:
 ```

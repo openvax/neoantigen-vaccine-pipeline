@@ -9,7 +9,6 @@ import os
 # See this thread for explanation of some STAR genomeGenerate parameters:
 # https://groups.google.com/forum/#!topic/rna-star/q3CZKHf9LOc
 # We want to support both high- and low-memory runs, so need to tweak the defaults sometimes
-
 def _mem_gb_for_star_genome_generate():
   return min(31, int(config["mem_gb"]))
 
@@ -24,7 +23,6 @@ def _num_junctions_for_star_genome_generate():
     return 300000
   else:
     return 1000000  # default
-
 
 # By default, STAR allows itself 31GB of memory to generate a genome. We may not have that
 # available, and need to constrain to available memory.
@@ -50,7 +48,6 @@ rule star_align_reference:
   run:
     if not os.path.exists(params.genome_dir):
         shell("mkdir {params.genome_dir}")
-    # genomeSAsparseD, limitSjdbInsertNsj, limitGenomeGenerateRAM values 
     shell("""
         STAR \
         --runMode genomeGenerate \

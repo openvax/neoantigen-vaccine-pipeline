@@ -53,9 +53,9 @@ Now we will download a test sequencing dataset, consisting of a YAML config file
 ```sh
 mkdir inputs
 cd inputs
-wget https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/test/idh1_config.yaml?raw=true
-wget https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/datagen/idh1_r132h_normal.fastq.gz?raw=true
-wget https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/datagen/idh1_r132h_tumor.fastq.gz?raw=true
+wget https://github.com/openvax/neoantigen-vaccine-pipeline/raw/master/test/idh1_config.yaml
+wget https://github.com/openvax/neoantigen-vaccine-pipeline/raw/master/datagen/idh1_r132h_normal.fastq.gz
+wget https://github.com/openvax/neoantigen-vaccine-pipeline/raw/master/datagen/idh1_r132h_tumor.fastq.gz
 cd ..
 chmod -R a+w inputs
 ```

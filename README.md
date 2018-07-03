@@ -78,7 +78,9 @@ julia326/neoantigen-vaccine-pipeline:latest \
 --configfile=/inputs/idh1_config.yaml
 ```
 
-This should create the final results as well as many intermediate files in the output directory. To print the pipeline commands without running the pipeline (a dry run), execute the above `docker run` command with the additional argument `--dry-run`. 
+This should create the final results as well as many intermediate files in the output directory. To print the pipeline commands without running the pipeline (a dry run), execute the above `docker run` command with the additional argument `--dry-run`.
+
+If the pipeline errors, the offending job will be highlighted in red and will mention a log file. The first step in understanding what went wrong is to look at that log file, which will live in your directory `$(realpath outputs)`.
 
 If you want to poke around in the image to execute tools manually or inspect versions:
 ```

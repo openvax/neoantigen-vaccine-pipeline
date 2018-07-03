@@ -43,7 +43,7 @@ rule bwa_mem_single_end:
     "{prefix}_bwa_mem_benchmark.txt"
   log:
     "{prefix}_bwa_mem.log"
-  threads: _get_half_cores
+  threads: _get_threads_for_alignment
   shell:
     "bwa mem -R '{params.rg}' -M -t {threads} -O 6 -E 1 -B 4 "
     "{input.reference} {input.r} "
@@ -65,7 +65,7 @@ rule bwa_mem_paired_end:
     "{prefix}_bwa_mem_benchmark.txt"
   log:
     "{prefix}_bwa_mem.log"
-  threads: _get_half_cores
+  threads: _get_threads_for_alignment
   shell:
     "bwa mem -R '{params.rg}' -M -t {threads} -O 6 -E 1 -B 4 "
     "{input.reference} {input.r1} {input.r2} "

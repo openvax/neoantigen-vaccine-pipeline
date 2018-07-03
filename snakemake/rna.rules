@@ -20,7 +20,7 @@ rule star_align_paired_end:
     "{prefix}_star_align_benchmark.txt"
   log:
     "{prefix}_star_align.log"
-  threads: _get_half_cores
+  threads: _get_threads_for_alignment
   shell:
     "STAR "
     "--genomeDir {params.genome_dir} "
@@ -51,7 +51,7 @@ rule star_align_single_end:
     "{prefix}_star_align_benchmark.txt"
   log:
     "{prefix}_star_align.log"
-  threads: _get_half_cores
+  threads: _get_threads_for_alignment
   shell:
     "STAR "
     "--genomeDir {params.genome_dir} "

@@ -2,7 +2,7 @@
 
 This repository is the public version of the bioinformatics pipeline for selecting patient-specific cancer neoantigen vaccines developed by the [openvax](https://www.openvax.org/) group at [Mount Sinai](http://icahn.mssm.edu/). This pipeline is currently the basis for two phase I clinical trials using synthetic long peptides, [NCT02721043](https://clinicaltrials.gov/ct2/show/NCT02721043) and [NCT03223103](https://clinicaltrials.gov/ct2/show/NCT03223103).
 
-The pipeline used for these trials differs slightly from the version given here due to licensing restrictions on the [NetMHC](http://www.cbs.dtu.dk/services/NetMHC/) suite of tools, which prevent their inclusion in the provided Docker image. To circumvent this issue, the open source pipeline performs MHC binding prediction using the IEDB web interface to these tools. This may be slower but should give the same results. If you have a license to the NetMHC tools (free for non-commerical use) and wish to run these tools locally in the pipeline, please contact us or file an issue.
+The pipeline used for these trials differs slightly from the version given here due to licensing restrictions on the [NetMHC](http://www.cbs.dtu.dk/services/NetMHC/) suite of tools, which prevent their inclusion in the provided Docker image. To circumvent this issue, the open source pipeline performs MHC binding prediction using the IEDB web interface to these tools. This may be slower but should give the same results. If you have a license to the NetMHC tools (free for non-commercial use) and wish to run these tools locally in the pipeline, please contact us or file an issue.
 
 The pipeline is implemented using the [Snakemake](https://snakemake.readthedocs.io/en/stable/) workflow management system. We recommend running it using our provided [Docker image](https://hub.docker.com/r/julia326/neoantigen-vaccine-pipeline/), which includes all needed dependencies.
 
@@ -31,20 +31,21 @@ The pipeline is run by invoking a Docker entrypoint in the image while providing
 
 Note that all three directories and their contents must be world writable. This is necessary because the Docker pipeline runs as an unprivileged user and not as you. Data is modified in the `outputs` directory as well as in the `reference-genome` directory, since indexing the reference genome for use by aligners and other tools requires writing results to this directory.
 
-First we will download and uncompress the reference data for b37decoy.
-
+First we will make a world-writable `reference-genome` directory.
 ```sh
-mkdir -p reference-genome/b37decoy
-cd reference-genome/b37decoy
-wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/pre-public/b37decoy.fasta.gz
-wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/pre-public/cosmic.vcf
-wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/pre-public/dbsnp.vcf.gz
-wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/pre-public/transcripts.gtf.gz
-gunzip b37decoy.fasta.gz
-gunzip dbsnp.vcf.gz
-gunzip transcripts.gtf.gz
-cd ../..
+mkdir -p reference-genome
 chmod -R a+w reference-genome
+```
+
+While the pipeline supports preparing your choice of reference FASTA for use by aligners and other tools, for a quick start we have made available a processed version of the b37decoy genome in Google Cloud. Visit https://storage.cloud.google.com/reference-genomes/b37decoy.tar.gz to download a zipped version of all b37decoy files (~30GB), and save it to the `reference-genome` directory. If you have installed `gsutil`, you can download the file faster this way:
+```sh
+gsutil -m cp gs://reference-genomes/b37decoy.tar.gz reference-genome/
+```
+
+Now we will uncompress the reference genome data, inside your `reference-genome` directory.
+```sh
+cd reference-genome
+tar -xzf b37decoy.tar.gz
 ```
 
 Now we will download a test sequencing dataset, consisting of a YAML config file and two small FASTQ files of reads overlapping a single somatic mutation. For this simple test, we will re-use the tumor DNA sequencing as our RNA reads.

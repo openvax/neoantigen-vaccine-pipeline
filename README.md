@@ -37,7 +37,7 @@ mkdir -p reference-genome
 chmod -R a+w reference-genome
 ```
 
-While the pipeline supports preparing your choice of reference FASTA for use by aligners and other tools, for a quick start we have made available a processed version of the b37decoy genome in Google Cloud. Visit https://storage.cloud.google.com/reference-genomes/b37decoy.tar.gz to download a zipped version of all b37decoy files (~30GB), and save it to the `reference-genome` directory. If you have installed `gsutil`, you can download the file faster this way:
+While the pipeline supports preparing your choice of reference FASTA for use by aligners and other tools, for a quick start we have made available a processed version of the b37decoy genome in Google Cloud. Visit https://storage.cloud.google.com/reference-genomes/b37decoy.tar.gz to download a zipped version of all b37decoy files (~30GB), and save it to the `reference-genome` directory. If you have installed `gsutil`, you can download the file faster. See [here](https://cloud.google.com/storage/docs/access-public-data) for more details on accessing public data in Google Cloud.
 ```sh
 gsutil -m cp gs://reference-genomes/b37decoy.tar.gz reference-genome/
 ```

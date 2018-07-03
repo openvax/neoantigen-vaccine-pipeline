@@ -22,8 +22,9 @@ def _get_half_cores(_):
 def _get_all_cores(_):
   return int(config["num_threads"])
 
-def _get_all_memory(_):
-  return int(config["mem_gb"])
+# 20GB or as close to that as allowed by pipeline resources
+def _mem_gb_for_ram_hungry_jobs():
+  return min(20, int(config["mem_gb"]))
 
 def _get_intervals_str(wildcards):
   return "--intervals %s" % wildcards.chr if wildcards.chr in _CHR else ""

@@ -7,18 +7,20 @@ rule mark_dups:
     "{prefix}_merged_aligned_coordinate_sorted.bam"
   output:
     "{prefix}_aligned_coordinate_sorted_dups.bam"
+  params:
+    mem_gb = _mem_gb_for_ram_hungry_jobs()
   benchmark:
     "{prefix}_mark_dups_benchmark.txt"
   log:
     "{prefix}_mark_dups.log"
   resources:
-    mem_mb = 20000
+    mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   shell:
     "TMPDIR={wildcards.prefix}_tmp "
     "MAX_SEQUENCES_FOR_DISK_READ_ENDS_MAP=50000 "
     "MAX_FILE_HANDLES_FOR_READ_ENDS_MAP=20000 "
     "SORTING_COLLECTION_SIZE_RATIO=0.250000 "
-    "picard -Xmx20g -Djava.io.tmpdir={wildcards.prefix}_tmp "
+    "picard -Xmx{params.mem_gb}g -Djava.io.tmpdir={wildcards.prefix}_tmp "
     "MarkDuplicates "
     "INPUT={input} OUTPUT={output} "
     "VALIDATION_STRINGENCY=LENIENT METRICS_FILE={wildcards.prefix}_markdups_metrics.txt "
@@ -52,17 +54,19 @@ rule dna_indel_realigner_target_creator_per_chr:
     reference = config["reference"]["genome"]
   output:
     "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals"
+  params:
+    mem_gb = _mem_gb_for_ram_hungry_jobs()
   threads: _get_half_cores
   benchmark:
     "{prefix}/dna_indel_realigner_target_creator_{chr}_benchmark.txt"
   log:
     "{prefix}/dna_indel_realigner_target_creator_{chr}.log"
   resources:
-    mem_mb = 20000
+    mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   run:
     intervals_str = _get_intervals_str(wildcards)
     shell("""
-      gatk -Xmx20g -T RealignerTargetCreator -R {input.reference} \
+      gatk -Xmx{params.mem_gb}g -T RealignerTargetCreator -R {input.reference} \
       %s \
       -I {input.normal} -I {input.tumor} -o {output} -nt {threads} \
       --filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored \
@@ -82,17 +86,19 @@ rule dna_indel_realigner_per_chr:
   output:
     "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam",
     "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam"
+  params:
+    mem_gb = _mem_gb_for_ram_hungry_jobs()
   benchmark:
     "{prefix}/dna_indel_realigner_{chr}_benchmark.txt"
   log:
     "{prefix}/dna_indel_realigner_{chr}.log"
   resources:
-    mem_mb = 20000
+    mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   # IndelRealigner writes the output to this directory; need to move the files manually after
   run:
     intervals_str = _get_intervals_str(wildcards)
     shell("""
-      gatk -Xmx20g -T IndelRealigner -compress 0 -R {input.reference} \
+      gatk -Xmx{params.mem_gb}g -T IndelRealigner -compress 0 -R {input.reference} \
       -I {input.normal} -I {input.tumor} \
       -targetIntervals {input.intervals} %s \
       --filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored \
@@ -137,15 +143,17 @@ rule base_recalibrator:
     known_sites = config["reference"]["dbsnp"]
   output:
     "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table"
+  params:
+    mem_gb = _mem_gb_for_ram_hungry_jobs()
   threads: _get_half_cores
   benchmark:
     "{prefix}_base_recalibrator_benchmark.txt"
   log:
     "{prefix}_base_recalibrator.log"
   resources:
-    mem_mb = 20000
+    mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   shell:
-    "gatk -Xmx20g "
+    "gatk -Xmx{params.mem_gb}g "
     "-T BaseRecalibrator -nct {threads} -R {input.reference} -I {input.bam} "
     "-knownSites {input.known_sites} -o {output} 2> {log}"
 
@@ -156,14 +164,16 @@ rule bqsr_print_reads:
     reference = config["reference"]["genome"]
   output:
     "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
+  params:
+    mem_gb = _mem_gb_for_ram_hungry_jobs()
   threads: _get_half_cores
   benchmark:
     "{prefix}_base_recalibrator_print_reads_benchmark.txt"
   log:
     "{prefix}_base_recalibrator_print_reads.log"
   resources:
-    mem_mb = 20000
+    mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   shell:
-    "gatk -Xmx20g "
+    "gatk -Xmx{params.mem_gb}g "
     "-T PrintReads -nct {threads} -R {input.reference} -I {input.bam} -BQSR {input.bqsr} "
     "-o {output} 2> {log}"

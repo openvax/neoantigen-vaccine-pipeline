@@ -126,17 +126,19 @@ rule rna_indel_realigner_target_creator_per_chr:
     reference = config["reference"]["genome"]
   output:
     "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.intervals"
+  params:
+    mem_gb = _mem_gb_for_ram_hungry_jobs()
   threads: _get_half_cores
   benchmark:
     "{prefix}/rna_indel_realigner_target_creator_{chr}_benchmark.txt"
   log:
     "{prefix}/rna_indel_realigner_target_creator_{chr}.log"
   resources:
-    mem_mb = 20000
+    mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   run:
     intervals_str = _get_intervals_str(wildcards)
     shell("""
-      gatk -Xmx20g -T RealignerTargetCreator -R {input.reference} \
+      gatk -Xmx{params.mem_gb}g -T RealignerTargetCreator -R {input.reference} \
       %s \
       -I {input.rna} -o {output} -nt {threads} \
       --filter_mismatching_base_and_quals --filter_bases_not_stored \
@@ -150,16 +152,18 @@ rule rna_indel_realigner_per_chr:
     reference = config["reference"]["genome"]
   output:
     "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.bam"
+  params:
+    mem_gb = _mem_gb_for_ram_hungry_jobs()
   benchmark:
     "{prefix}/rna_indel_realigner_{chr}_benchmark.txt"
   log:
     "{prefix}/rna_indel_realigner_{chr}.log"
   resources:
-    mem_mb = 20000
+    mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   run:
     intervals_str = _get_intervals_str(wildcards)
     shell("""
-      gatk -Xmx20g -T IndelRealigner -compress 0 -R {input.reference} -I {input.bam} \
+      gatk -Xmx{params.mem_gb}g -T IndelRealigner -compress 0 -R {input.reference} -I {input.bam} \
       -targetIntervals {input.intervals} %s -o {output} \
       --filter_mismatching_base_and_quals --filter_bases_not_stored \
       2> {log}

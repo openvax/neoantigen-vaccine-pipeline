@@ -72,11 +72,14 @@ rule convert_alignment_to_sorted_bam:
     "{prefix}_aligned.sam"
   output:
     "{prefix}_aligned_coordinate_sorted.bam"
+  params:
+    mem_gb = _mem_gb_for_ram_hungry_jobs()
   benchmark:
     "{prefix}_convert_alignment_to_sorted_bam_benchmark.txt"
   log:
     "{prefix}_convert_alignment_to_sorted_bam.log"
   resources:
-    mem_mb = 20000
+    mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   shell:
-    "picard -Xmx20g SortSam INPUT={input} OUTPUT={output} SORT_ORDER=coordinate 2> {log}"
+    "picard -Xmx{params.mem_gb}g "
+    "SortSam INPUT={input} OUTPUT={output} SORT_ORDER=coordinate 2> {log}"

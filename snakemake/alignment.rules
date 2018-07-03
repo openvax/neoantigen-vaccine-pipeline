@@ -37,6 +37,8 @@ rule bwa_mem_single_end:
     "{prefix}_aligned.sam"
   params:
     rg = _get_read_group_header
+  resources:
+    mem_mb = _mem_gb_for_alignment() * 1024
   benchmark:
     "{prefix}_bwa_mem_benchmark.txt"
   log:
@@ -57,6 +59,8 @@ rule bwa_mem_paired_end:
     "{prefix}_aligned.sam"
   params:
     rg = _get_read_group_header
+  resources:
+    mem_mb = _mem_gb_for_alignment() * 1024
   benchmark:
     "{prefix}_bwa_mem_benchmark.txt"
   log:

@@ -14,6 +14,8 @@ rule star_align_paired_end:
   params:
     genome_dir = _STAR_GENOME_DIR,
     rg_sm = config["input"]["id"] + "_rna"
+  resources:
+    mem_mb = _mem_gb_for_alignment() * 1024
   benchmark:
     "{prefix}_star_align_benchmark.txt"
   log:
@@ -43,6 +45,8 @@ rule star_align_single_end:
   params:
     genome_dir = _STAR_GENOME_DIR,
     rg_sm = config["input"]["id"] + "_rna"
+  resources:
+    mem_mb = _mem_gb_for_alignment() * 1024
   benchmark:
     "{prefix}_star_align_benchmark.txt"
   log:

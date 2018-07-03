@@ -45,7 +45,7 @@ gsutil -m cp gs://reference-genomes/b37decoy.tar.gz reference-genome/
 Now we will uncompress the reference genome data, inside your `reference-genome` directory.
 ```sh
 cd reference-genome
-tar -xzf b37decoy.tar.gz
+tar -zxvf b37decoy.tar.gz
 ```
 
 Now we will download a test sequencing dataset, consisting of a YAML config file and two small FASTQ files of reads overlapping a single somatic mutation. For this simple test, we will re-use the tumor DNA sequencing as our RNA reads.

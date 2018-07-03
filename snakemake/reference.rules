@@ -6,17 +6,43 @@ NOTE: the reference genome directory must be writeable for these rules to work
 
 import os
 
-# TODO(julia): for these rules, consider outputting logs/benchmark to
+# See this thread for explanation of some STAR genomeGenerate parameters:
+# https://groups.google.com/forum/#!topic/rna-star/q3CZKHf9LOc
+# We want to support both high- and low-memory runs, so need to tweak the defaults sometimes
+
+def _mem_gb_for_star_genome_generate():
+  return min(31, int(config["mem_gb"]))
+
+def _suffix_array_sparsity_for_star_genome_generate():
+  if int(config["mem_gb"]) < 31:
+    return 2
+  else:
+    return 1  # default
+
+def _num_junctions_for_star_genome_generate():
+  if int(config["mem_gb"]) < 31:
+    return 300000
+  else:
+    return 1000000  # default
+
+
+# By default, STAR allows itself 31GB of memory to generate a genome. We may not have that
+# available, and need to constrain to available memory.
 rule star_align_reference:
   input:
     reference = config["reference"]["genome"],
     transcripts = config["reference"]["transcripts"]
   params:
     size = _READ_LENGTH,
-    genome_dir = _STAR_GENOME_DIR
+    genome_dir = _STAR_GENOME_DIR,
+    mem_bytes = _mem_gb_for_star_genome_generate() * 1024 * 1024 * 1024,
+    suffix_array_sparsity = _suffix_array_sparsity_for_star_genome_generate(),
+    num_junctions = _num_junctions_for_star_genome_generate()
+  resources:
+    mem_mb = _mem_gb_for_star_genome_generate() * 1024
   output:
     os.path.join(_STAR_GENOME_DIR, "SA")
-  threads: _get_half_cores
+  threads: _get_all_cores
   log:
     os.path.join(WORKDIR, "star_align_reference.log")
   benchmark:
@@ -24,6 +50,7 @@ rule star_align_reference:
   run:
     if not os.path.exists(params.genome_dir):
         shell("mkdir {params.genome_dir}")
+    # genomeSAsparseD, limitSjdbInsertNsj, limitGenomeGenerateRAM values 
     shell("""
         STAR \
         --runMode genomeGenerate \
@@ -31,7 +58,10 @@ rule star_align_reference:
         --genomeFastaFiles {input.reference} \
         --sjdbGTFfile {input.transcripts} \
         --sjdbOverhang {params.size} \
+        --genomeSAsparseD {params.suffix_array_sparsity} \
+        --limitSjdbInsertNsj {params.num_junctions} \
         --runThreadN {threads} \
+        --limitGenomeGenerateRAM {params.mem_bytes} \
         >> {log} 2>&1
     """)
 

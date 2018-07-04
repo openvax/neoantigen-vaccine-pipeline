@@ -1,57 +1,16 @@
-"""
-To see how Snakemake behaves with certain commands given the current config.yaml,
-try these examples:
-
-Print jobs (and their shell commands) required to produce an aligned tumor DNA file:
-snakemake -s fastq_fragment_Snakefile -np /data/smoking-sigs/workdir/5/tumor_aligned.sam --cores=24
-
-Print jobs (and their shell commands) required to produce the MuTect2 output:
-snakemake -s fastq_fragment_Snakefile -np /data/smoking-sigs/workdir/5/mutect.vcf --cores=24
-
-To see a DAG of all the jobs:
-snakemake --dag /data/smoking-sigs/workdir/5/mutect.vcf -s fastq_fragment_Snakefile | dot -Tsvg > ~/Desktop/dag.svg
-
-Note that these commands need to be run from this directory. Also, this file needs a configfile
-(passed as --configfile to the snakemake command) with data of the form:
-
-{
-    "workdir": "path/to/workdir",
-    "input": {
-        "id": "some-id",
-        "normal": [
-            {
-                "fragment_id": "L1",
-                "r1": "path/to/normal_L1_R1.fastq.gz",
-                "r2": "path/to/normal_L1_R2.fastq.gz"
-            },
-            {
-                "fragment_id": "L2",
-                "r1": "path/to/normal_L2_R1.fastq.gz",
-                "r2": "path/to/normal_L2_R2.fastq.gz"
-            }
-        ],
-        "tumor": [
-            {
-                "fragment_id": "L1",
-                "r1": "path/to/tumor_L1_R1.fastq.gz",
-                "r2": "path/to/tumor_L1_R2.fastq.gz"
-            },
-            {
-                "fragment_id": "L2",
-                "r1": "path/to/tumor_L2_R1.fastq.gz",
-                "r2": "path/to/tumor_L2_R2.fastq.gz"
-            }
-        ]
-    },
-    "reference": {
-        "genome": "path/to/genome.fasta",
-        "dbsnp": "path/to/dbsnp.vcf"
-    }
-}
-
-The files listed in this config have to exist.
-
-"""
+# Copyright (c) 2018. Mount Sinai School of Medicine
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
 from shutil import copy2

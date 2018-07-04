@@ -72,7 +72,7 @@ chmod -R a+w outputs
 
 Now we may run the pipeline. Note that the Docker volume option (`-v`) requires absolute paths. We use `$(realpath <dirname>)` to get the absolute path to the directories created above on the host machine. You can also just replace those with absolute paths.
 
-```
+```sh
 docker run -it \
 -v $(realpath inputs):/inputs \
 -v $(realpath outputs):/outputs \
@@ -81,9 +81,14 @@ julia326/neoantigen-vaccine-pipeline:latest \
 --configfile=/inputs/idh1_config.yaml
 ```
 
-This should create the final results as well as many intermediate files in the output directory. To print the pipeline commands without running the pipeline (a dry run), execute the above `docker run` command with the additional argument `--dry-run`.
+This should create the final vaccine peptide results as well as many intermediate files in your output directory. See the final results at `$(realpath outputs)/idh1-test-sample/vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.txt`.
 
-If the pipeline errors, the offending job will be highlighted in red and will mention a log file. The first step in understanding what went wrong is to look at that log file, which will live in your directory `$(realpath outputs)`.
+If the pipeline errors, the offending job will be highlighted in red and will mention a log file. The first step in understanding what went wrong is to look at that log file, which will live in the directory `$(realpath outputs)/idh1-test-sample`.
+
+If you want to see all available pipeline options (e.g. ability to execute a dry run, specify memory/CPU resources for the pipeline), run:
+```sh
+docker run julia326/neoantigen-vaccine-pipeline:latest -h
+```
 
 If you want to poke around in the image to execute tools manually or inspect versions:
 ```

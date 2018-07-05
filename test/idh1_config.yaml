@@ -2,8 +2,13 @@ input:
   id: idh1-test-sample
   mhc_alleles:
     - HLA-A*30:01
+  # The input FASTQ files must live in the same directory as your config YAML file.
+  # You should only need to modify the basename of the sample file paths, leaving the /inputs part
+  # of the filename unchanged.
   normal:
     - fragment_id: L001
+      # If your data is paired-end FASTQ files, you must specify the two files as r1 and r2 entries
+      # instead of the singular r entry in this template. Also change the type to say paired-end.
       type: single-end
       r: /inputs/idh1_r132h_normal.fastq.gz
   tumor:
@@ -14,6 +19,7 @@ input:
     - fragment_id: L001
       type: single-end
       r: /inputs/idh1_r132h_tumor.fastq.gz
+# In most cases, you should not need to modify anything below this line.
 workdir:
   /outputs
 reference:

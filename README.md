@@ -81,7 +81,7 @@ julia326/neoantigen-vaccine-pipeline:latest \
 --configfile=/inputs/idh1_config.yaml
 ```
 
-This should create the final vaccine peptide results as well as many intermediate files in your output directory. See the final results at `$(realpath outputs)/idh1-test-sample/vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.txt`.
+This should create the final vaccine peptide results as well as many intermediate files in your `outputs` directory, under a subdirectory specified in the `id` field in the YAML config (in this case, `idh1-test-sample`). See the final results at `$(realpath outputs)/idh1-test-sample/vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.txt`.
 
 If the pipeline errors, the offending job will be highlighted in red and will mention a log file. The first step in understanding what went wrong is to look at that log file, which will live in the directory `$(realpath outputs)/idh1-test-sample`.
 

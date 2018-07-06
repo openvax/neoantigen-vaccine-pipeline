@@ -32,7 +32,9 @@ class TestPipeline(unittest.TestCase):
         cls.referencedir = tempfile.TemporaryDirectory()
         cls.inputdir = tempfile.TemporaryDirectory()
         cls.config_tmpfile = tempfile.NamedTemporaryFile(mode='w', delete=True)
-        cls.make_test_config()
+        cls.dna_only_config_tmpfile = tempfile.NamedTemporaryFile(mode='w', delete=True)
+        cls.populate_config('idh1_config.yaml', cls.config_tmpfile)
+        cls.populate_config('idh1_config_dna_only.yaml', cls.dna_only_config_tmpfile)
         cls.populate_test_files()
 
     @classmethod
@@ -57,8 +59,8 @@ class TestPipeline(unittest.TestCase):
             copy2(path, cls.inputdir.name)
 
     @classmethod
-    def make_test_config(cls):
-        with open(join(cls._get_test_dir_path(), 'idh1_config.yaml'), 'r') as idh1_config_file:
+    def populate_config(cls, basename, dest_tempfile):
+        with open(join(cls._get_test_dir_path(), basename), 'r') as idh1_config_file:
             config_file_contents = idh1_config_file.read()
         # kinda gross, but: replace /outputs, /reference-genome, /inputs paths in config file with
         # temp dir locations
@@ -66,8 +68,8 @@ class TestPipeline(unittest.TestCase):
             '/outputs', cls.workdir.name).replace(
             '/reference-genome/b37decoy', cls.referencedir.name).replace(
             '/inputs', cls.inputdir.name)
-        cls.config_tmpfile.write(config_file_contents)
-        cls.config_tmpfile.seek(0)
+        dest_tempfile.write(config_file_contents)
+        dest_tempfile.seek(0)
 
     @classmethod
     def _get_test_dir_path(cls):
@@ -126,6 +128,16 @@ class TestPipeline(unittest.TestCase):
                 ],
             stats=join(self.workdir.name, 'idh1-test-sample', 'stats.json')
         ))
+
+    def test_dna_only_setup(self):
+        cli_args = [
+            '--configfile', self.dna_only_config_tmpfile.name,
+            '--dry-run',
+            '--memory', '15',
+            '--somatic-variant-calling-only',
+        ]
+        # run to make sure it doesn't crash
+        docker_entrypoint(cli_args)
 
     def test_docker_entrypoint_script(self):
         cli_args = [

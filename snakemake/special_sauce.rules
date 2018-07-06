@@ -33,50 +33,53 @@ def _check_vaxrank_wildcards(wildcards):
         raise ValueError("Vaccine peptide report output filenames must match variant callers "
             "specified in config: %s" % config["variant_callers"])
 
-rule vaxrank:
-  input:
-    vcfs = _get_vaxrank_input_vcfs,
-    rna = "{prefix}/rna_final_sorted.bam",
-    rna_index = "{prefix}/rna_final_sorted.bam.bai",
-    pyensembl_cache = "$PYENSEMBL_CACHE_DIR/homo_sapiens_75.cached"
-  output:
-    ascii_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.txt",
-    json_file = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.json",
-    pdf_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.pdf",
-    xlsx_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.xlsx"
-  params:
-    mhc_alleles = config["input"]["mhc_alleles"],
-    patient_id = config["input"]["id"],
-    vaccine_peptide_length = 25,
-    padding_around_mutation = 5,
-    max_vaccine_peptides_per_mutation = 3,
-    min_mapping_quality = 1,
-    min_variant_sequence_coverage = 1,
-    min_alt_rna_reads = 2,
-    mhc_epitope_lengths = "8-11"
-  benchmark:
-    "{prefix}/vaxrank_{mhc_predictor}_{vcf_types}_benchmark.txt"
-  log:
-    "{prefix}/vaxrank_{mhc_predictor}_{vcf_types}.log"
-  run:
-    _check_vaxrank_wildcards(wildcards)
-    vcf_input_str = ' '.join(['--vcf %s' % x for x in input.vcfs])
-    shell("""
-        vaxrank %s \
-        --bam {input.rna} \
-        --mhc-predictor {wildcards.mhc_predictor} \
-        --mhc-alleles %s \
-        --output-ascii-report {output.ascii_report} \
-        --output-pdf-report {output.pdf_report} \
-        --output-xlsx-report {output.xlsx_report} \
-        --output-json-file {output.json_file} \
-        --output-patient-id {params.patient_id} \
-        --log-path {log} \
-        --vaccine-peptide-length {params.vaccine_peptide_length} \
-        --padding-around-mutation {params.padding_around_mutation} \
-        --max-vaccine-peptides-per-mutation {params.max_vaccine_peptides_per_mutation} \
-        --min-mapping-quality {params.min_mapping_quality} \
-        --min-variant-sequence-coverage {params.min_variant_sequence_coverage} \
-        --min-alt-rna-reads {params.min_alt_rna_reads} \
-        --mhc-epitope-lengths {params.mhc_epitope_lengths}
-        """ % (vcf_input_str, ",".join(params.mhc_alleles)))
+# only define the Vaxrank rule if we have MHC alleles specified in the config
+# TODO(julia): support inferring MHC alleles from seq2hla instead of requiring user input
+if "mhc_alleles" in config["input"]:
+    rule vaxrank:
+      input:
+        vcfs = _get_vaxrank_input_vcfs,
+        rna = "{prefix}/rna_final_sorted.bam",
+        rna_index = "{prefix}/rna_final_sorted.bam.bai",
+        pyensembl_cache = "$PYENSEMBL_CACHE_DIR/homo_sapiens_75.cached"
+      output:
+        ascii_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.txt",
+        json_file = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.json",
+        pdf_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.pdf",
+        xlsx_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.xlsx"
+      params:
+        mhc_alleles = config["input"]["mhc_alleles"],
+        patient_id = config["input"]["id"],
+        vaccine_peptide_length = 25,
+        padding_around_mutation = 5,
+        max_vaccine_peptides_per_mutation = 3,
+        min_mapping_quality = 1,
+        min_variant_sequence_coverage = 1,
+        min_alt_rna_reads = 2,
+        mhc_epitope_lengths = "8-11"
+      benchmark:
+        "{prefix}/vaxrank_{mhc_predictor}_{vcf_types}_benchmark.txt"
+      log:
+        "{prefix}/vaxrank_{mhc_predictor}_{vcf_types}.log"
+      run:
+        _check_vaxrank_wildcards(wildcards)
+        vcf_input_str = ' '.join(['--vcf %s' % x for x in input.vcfs])
+        shell("""
+            vaxrank %s \
+            --bam {input.rna} \
+            --mhc-predictor {wildcards.mhc_predictor} \
+            --mhc-alleles %s \
+            --output-ascii-report {output.ascii_report} \
+            --output-pdf-report {output.pdf_report} \
+            --output-xlsx-report {output.xlsx_report} \
+            --output-json-file {output.json_file} \
+            --output-patient-id {params.patient_id} \
+            --log-path {log} \
+            --vaccine-peptide-length {params.vaccine_peptide_length} \
+            --padding-around-mutation {params.padding_around_mutation} \
+            --max-vaccine-peptides-per-mutation {params.max_vaccine_peptides_per_mutation} \
+            --min-mapping-quality {params.min_mapping_quality} \
+            --min-variant-sequence-coverage {params.min_variant_sequence_coverage} \
+            --min-alt-rna-reads {params.min_alt_rna_reads} \
+            --mhc-epitope-lengths {params.mhc_epitope_lengths}
+            """ % (vcf_input_str, ",".join(params.mhc_alleles)))

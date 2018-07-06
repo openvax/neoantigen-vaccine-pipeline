@@ -139,6 +139,10 @@ def check_target_against_args(target, args):
         if args.memory < 32:
             raise ValueError(
                 "Must provide at least 32GB RAM for RNA processing or full peptide computation")
+        if args.somatic_variant_calling_only:
+            raise ValueError(
+                "Cannot request --somatic-variant-calling-only in combination with any RNA "
+                "processing or vaccine peptide targets")
 
 def main(args_list=None):
     if args_list is None:

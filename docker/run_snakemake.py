@@ -17,7 +17,7 @@ from argparse import ArgumentParser
 import datetime
 import json
 from os import access, R_OK, W_OK
-from os.path import isfile, join
+from os.path import isfile, join, basename, splitext
 import sys
 
 import psutil
@@ -39,6 +39,12 @@ parser.add_argument(
     "--target",
     action="append",
     help="Snakemake target(s). For multiple targets, can specify --target t1 --target t2 ...")
+
+parser.add_argument(
+    "--somatic-variant-calling-only",
+    help="If this argument is present, will only call somatic variants - no RNA processing "
+        "or final vaccine peptide computation",
+    action="store_true")
 
 parser.add_argument(
     "--snakefile",
@@ -69,9 +75,15 @@ def default_vaxrank_targets(config):
     mhc_predictor = config["mhc_predictor"]
     vcfs = "-".join(config["variant_callers"])
     path_without_ext = join(
-            get_output_dir(config),
-            "vaccine-peptide-report_%s_%s" % (mhc_predictor, vcfs))
+        get_output_dir(config),
+        "vaccine-peptide-report_%s_%s" % (mhc_predictor, vcfs))
     return ['%s.%s' % (path_without_ext, ext) for ext in ('txt', 'json', 'pdf', 'xlsx')]
+
+def somatic_vcf_targets(config):
+    return [join(
+        get_output_dir(config),
+        "%s.vcf" % vcf_type
+        ) for vcf_type in config["variant_callers"]]
 
 def check_inputs(config):
     """
@@ -105,19 +117,28 @@ def check_inputs(config):
     if not access(workdir, W_OK):
         raise ValueError("Workdir %s does not exist or is not writable" % workdir)
 
-def check_targets(targets, config):
-    # make sure they all start with output dir
-    if len(targets) == 0:
-        raise ValueError("Must specify at least one target")
-    default_targets = default_vaxrank_targets(config)
-    for target in targets:
-        if not target.startswith(get_output_dir(config)):
-            raise ValueError("Invalid target, must start with output directory: %s" % target)
-        # if any of the targets are vaxrank report outputs, make sure they match config specs
-        if 'vaccine-peptide-report' in target:
-            if not target in default_targets:
-                raise ValueError(
-                    "Invalid target, vaccine peptide report output must match config file specs")
+# Contains validation specific to pipeline config details
+def check_target_against_config(target, config):
+    if not target.startswith(get_output_dir(config)):
+        raise ValueError("Invalid target, must start with output directory: %s" % target)
+    if "vaccine-peptide-report" in target and target not in default_vaxrank_targets(config):
+        raise ValueError(
+            "Invalid target, vaccine peptide output must match config file specs: %s" % target)
+    # if the target is a VCF file, make sure it's in the config
+    root, ext = splitext(basename(target))
+    if ext == ".vcf" and not root in config["variant_callers"]:
+        raise ValueError(
+            "Invalid target, must be part of config file variant_callers: %s" % root)
+
+# Contains validation specific to runtime args: memory/CPU resources, etc.
+def check_target_against_args(target, args):
+    if args.memory < 6.5:
+        raise ValueError("Must provide at least 6.5GB RAM")
+    # if any of the targets are RNA or vaxrank report outputs, needs >=32GB RAM
+    if "vaccine-peptide-report" in target or basename(target).startswith("rna"):
+        if args.memory < 32:
+            raise ValueError(
+                "Must provide at least 32GB RAM for RNA processing or full peptide computation")
 
 def main(args_list=None):
     if args_list is None:
@@ -131,10 +152,18 @@ def main(args_list=None):
 
     targets = args.target
     if targets is None:
-        targets = default_vaxrank_targets(config)
+        if args.somatic_variant_calling_only:
+            targets = somatic_vcf_targets(config)
+        else:
+            targets = default_vaxrank_targets(config)
 
+    # input validation
     check_inputs(config)
-    check_targets(targets, config)
+    if len(targets) == 0:
+        raise ValueError("Must specify at least one target")
+    for target in targets:
+        check_target_against_config(target, config)
+        check_target_against_args(target, args)
 
     start_time = datetime.datetime.now()
     if not snakemake.snakemake(

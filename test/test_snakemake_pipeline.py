@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import getpass
 import glob
 from os import chdir, listdir
 from os.path import dirname, join
@@ -21,8 +20,10 @@ import tempfile
 import unittest
 
 import snakemake
+import yaml
 
-from docker.run_snakemake import main as docker_entrypoint, default_vaxrank_targets
+from docker.run_snakemake import main as docker_entrypoint, \
+    default_vaxrank_targets, somatic_vcf_targets
 
 class TestPipeline(unittest.TestCase):
     @classmethod
@@ -55,7 +56,6 @@ class TestPipeline(unittest.TestCase):
         for path in glob.glob('datagen/*.fastq.gz'):
             copy2(path, cls.inputdir.name)
 
-
     @classmethod
     def make_test_config(cls):
         with open(join(cls._get_test_dir_path(), 'idh1_config.yaml'), 'r') as idh1_config_file:
@@ -76,6 +76,32 @@ class TestPipeline(unittest.TestCase):
     @classmethod
     def _get_snakemake_dir_path(cls):
         return join(cls._get_test_dir_path(), '..', 'snakemake')
+
+    def test_vaxrank_targets(self):
+        with open(join(self._get_test_dir_path(), 'idh1_config.yaml'), 'r') as idh1_config_file:
+            config = yaml.load(idh1_config_file)
+        targets = default_vaxrank_targets(config)
+        expected_targets = (
+            '/outputs/idh1-test-sample/vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.txt',
+            '/outputs/idh1-test-sample/vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.json',
+            '/outputs/idh1-test-sample/vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.pdf',
+            '/outputs/idh1-test-sample/vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.xlsx',
+        )
+        self.assertEqual(len(expected_targets), len(targets))
+        for target in targets:
+            self.assertTrue(target in expected_targets)
+
+    def test_somatic_vcf_targets(self):
+        with open(join(self._get_test_dir_path(), 'idh1_config.yaml'), 'r') as idh1_config_file:
+            config = yaml.load(idh1_config_file)
+        targets = somatic_vcf_targets(config)
+        expected_targets = (
+            '/outputs/idh1-test-sample/mutect.vcf',
+            '/outputs/idh1-test-sample/strelka.vcf',
+        )
+        self.assertEqual(len(expected_targets), len(targets))
+        for target in targets:
+            self.assertTrue(target in expected_targets)
 
     # This simulates a dry run on the test data, and mostly checks rule graph validity.
     def test_workflow_compiles(self):
@@ -105,6 +131,7 @@ class TestPipeline(unittest.TestCase):
         cli_args = [
             '--configfile', self.config_tmpfile.name,
             '--dry-run',
+            '--memory', '32',
             '--target', join(
                 self.workdir.name, 
                 'idh1-test-sample',
@@ -113,10 +140,31 @@ class TestPipeline(unittest.TestCase):
         # run to make sure it doesn't crash
         docker_entrypoint(cli_args)
 
-        # check that invalid target fails
+        ok_dna_target_cli_args = [
+            '--configfile', self.config_tmpfile.name,
+            '--dry-run',
+            '--memory', '15',
+            '--target', join(
+                self.workdir.name, 
+                'idh1-test-sample',
+                'mutect.vcf'),
+        ]
+        docker_entrypoint(ok_dna_target_cli_args)
+
+        variant_target_cli_args = [
+            '--configfile', self.config_tmpfile.name,
+            '--dry-run',
+            '--somatic-variant-calling-only',
+            '--memory', '15',
+        ]
+        docker_entrypoint(variant_target_cli_args)
+
+    def test_docker_entrypoint_script_failures(self):
+        # check that invalid targets fail
         fake_target_cli_args = [
             '--configfile', self.config_tmpfile.name,
             '--dry-run',
+            '--memory', '32',
             '--target', join(
                 self.workdir.name, 
                 'idh1-test-sample',
@@ -127,9 +175,21 @@ class TestPipeline(unittest.TestCase):
         bad_vaxrank_target_cli_args = [
             '--configfile', self.config_tmpfile.name,
             '--dry-run',
+            '--memory', '32',
             '--target', join(
                 self.workdir.name, 
                 'idh1-test-sample',
                 'vaccine-peptide-report_netmhcpan-iedb_mutect-strelka-mutect2.txt'),
         ]
         self.assertRaises(ValueError, docker_entrypoint, bad_vaxrank_target_cli_args)
+
+        bad_rna_target_cli_args = [
+            '--configfile', self.config_tmpfile.name,
+            '--dry-run',
+            '--memory', '15',
+            '--target', join(
+                self.workdir.name, 
+                'idh1-test-sample',
+                'rna_final.bam'),
+        ]
+        self.assertRaises(ValueError, docker_entrypoint, bad_rna_target_cli_args)

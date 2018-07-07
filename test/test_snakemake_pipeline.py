@@ -171,6 +171,17 @@ class TestPipeline(unittest.TestCase):
         ]
         docker_entrypoint(variant_target_cli_args)
 
+        germline_variant_cli_args = [
+            '--configfile', self.config_tmpfile.name,
+            '--dry-run',
+            '--memory', '15',
+            '--target', join(
+                self.workdir.name, 
+                'idh1-test-sample',
+                'normal_germline_snps_indels_filtered.vcf'),
+        ]
+        docker_entrypoint(germline_variant_cli_args)
+
     def test_docker_entrypoint_script_failures(self):
         # check that invalid targets fail
         fake_target_cli_args = [

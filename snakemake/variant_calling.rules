@@ -166,3 +166,91 @@ rule haplotype_caller:
     "{prefix}/normal_germline_snps_indels.vcf"
   shell:
     "vcf-concat {input} > {output}"
+
+rule extract_snps:
+  input:
+    reference = config["reference"]["genome"],
+    all_germline_variants = "{prefix}/normal_germline_snps_indels.vcf"
+  output:
+    "{prefix}/normal_germline_snps.vcf"
+  benchmark:
+    "{prefix}/extract_snps_benchmark.txt"
+  log:
+    "{prefix}/extract_snps.log"
+  shell:
+    "gatk "
+    "-T SelectVariants "
+    "-R {input.reference} "
+    "-V {input.all_germline_variants} "
+    "-selectType SNP "
+    "-o {output} "
+    ">> {log} 2>&1"
+
+# Filters recommended at https://software.broadinstitute.org/gatk/documentation/article.php?id=2806
+rule filter_snps:
+  input:
+    reference = config["reference"]["genome"],
+    germline_snps = "{prefix}/normal_germline_snps.vcf"
+  output:
+    "{prefix}/normal_germline_snps_filtered.vcf"
+  benchmark:
+    "{prefix}/filter_snps_benchmark.txt"
+  log:
+    "{prefix}/filter_snps.log"
+  shell:
+    "gatk " 
+    "-T VariantFiltration "
+    "-R {input.reference} "
+    "-V {input.germline_snps} "
+    "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" "
+    "--filterName \"gatk_snp_filter\" "
+    "-o {output} "
+    ">> {log} 2>&1"
+
+rule extract_indels:
+  input:
+    reference = config["reference"]["genome"],
+    all_germline_variants = "{prefix}/normal_germline_snps_indels.vcf"
+  output:
+    "{prefix}/normal_germline_indels.vcf"
+  benchmark:
+    "{prefix}/extract_indels_benchmark.txt"
+  log:
+    "{prefix}/extract_indels.log"
+  shell:
+    "gatk "
+    "-T SelectVariants "
+    "-R {input.reference} "
+    "-V {input.all_germline_variants} "
+    "-selectType INDEL "
+    "-o {output} "
+    ">> {log} 2>&1"
+
+# Filters recommended at https://software.broadinstitute.org/gatk/documentation/article.php?id=2806
+rule filter_indels:
+  input:
+    reference = config["reference"]["genome"],
+    germline_indels = "{prefix}/normal_germline_indels.vcf"
+  output:
+    "{prefix}/normal_germline_indels_filtered.vcf"
+  benchmark:
+    "{prefix}/filter_indels_benchmark.txt"
+  log:
+    "{prefix}/filter_indels.log"
+  shell:
+    "gatk " 
+    "-T VariantFiltration "
+    "-R {input.reference} "
+    "-V {input.germline_indels} "
+    "--filterExpression \"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0\" "
+    "--filterName \"gatk_indel_filter\" "
+    "-o {output} "
+    ">> {log} 2>&1"
+
+rule combine_germline_variants:
+  input:
+    expand("{{prefix}}/normal_germline_{var}.vcf", var=["snps", "indels"])
+  output:
+    "{prefix}/normal_germline_snps_indels_filtered.vcf"
+  shell:
+    "vcf-concat {input} > {output}"

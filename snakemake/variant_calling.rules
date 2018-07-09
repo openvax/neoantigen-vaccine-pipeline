@@ -249,7 +249,7 @@ rule filter_indels:
 
 rule combine_germline_variants:
   input:
-    expand("{{prefix}}/normal_germline_{var}.vcf", var=["snps", "indels"])
+    expand("{{prefix}}/filtered_normal_germline_{var}.vcf", var=["snps", "indels"])
   output:
     "{prefix}/filtered_normal_germline_snps_indels.vcf"
   shell:

@@ -192,7 +192,7 @@ rule filter_snps:
     reference = config["reference"]["genome"],
     germline_snps = "{prefix}/normal_germline_snps.vcf"
   output:
-    "{prefix}/normal_germline_snps_filtered.vcf"
+    "{prefix}/filtered_normal_germline_snps.vcf"
   benchmark:
     "{prefix}/filter_snps_benchmark.txt"
   log:
@@ -232,7 +232,7 @@ rule filter_indels:
     reference = config["reference"]["genome"],
     germline_indels = "{prefix}/normal_germline_indels.vcf"
   output:
-    "{prefix}/normal_germline_indels_filtered.vcf"
+    "{prefix}/filtered_normal_germline_indels.vcf"
   benchmark:
     "{prefix}/filter_indels_benchmark.txt"
   log:
@@ -251,6 +251,6 @@ rule combine_germline_variants:
   input:
     expand("{{prefix}}/normal_germline_{var}.vcf", var=["snps", "indels"])
   output:
-    "{prefix}/normal_germline_snps_indels_filtered.vcf"
+    "{prefix}/filtered_normal_germline_snps_indels.vcf"
   shell:
     "vcf-concat {input} > {output}"

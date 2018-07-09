@@ -178,7 +178,7 @@ class TestPipeline(unittest.TestCase):
             '--target', join(
                 self.workdir.name, 
                 'idh1-test-sample',
-                'normal_germline_snps_indels_filtered.vcf'),
+                'filtered_normal_germline_snps_indels.vcf'),
         ]
         docker_entrypoint(germline_variant_cli_args)
 

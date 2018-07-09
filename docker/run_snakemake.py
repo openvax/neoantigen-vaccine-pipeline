@@ -126,7 +126,7 @@ def check_target_against_config(target, config):
             "Invalid target, vaccine peptide output must match config file specs: %s" % target)
     # if the target is a VCF file, make sure it's in the config
     root, ext = splitext(basename(target))
-    if ext == ".vcf" and not root in config["variant_callers"]:
+    if ext == ".vcf" and not "germline" in root and not root in config["variant_callers"]:
         raise ValueError(
             "Invalid target, must be part of config file variant_callers: %s" % root)
 

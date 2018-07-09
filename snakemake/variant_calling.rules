@@ -254,3 +254,13 @@ rule combine_germline_variants:
     "{prefix}/filtered_normal_germline_snps_indels.vcf"
   shell:
     "vcf-concat {input} > {output}"
+
+if "capture_kit_coverage_file" in config["reference"]:
+  rule intersect_with_coverage_file:
+    input:
+      coverage_file = config["reference"]["capture_kit_coverage_file"],
+      germline_variants = "{prefix}/filtered_normal_germline_snps_indels.vcf"
+    output:
+      "{prefix}/filtered_covered_normal_germline_snps_indels.vcf"
+    shell:
+      "bedtools intersect -a {input.germline_variants} -b {input.coverage_file} -header > {output}"

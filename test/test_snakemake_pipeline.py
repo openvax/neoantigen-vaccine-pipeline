@@ -55,6 +55,8 @@ class TestPipeline(unittest.TestCase):
             dbsnp.write('placeholder')
         with open(join(cls.referencedir.name, 'cosmic.vcf'), 'w') as cosmic:
             cosmic.write('placeholder')
+        with open(join(cls.referencedir.name, 'S04380110_Covered_grch37_with_M.bed'), 'w') as cover:
+            cover.write('placeholder')
         for path in glob.glob('datagen/*.fastq.gz'):
             copy2(path, cls.inputdir.name)
 
@@ -178,7 +180,7 @@ class TestPipeline(unittest.TestCase):
             '--target', join(
                 self.workdir.name, 
                 'idh1-test-sample',
-                'filtered_normal_germline_snps_indels.vcf'),
+                'filtered_covered_normal_germline_snps_indels.vcf'),
         ]
         docker_entrypoint(germline_variant_cli_args)
 

@@ -89,6 +89,7 @@ RUN conda config --add channels r && \
     conda config --add channels conda-forge && \
     conda config --add channels bioconda && \
     conda create -n pgv \
+    bedtools \
     bwa==0.7.17 \
     cython \
     gatk==3.7 \

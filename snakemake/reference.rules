@@ -24,16 +24,23 @@ import os
 # https://groups.google.com/forum/#!topic/rna-star/q3CZKHf9LOc
 # We want to support both high- and low-memory runs, so need to tweak the defaults sometimes
 def _mem_gb_for_star_genome_generate():
-  return min(31, int(config["mem_gb"]))
+  return min(31, _available_memory_gb())
+
+def _mem_mb_for_star_genome_generate():
+  return _mem_gb_for_star_genome_generate() * 1024
+
+def _mem_bytes_for_star_genome_generate():
+  bytes_per_gb = 1024 ** 3
+  return _mem_gb_for_star_genome_generate() * bytes_per_gb
 
 def _suffix_array_sparsity_for_star_genome_generate():
-  if int(config["mem_gb"]) < 31:
+  if _available_memory_gb() < 31:
     return 2
   else:
     return 1  # default
 
 def _num_junctions_for_star_genome_generate():
-  if int(config["mem_gb"]) < 31:
+  if _available_memory_gb() < 31:
     return 300000
   else:
     return 1000000  # default
@@ -47,11 +54,11 @@ rule star_align_reference:
   params:
     size = _READ_LENGTH,
     genome_dir = _STAR_GENOME_DIR,
-    mem_bytes = _mem_gb_for_star_genome_generate() * 1024 * 1024 * 1024,
+    mem_bytes = _mem_bytes_for_star_genome_generate(),
     suffix_array_sparsity = _suffix_array_sparsity_for_star_genome_generate(),
     num_junctions = _num_junctions_for_star_genome_generate()
   resources:
-    mem_mb = _mem_gb_for_star_genome_generate() * 1024
+    mem_mb = _mem_mb_for_star_genome_generate()
   output:
     os.path.join(_STAR_GENOME_DIR, "SA")
   threads: _get_all_cores
@@ -104,9 +111,9 @@ rule picard_sequence_dict_reference:
   input:
     reference = config["reference"]["genome"]
   params:
-    mem_gb = int(config["mem_gb"])
+    mem_gb = _available_memory_gb()
   resources:
-    mem_mb = int(config["mem_gb"]) * 1024
+    mem_mb = _available_memory_gb() * 1024
   output:
     config["reference"]["genome"].replace("fasta", "dict")
   benchmark:

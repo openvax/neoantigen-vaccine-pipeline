@@ -16,20 +16,14 @@ import os
 from shutil import copy2
 import subprocess
 
-include:
-    "common.rules"
-include:
-    "reference.rules"
-include:
-    "gatk.rules"
-include:
-    "alignment.rules"
-include:
-    "rna.rules"
-include:
-    "variant_calling.rules"
-include:
-    "special_sauce.rules"
+include: "common.rules"
+include: "reference.rules"
+include: "gatk.rules"
+include: "alignment.rules"
+include: "rna.rules"
+include: "variant_calling.rules"
+include: "special_sauce.rules"
+include: "hla.rules"
 
 # copy all fragments over to the sample-specific workdir, create if it doesn't exist
 if not os.path.exists(WORKDIR):

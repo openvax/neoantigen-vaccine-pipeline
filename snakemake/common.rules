@@ -53,7 +53,7 @@ def _available_memory_gb():
 def _get_threads_for_alignment(_):
   if _available_memory_gb() < 20:
     return _get_half_cores(_)
-    else:
+  else:
     return _get_all_cores(_)
 
 def _mem_gb_for_alignment():

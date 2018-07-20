@@ -143,6 +143,8 @@ def check_target_against_args(target, args):
     if args.memory < 6.5:
         raise ValueError("Must provide at least 6.5GB RAM")
     # if any of the targets are RNA or vaxrank report outputs, needs >=32GB RAM
+    # TODO: don't just match the target on starting with 'rna' since we might
+    # be doing something like seq2hla that doesn't require as much memory
     if "vaccine-peptide-report" in target or basename(target).startswith("rna"):
         if args.memory < 32:
             raise ValueError(

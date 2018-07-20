@@ -19,10 +19,25 @@ TODO: replace this with allele-specific quantification that works
 across multiple species.
 """
 
+def _get_seq2hla_input_fastq_files(wildcards):
+  # pick an arbitrary fragment, in the future
+  # we should merge all the FASTQs
+  sample_type = os.path.split(wildcards.prefix)[1]
+  assert sample_type in FRAGMENT_IDS, \
+    "Expected sample type = '%s' to be in FRAGMENT_IDS=%s" % (
+      wildcards.prefix,
+      FRAGMENT_IDS)
+  fragment_ids = sorted(FRAGMENT_IDS[sample_type])
+  assert len(fragment_ids) > 0
+  fragment_id = fragment_ids[0]
+  fastq_names = []
+  return {
+    "r1": "%s_%s_R1.fastq.gz" % (wildcards.prefix, fragment_id),
+    "r2": "%s_%s_R2.fastq.gz" % (wildcards.prefix, fragment_id)
+  }
+
 rule seq2hla_paired_end:
-  input:
-    r1 = "{prefix}_R1.fastq.gz",
-    r2 = "{prefix}_R2.fastq.gz",
+  input: unpack(_get_seq2hla_input_fastq_files)
   output:
     "{prefix}-ClassI.expression",
     "{prefix}-ClassII.expression",
@@ -35,5 +50,7 @@ rule seq2hla_paired_end:
   log:
     "{prefix}_seq2hla.log"
   threads: _get_threads_for_alignment
+  params:
+    name=lambda wildcards: os.split(wildcards.prefix)[1]
   shell:
-    "seq2hla -r {prefix} -1 {input.r1} -2 {input.r2} -p {threads}"
+    "seq2hla -r {params.name} -1 {input.r1} -2 {input.r2} -p {threads}"

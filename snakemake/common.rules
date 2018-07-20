@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import psutil
+
 # This file contains pipeline constants and a few functions.
 
 SAMPLE_ID = config["input"]["id"]
@@ -28,27 +30,43 @@ _READ_LENGTH = 124
 _STAR_GENOME_DIR = os.path.join(
     os.path.dirname(config["reference"]["genome"]), "star-genome-%d" % _READ_LENGTH)
 
+
 # Common functions
 
 def _get_half_cores(_):
-  return max(1, int(config["num_threads"]/2))
+  n = _get_all_cores(_)
+  return max(1, n // 2)
 
 def _get_all_cores(_):
-  return int(config["num_threads"])
+  if "num_threads" in config:
+    return int(config["num_threads"])
+  else:
+    return psutil.cpu_count()
+
+def _available_memory_gb():
+  if "mem_gb" in config:
+    return int(config["mem_gb"])
+  else:
+    bytes_per_gb = 1024 ** 3
+    return max(1, psutil.virtual_memory().total // bytes_per_gb)
 
 def _get_threads_for_alignment(_):
-  if _mem_gb_for_alignment() < 20:
-    return _get_all_cores(_)
-  else:
+  if _available_memory_gb() < 20:
     return _get_half_cores(_)
+  else:
+    return _get_all_cores(_)
 
-# 20GB or as close to that as allowed by pipeline resources
-def _mem_gb_for_ram_hungry_jobs():
-  return min(20, int(config["mem_gb"]))
-
-# 6GB or as close to that as allowed by pipeline resources
 def _mem_gb_for_alignment():
-  return min(6, int(config["mem_gb"]))
+  """
+  6GB or as close to that as allowed by pipeline resources
+  """
+  return min(6, _available_memory_gb())
+
+def _mem_gb_for_ram_hungry_jobs():
+  """
+  20GB or as close to that as allowed by pipeline resources
+  """
+  return min(20, _available_memory_gb())
 
 def _get_intervals_str(wildcards):
   return "--intervals %s" % wildcards.chr if wildcards.chr in _CHR else ""

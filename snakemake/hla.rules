@@ -1,0 +1,56 @@
+# Copyright (c) 2018. Mount Sinai School of Medicine
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+HLA typing and gene quantification.
+
+TODO: replace this with allele-specific quantification that works
+across multiple species.
+"""
+
+def _get_seq2hla_input_fastq_files(wildcards):
+  # pick an arbitrary fragment, in the future
+  # we should merge all the FASTQs
+  sample_type = os.path.split(wildcards.prefix)[1]
+  assert sample_type in FRAGMENT_IDS, \
+    "Expected sample type = '%s' to be in FRAGMENT_IDS=%s" % (
+      wildcards.prefix,
+      FRAGMENT_IDS)
+  fragment_ids = sorted(FRAGMENT_IDS[sample_type])
+  assert len(fragment_ids) > 0
+  fragment_id = fragment_ids[0]
+  fastq_names = []
+  return {
+    "r1": "%s_%s_R1.fastq.gz" % (wildcards.prefix, fragment_id),
+    "r2": "%s_%s_R2.fastq.gz" % (wildcards.prefix, fragment_id)
+  }
+
+rule seq2hla_paired_end:
+  input: unpack(_get_seq2hla_input_fastq_files)
+  output:
+    "{prefix}-ClassI.expression",
+    "{prefix}-ClassII.expression",
+    "{prefix}-ClassI.HLAgenotype4digits",
+    "{prefix}-ClassII.HLAgenotype4digits",
+  resources:
+    mem_mb = _mem_gb_for_alignment() * 1024
+  benchmark:
+    "{prefix}_seq2hla_benchmark.txt"
+  log:
+    "{prefix}_seq2hla.log"
+  threads: _get_threads_for_alignment
+  params:
+    name=lambda wildcards: os.split(wildcards.prefix)[1]
+  shell:
+    "seq2hla -r {params.name} -1 {input.r1} -2 {input.r2} -p {threads}"

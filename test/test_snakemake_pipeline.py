@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+
 import glob
-from os import chdir, listdir
+from os import chdir
 from os.path import dirname, join
 from shutil import copy2
 import tempfile
@@ -24,6 +26,7 @@ import yaml
 
 from docker.run_snakemake import main as docker_entrypoint, \
     default_vaxrank_targets, somatic_vcf_targets
+
 
 class TestPipeline(unittest.TestCase):
     @classmethod
@@ -120,14 +123,14 @@ class TestPipeline(unittest.TestCase):
             printshellcmds=True,
             targets=[
                 join(
-                    self.workdir.name, 
+                    self.workdir.name,
                     'idh1-test-sample',
                     'vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.txt'),
                 join(
                     self.workdir.name,
                     'idh1-test-sample',
                     'rna_final.bam'),
-                ],
+            ],
             stats=join(self.workdir.name, 'idh1-test-sample', 'stats.json')
         ))
 
@@ -147,24 +150,26 @@ class TestPipeline(unittest.TestCase):
             '--dry-run',
             '--memory', '32',
             '--target', join(
-                self.workdir.name, 
+                self.workdir.name,
                 'idh1-test-sample',
                 'rna_final.bam'),  # valid target
         ]
         # run to make sure it doesn't crash
         docker_entrypoint(cli_args)
 
+    def test_docker_entrypoint_script_dna_target(self):
         ok_dna_target_cli_args = [
             '--configfile', self.config_tmpfile.name,
             '--dry-run',
             '--memory', '15',
             '--target', join(
-                self.workdir.name, 
+                self.workdir.name,
                 'idh1-test-sample',
                 'mutect.vcf'),
         ]
         docker_entrypoint(ok_dna_target_cli_args)
 
+    def test_docker_entrypoint_script_variant_calling_only(self):
         variant_target_cli_args = [
             '--configfile', self.config_tmpfile.name,
             '--dry-run',
@@ -173,16 +178,30 @@ class TestPipeline(unittest.TestCase):
         ]
         docker_entrypoint(variant_target_cli_args)
 
+    def test_docker_entrypoint_script_germline_target(self):
         germline_variant_cli_args = [
             '--configfile', self.config_tmpfile.name,
             '--dry-run',
             '--memory', '15',
             '--target', join(
-                self.workdir.name, 
+                self.workdir.name,
                 'idh1-test-sample',
                 'filtered_covered_normal_germline_snps_indels.vcf'),
         ]
         docker_entrypoint(germline_variant_cli_args)
+
+    def test_docker_entrypoint_script_seq2hla(self):
+        # test that seq2hla rules workdir
+        seq2hla_cli_args = [
+            '--configfile', self.config_tmpfile.name,
+            '--dry-run',
+            '--memory', '32',
+            '--target', join(
+                self.workdir.name,
+                'idh1-test-sample',
+                'rna-ClassI.expression'),
+        ]
+        docker_entrypoint(seq2hla_cli_args)
 
     def test_docker_entrypoint_script_failures(self):
         # check that invalid targets fail
@@ -191,7 +210,7 @@ class TestPipeline(unittest.TestCase):
             '--dry-run',
             '--memory', '32',
             '--target', join(
-                self.workdir.name, 
+                self.workdir.name,
                 'idh1-test-sample',
                 'fakey_fakerson'),
         ]
@@ -202,7 +221,7 @@ class TestPipeline(unittest.TestCase):
             '--dry-run',
             '--memory', '32',
             '--target', join(
-                self.workdir.name, 
+                self.workdir.name,
                 'idh1-test-sample',
                 'vaccine-peptide-report_netmhcpan-iedb_mutect-strelka-mutect2.txt'),
         ]
@@ -213,7 +232,7 @@ class TestPipeline(unittest.TestCase):
             '--dry-run',
             '--memory', '15',
             '--target', join(
-                self.workdir.name, 
+                self.workdir.name,
                 'idh1-test-sample',
                 'rna_final.bam'),
         ]

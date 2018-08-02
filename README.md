@@ -4,7 +4,7 @@ This repository is the public version of the bioinformatics pipeline for selecti
 
 The pipeline used for these trials differs slightly from the version given here due to licensing restrictions on the [NetMHC](http://www.cbs.dtu.dk/services/NetMHC/) suite of tools, which prevent their inclusion in the provided Docker image. To circumvent this issue, the open source pipeline performs MHC binding prediction using the IEDB web interface to these tools. This may be slower but should give the same results. If you have a license to the NetMHC tools (free for non-commercial use) and wish to run these tools locally in the pipeline, please contact us or file an issue.
 
-The pipeline is implemented using the [Snakemake](https://snakemake.readthedocs.io/en/stable/) workflow management system. We recommend running it using our provided [Docker image](https://hub.docker.com/r/julia326/neoantigen-vaccine-pipeline/), which includes all needed dependencies.
+The pipeline is implemented using the [Snakemake](https://snakemake.readthedocs.io/en/stable/) workflow management system. We recommend running it using our provided [Docker image](https://hub.docker.com/r/openvax/neoantigen-vaccine-pipeline/), which includes all needed dependencies.
 
 # Overview
 
@@ -77,7 +77,7 @@ docker run -it \
 -v $(realpath inputs):/inputs \
 -v $(realpath outputs):/outputs \
 -v $(realpath reference-genome):/reference-genome \
-julia326/neoantigen-vaccine-pipeline:latest \
+openvax/neoantigen-vaccine-pipeline:latest \
 --configfile=/inputs/idh1_config.yaml
 ```
 
@@ -87,7 +87,7 @@ If the pipeline errors, the offending job will be highlighted in red and will me
 
 If you want to see all available pipeline options (e.g. ability to execute a dry run, specify memory/CPU resources for the pipeline), run:
 ```sh
-docker run julia326/neoantigen-vaccine-pipeline:latest -h
+docker run openvax/neoantigen-vaccine-pipeline:latest -h
 ```
 
 If you want to poke around in the image to execute tools manually or inspect versions:
@@ -97,7 +97,7 @@ docker run -it \
 -v $(realpath outputs):/outputs \
 -v $(realpath reference-genome):/reference-genome \
 --entrypoint /bin/bash \
-julia326/neoantigen-vaccine-pipeline:latest
+openvax/neoantigen-vaccine-pipeline:latest
 ```
 
 ### Running the dockerized pipeline with your own data
@@ -116,7 +116,7 @@ docker run -it \
 -v <your inputs dir>:/inputs \
 -v <your outputs dir>:/outputs \
 -v <your reference genome dir>:/reference-genome \
-julia326/neoantigen-vaccine-pipeline:latest \
+openvax/neoantigen-vaccine-pipeline:latest \
 --configfile=/inputs/idh1_config.yaml \
 --target=/outputs/idh1-test-sample/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam \
 --target=/outputs/idh1-test-sample/normal_merged_aligned_coordinate_sorted.bam

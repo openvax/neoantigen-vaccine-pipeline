@@ -28,6 +28,9 @@ _READ_LENGTH = 124
 _STAR_GENOME_DIR = os.path.join(
     os.path.dirname(config["reference"]["genome"]), "star-genome-%d" % _READ_LENGTH)
 
+_IDEAL_ALIGNMENT_MEM_GB = 6
+_IDEAL_LARGE_MEM_GB = 20
+
 # Common functions
 
 def _get_half_cores(_):
@@ -37,18 +40,18 @@ def _get_all_cores(_):
   return int(config["num_threads"])
 
 def _get_threads_for_alignment(_):
-  if _mem_gb_for_alignment() < 20:
+  if _mem_gb_for_alignment() < _IDEAL_ALIGNMENT_MEM_GB:
     return _get_all_cores(_)
   else:
     return _get_half_cores(_)
 
-# 20GB or as close to that as allowed by pipeline resources
+# if available, return the ideal pretty-large amount for most jobs (20GB)
 def _mem_gb_for_ram_hungry_jobs():
-  return min(20, int(config["mem_gb"]))
+  return min(_IDEAL_LARGE_MEM_GB, int(config["mem_gb"]))
 
-# 6GB or as close to that as allowed by pipeline resources
+# if available, return the ideal alignment amount (6GB)
 def _mem_gb_for_alignment():
-  return min(6, int(config["mem_gb"]))
+  return min(_IDEAL_ALIGNMENT_MEM_GB, int(config["mem_gb"]))
 
 def _get_intervals_str(wildcards):
   return "--intervals %s" % wildcards.chr if wildcards.chr in _CHR else ""

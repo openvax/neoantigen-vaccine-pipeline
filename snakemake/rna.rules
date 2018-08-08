@@ -169,7 +169,7 @@ rule rna_indel_realigner_per_chr:
     intervals = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.intervals",
     reference = config["reference"]["genome"]
   output:
-    "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.bam"
+    "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam"
   params:
     mem_gb = _mem_gb_for_ram_hungry_jobs()
   benchmark:
@@ -196,18 +196,22 @@ def _get_rna_indel_realigner_input(wildcards):
 
 rule rna_indel_realigner:
   input:
-    _get_rna_indel_realigner_input
+    bam = _get_rna_indel_realigner_input
   output:
-    "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"
+    bam = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"
   benchmark:
     "{prefix}/rna_indel_realigner_benchmark.txt"
   log:
     "{prefix}/rna_indel_realigner.log"
   run:
     if _PARALLEL_INDEL_REALIGNER:
-      shell("sambamba merge {output} {input}")
+      shell("sambamba merge {output.bam} {input.bam}")
     else:
-      shell("mv {input} {output}")
+      shell("mv {input.bam} {output.bam}")
+      input_bai = input.bam.replace(".bam", ".bai")
+      output_bai = output.bam.replace(".bam", ".bai")
+      # also need to rename the .bai from the .bam
+      shell("mv %s %s" % (input_bai, output_bai))
 
 rule merge_all_rna:
   input:

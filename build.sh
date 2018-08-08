@@ -5,7 +5,7 @@
 set -ex
 
 # docker hub username
-USERNAME=julia326
+USERNAME=openvax
 # image name
 IMAGE=neoantigen-vaccine-pipeline
 

@@ -175,10 +175,9 @@ def main(args_list=None):
     if args.inputs or args.outputs or args.reference_genome:
         if not (args.inputs and args.outputs and args.reference_genome):
             raise ValueError(
-                "For a Dockerless run, must specify all of: --inputs, --outputs, "
-                "--reference-genome overrides")
-        # kinda gross, but: replace /outputs, /reference-genome, /inputs paths in config with
-        # temp dir locations
+                "For a Dockerless run, must specify all overrides: --inputs, --outputs, and "
+                "--reference-genome")
+        # replace /outputs, /reference-genome, /inputs paths in config with user-specified dirs
         configfile_contents = configfile_contents.replace(
             '/outputs', args.outputs).replace(
             '/reference-genome', args.reference_genome).replace(

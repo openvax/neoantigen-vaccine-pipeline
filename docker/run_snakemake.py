@@ -15,12 +15,12 @@
 from __future__ import print_function, division, absolute_import
 from argparse import ArgumentParser
 import datetime
-import json
 from os import access, R_OK, W_OK
 from os.path import isfile, join, basename, splitext
-import sys
-
 import psutil
+import sys
+import tempfile
+
 import snakemake
 import yaml
 
@@ -67,6 +67,24 @@ parser.add_argument(
     "--dry-run",
     help="If this argument is present, Snakemake will do a dry run of the pipeline",
     action="store_true")
+
+overrides_group = parser.add_argument_group("Dockerless runs: directory override options")
+
+# TODO(julia): make sure that if any of these is specified, all the others are too
+overrides_group.add_argument(
+    "--inputs",
+    default="",
+    help="Directory that should be treated as /inputs: mimicking Docker volume mounting")
+
+overrides_group.add_argument(
+    "--outputs",
+    default="",
+    help="Directory that should be treated as /outputs: mimicking Docker volume mounting")
+
+overrides_group.add_argument(
+    "--reference-genome",
+    default="",
+    help="Directory that should be treated as /reference-genome: mimicking Docker volume mounting")
 
 def get_output_dir(config):
     return join(config["workdir"], config["input"]["id"])
@@ -151,40 +169,58 @@ def main(args_list=None):
     print(args)
 
     with open(args.configfile) as configfile:
-        config = yaml.load(configfile)
-    output_dir = get_output_dir(config)
+        configfile_contents = configfile.read()
 
-    targets = args.target
-    if targets is None:
-        if args.somatic_variant_calling_only:
-            targets = somatic_vcf_targets(config)
-        else:
-            targets = default_vaxrank_targets(config)
+    # if necessary, replace paths in the configfile contents
+    if args.inputs or args.outputs or args.reference_genome:
+        if not (args.inputs and args.outputs and args.reference_genome):
+            raise ValueError(
+                "For a Dockerless run, must specify all overrides: --inputs, --outputs, and "
+                "--reference-genome")
+        # replace /outputs, /reference-genome, /inputs paths in config with user-specified dirs
+        configfile_contents = configfile_contents.replace(
+            '/outputs', args.outputs).replace(
+            '/reference-genome', args.reference_genome).replace(
+            '/inputs', args.inputs)
 
-    # input validation
-    check_inputs(config)
-    if len(targets) == 0:
-        raise ValueError("Must specify at least one target")
-    for target in targets:
-        check_target_against_config(target, config)
-        check_target_against_args(target, args)
+    with tempfile.NamedTemporaryFile(mode='w') as config_tmpfile:
+        config_tmpfile.write(configfile_contents)
+        config_tmpfile.seek(0)
+        config = yaml.load(configfile_contents)
 
-    start_time = datetime.datetime.now()
-    if not snakemake.snakemake(
-        args.snakefile,
-        cores=args.cores,
-        resources={'mem_mb': int(1024 * args.memory)},
-        configfile=args.configfile,
-        config={'num_threads': args.cores, 'mem_gb': args.memory},
-        printshellcmds=True,
-        dryrun=args.dry_run,
-        targets=targets,
-        stats=join(output_dir, "stats.json"),
-    ):
-        raise ValueError("Pipeline failed, see Snakemake error message for details")
+        output_dir = get_output_dir(config)
 
-    end_time = datetime.datetime.now()
-    print("--- Pipeline running time: %s ---" % (str(end_time - start_time)))
+        targets = args.target
+        if targets is None:
+            if args.somatic_variant_calling_only:
+                targets = somatic_vcf_targets(config)
+            else:
+                targets = default_vaxrank_targets(config)
+
+        # input validation
+        check_inputs(config)
+        if len(targets) == 0:
+            raise ValueError("Must specify at least one target")
+        for target in targets:
+            check_target_against_config(target, config)
+            check_target_against_args(target, args)
+
+        start_time = datetime.datetime.now()
+        if not snakemake.snakemake(
+            args.snakefile,
+            cores=args.cores,
+            resources={'mem_mb': int(1024 * args.memory)},
+            configfile=config_tmpfile.name,
+            config={'num_threads': args.cores, 'mem_gb': args.memory},
+            printshellcmds=True,
+            dryrun=args.dry_run,
+            targets=targets,
+            stats=join(output_dir, "stats.json"),
+        ):
+            raise ValueError("Pipeline failed, see Snakemake error message for details")
+
+        end_time = datetime.datetime.now()
+        print("--- Pipeline running time: %s ---" % (str(end_time - start_time)))
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ from __future__ import print_function, division, absolute_import
 from argparse import ArgumentParser
 import datetime
 from os import access, R_OK, W_OK
-from os.path import isfile, join, basename, splitext
+from os.path import dirname, isfile, join, basename, splitext
 import psutil
 import sys
 import tempfile
@@ -89,6 +89,9 @@ overrides_group.add_argument(
 def get_output_dir(config):
     return join(config["workdir"], config["input"]["id"])
 
+def get_reference_genome_dir(config):
+    return dirname(config["reference"]["genome"])
+
 def default_vaxrank_targets(config):
     mhc_predictor = config["mhc_predictor"]
     vcfs = "-".join(config["variant_callers"])
@@ -137,7 +140,8 @@ def check_inputs(config):
 
 # Contains validation specific to pipeline config details
 def check_target_against_config(target, config):
-    if not target.startswith(get_output_dir(config)):
+    if not (target.startswith(get_output_dir(config)) or \
+            target.startswith(get_reference_genome_dir(config))):
         raise ValueError("Invalid target, must start with output directory: %s" % target)
     if "vaccine-peptide-report" in target and target not in default_vaxrank_targets(config):
         raise ValueError(

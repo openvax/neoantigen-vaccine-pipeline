@@ -18,6 +18,7 @@ This contains rules related to processing the reference genome, for both DNA and
 NOTE: the reference genome directory must be writeable for these rules to work
 """
 
+import csv
 import os
 
 # See this thread for explanation of some STAR genomeGenerate parameters:
@@ -99,6 +100,19 @@ rule samtools_index_reference:
     os.path.join(WORKDIR, "samtools_index_reference.log")
   shell:
     "samtools faidx {input.reference} >> {log} 2>&1"
+
+rule extract_contig_names:
+  input:
+    fai = config["reference"]["genome"] + ".fai"
+  output:
+    config["reference"]["genome"].replace("fasta", "contigs")
+  run:
+    with open(input.fai) as f, open(output, 'w') as o:
+      reader = csv.reader(f, delimiter='\t')
+      for i in reader:
+        contig = i[0]
+        if contig.isdigit() or contig.lower() in ['x', 'y', 'mt', 'chrx', 'chry', 'chrm']:
+          o.write(contig + '\n')
 
 rule picard_sequence_dict_reference:
   input:

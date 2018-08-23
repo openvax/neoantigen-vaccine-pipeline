@@ -184,6 +184,17 @@ class TestPipeline(unittest.TestCase):
         ]
         docker_entrypoint(germline_variant_cli_args)
 
+    def test_docker_entrypoint_script_reference_target(self):
+        reference_cli_args = [
+            '--configfile', self.config_tmpfile.name,
+            '--dry-run',
+            '--memory', '15',
+            '--target', join(
+                self.referencedir.name,
+                'b37decoy.contigs'),
+        ]
+        docker_entrypoint(reference_cli_args)
+
     def test_docker_entrypoint_script_failures(self):
         # check that invalid targets fail
         fake_target_cli_args = [
@@ -191,7 +202,7 @@ class TestPipeline(unittest.TestCase):
             '--dry-run',
             '--memory', '32',
             '--target', join(
-                self.workdir.name, 
+                self.referencedir.name, 
                 'idh1-test-sample',
                 'fakey_fakerson'),
         ]

@@ -101,18 +101,22 @@ rule samtools_index_reference:
   shell:
     "samtools faidx {input.reference} >> {log} 2>&1"
 
+# This rule generates one file per contig we should use
 rule extract_contig_names:
   input:
     fai = config["reference"]["genome"] + ".fai"
   output:
-    contigs = config["reference"]["genome"].replace("fasta", "contigs")
+    dynamic(config["reference"]["genome"].replace("fasta", "contigs") + "_{chr}")
   run:
-    with open(input.fai) as f, open(output.contigs, 'w') as o:
+    with open(input.fai) as f:
       reader = csv.reader(f, delimiter='\t')
       for i in reader:
         contig = i[0]
         if contig.isdigit() or contig.lower() in ['x', 'y', 'mt', 'chrx', 'chry', 'chrm']:
-          o.write(contig + '\n')
+          output_filename = "%s_%s" % (
+            config["reference"]["genome"].replace("fasta", "contigs"), contig)
+          with open(output_filename, 'w') as o:
+            o.write(contig)
 
 rule picard_sequence_dict_reference:
   input:

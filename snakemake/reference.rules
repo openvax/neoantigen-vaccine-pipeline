@@ -105,9 +105,9 @@ rule extract_contig_names:
   input:
     fai = config["reference"]["genome"] + ".fai"
   output:
-    config["reference"]["genome"].replace("fasta", "contigs")
+    contigs = config["reference"]["genome"].replace("fasta", "contigs")
   run:
-    with open(input.fai) as f, open(output, 'w') as o:
+    with open(input.fai) as f, open(output.contigs, 'w') as o:
       reader = csv.reader(f, delimiter='\t')
       for i in reader:
         contig = i[0]

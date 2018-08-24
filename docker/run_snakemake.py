@@ -140,9 +140,13 @@ def check_inputs(config):
 
 # Contains validation specific to pipeline config details
 def check_target_against_config(target, config):
-    if not (target.startswith(get_output_dir(config)) or \
-            target.startswith(get_reference_genome_dir(config))):
-        raise ValueError("Invalid target, must start with output directory: %s" % target)
+    output_dir = get_output_dir(config)
+    reference_genome_dir = get_reference_genome_dir(config)
+    if not (target.startswith(output_dir) or \
+            target.startswith(reference_genome_dir)):
+        raise ValueError(
+            "Invalid target %s, must start with output (%s) or genome (%s) directory" % (
+                target, output_dir, reference_genome_dir))
     if "vaccine-peptide-report" in target and target not in default_vaxrank_targets(config):
         raise ValueError(
             "Invalid target, vaccine peptide output must match config file specs: %s" % target)
@@ -165,6 +169,54 @@ def check_target_against_args(target, args):
             raise ValueError(
                 "Cannot request --somatic-variant-calling-only in combination with any RNA "
                 "processing or vaccine peptide targets")
+
+def process_reference(args, configfile_path):
+    start_time = datetime.datetime.now()
+    if not snakemake.snakemake(
+        'reference/Snakefile',
+        cores=args.cores,
+        resources={'mem_mb': int(1024 * args.memory)},
+        configfile=configfile_path,
+        config={'num_threads': args.cores, 'mem_gb': args.memory},
+        printshellcmds=True,
+        dryrun=args.dry_run):
+            raise ValueError("Reference processing failed, see Snakemake error message for details")
+    end_time = datetime.datetime.now()
+    print("--- Reference processing time: %s ---" % (str(end_time - start_time)))
+
+def run_neoantigen_pipeline():
+    output_dir = get_output_dir(config)
+    targets = args.target
+    if targets is None:
+        if args.somatic_variant_calling_only:
+            targets = somatic_vcf_targets(config)
+        else:
+            targets = default_vaxrank_targets(config)
+
+    # input validation
+    check_inputs(config)
+    if len(targets) == 0:
+        raise ValueError("Must specify at least one target")
+    for target in targets:
+        check_target_against_config(target, config)
+        check_target_against_args(target, args)
+
+    start_time = datetime.datetime.now()
+    if not snakemake.snakemake(
+        args.snakefile,
+        cores=args.cores,
+        resources={'mem_mb': int(1024 * args.memory)},
+        configfile=config_tmpfile.name,
+        config={'num_threads': args.cores, 'mem_gb': args.memory},
+        printshellcmds=True,
+        dryrun=args.dry_run,
+        targets=targets,
+        stats=join(output_dir, "stats.json"),
+    ):
+        raise ValueError("Pipeline failed, see Snakemake error message for details")
+
+    end_time = datetime.datetime.now()
+    print("--- Pipeline running time: %s ---" % (str(end_time - start_time)))
 
 def main(args_list=None):
     if args_list is None:
@@ -192,39 +244,41 @@ def main(args_list=None):
         config_tmpfile.seek(0)
         config = yaml.load(configfile_contents)
 
-        output_dir = get_output_dir(config)
+        # process the reference, if necessary
+        process_reference(args, config_tmpfile.name)
 
-        targets = args.target
-        if targets is None:
-            if args.somatic_variant_calling_only:
-                targets = somatic_vcf_targets(config)
-            else:
-                targets = default_vaxrank_targets(config)
+        # output_dir = get_output_dir(config)
+        # targets = args.target
+        # if targets is None:
+        #     if args.somatic_variant_calling_only:
+        #         targets = somatic_vcf_targets(config)
+        #     else:
+        #         targets = default_vaxrank_targets(config)
 
-        # input validation
-        check_inputs(config)
-        if len(targets) == 0:
-            raise ValueError("Must specify at least one target")
-        for target in targets:
-            check_target_against_config(target, config)
-            check_target_against_args(target, args)
+        # # input validation
+        # check_inputs(config)
+        # if len(targets) == 0:
+        #     raise ValueError("Must specify at least one target")
+        # for target in targets:
+        #     check_target_against_config(target, config)
+        #     check_target_against_args(target, args)
 
-        start_time = datetime.datetime.now()
-        if not snakemake.snakemake(
-            args.snakefile,
-            cores=args.cores,
-            resources={'mem_mb': int(1024 * args.memory)},
-            configfile=config_tmpfile.name,
-            config={'num_threads': args.cores, 'mem_gb': args.memory},
-            printshellcmds=True,
-            dryrun=args.dry_run,
-            targets=targets,
-            stats=join(output_dir, "stats.json"),
-        ):
-            raise ValueError("Pipeline failed, see Snakemake error message for details")
+        # start_time = datetime.datetime.now()
+        # if not snakemake.snakemake(
+        #     args.snakefile,
+        #     cores=args.cores,
+        #     resources={'mem_mb': int(1024 * args.memory)},
+        #     configfile=config_tmpfile.name,
+        #     config={'num_threads': args.cores, 'mem_gb': args.memory},
+        #     printshellcmds=True,
+        #     dryrun=args.dry_run,
+        #     targets=targets,
+        #     stats=join(output_dir, "stats.json"),
+        # ):
+        #     raise ValueError("Pipeline failed, see Snakemake error message for details")
 
-        end_time = datetime.datetime.now()
-        print("--- Pipeline running time: %s ---" % (str(end_time - start_time)))
+        # end_time = datetime.datetime.now()
+        # print("--- Pipeline running time: %s ---" % (str(end_time - start_time)))
 
 
 if __name__ == "__main__":

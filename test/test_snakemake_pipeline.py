@@ -202,7 +202,7 @@ class TestPipeline(unittest.TestCase):
             '--dry-run',
             '--memory', '32',
             '--target', join(
-                self.referencedir.name, 
+                self.workdir.name, 
                 'idh1-test-sample',
                 'fakey_fakerson'),
         ]

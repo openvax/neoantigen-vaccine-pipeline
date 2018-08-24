@@ -21,6 +21,14 @@ NOTE: the reference genome directory must be writeable for these rules to work
 import csv
 import os
 
+SAMPLE_ID = config["input"]["id"]
+WORKDIR = os.path.join(config["workdir"], SAMPLE_ID)
+LOGDIR = os.path.join(WORKDIR, "logs")
+BENCHMARKDIR = os.path.join(WORKDIR, "benchmarks")
+_READ_LENGTH = 124
+_STAR_GENOME_DIR = os.path.join(
+    os.path.dirname(config["reference"]["genome"]), "star-genome-%d" % _READ_LENGTH)
+
 # See this thread for explanation of some STAR genomeGenerate parameters:
 # https://groups.google.com/forum/#!topic/rna-star/q3CZKHf9LOc
 # We want to support both high- and low-memory runs, so need to tweak the defaults sometimes
@@ -55,11 +63,11 @@ rule star_align_reference:
     mem_mb = _mem_gb_for_star_genome_generate() * 1024
   output:
     os.path.join(_STAR_GENOME_DIR, "SA")
-  threads: _get_all_cores
+  threads: int(config["num_threads"])
   log:
-    os.path.join(WORKDIR, "star_align_reference.log")
+    os.path.join(LOGDIR, "star_align_reference.log")
   benchmark:
-    os.path.join(WORKDIR, "star_align_reference_benchmark.txt")
+    os.path.join(BENCHMARKDIR, "star_align_reference_benchmark.txt")
   run:
     if not os.path.exists(params.genome_dir):
         shell("mkdir {params.genome_dir}")
@@ -83,9 +91,9 @@ rule bwa_index_reference:
   output:
     expand("%s.{ext}" % config["reference"]["genome"], ext=["amb", "ann", "bwt", "pac", "sa"])
   benchmark:
-    os.path.join(WORKDIR, "bwa_index_reference_benchmark.txt")
+    os.path.join(BENCHMARKDIR, "bwa_index_reference_benchmark.txt")
   log:
-    os.path.join(WORKDIR, "bwa_index_reference.log")
+    os.path.join(LOGDIR, "bwa_index_reference.log")
   shell:
     "bwa index {input.reference} >> {log} 2>&1"
 
@@ -95,9 +103,9 @@ rule samtools_index_reference:
   output:
     config["reference"]["genome"] + ".fai"
   benchmark:
-    os.path.join(WORKDIR, "samtools_index_reference_benchmark.txt")
+    os.path.join(BENCHMARKDIR, "samtools_index_reference_benchmark.txt")
   log:
-    os.path.join(WORKDIR, "samtools_index_reference.log")
+    os.path.join(LOGDIR, "samtools_index_reference.log")
   shell:
     "samtools faidx {input.reference} >> {log} 2>&1"
 
@@ -124,9 +132,9 @@ rule picard_sequence_dict_reference:
   output:
     config["reference"]["genome"].replace("fasta", "dict")
   benchmark:
-    os.path.join(WORKDIR, "picard_sequence_dict_reference_benchmark.txt")
+    os.path.join(BENCHMARKDIR, "picard_sequence_dict_reference_benchmark.txt")
   log:
-    os.path.join(WORKDIR, "picard_sequence_dict_reference.log")
+    os.path.join(LOGDIR, "picard_sequence_dict_reference.log")
   shell:
     "picard -Xmx{params.mem_gb}g "
     "CreateSequenceDictionary R={input.reference} O={output} >> {log} 2>&1"

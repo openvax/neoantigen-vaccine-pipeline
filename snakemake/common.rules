@@ -19,7 +19,7 @@ WORKDIR = os.path.join(config["workdir"], SAMPLE_ID)
 SUPPORTED_FILETYPES = {".fastq.gz", ".fastq", ".bam"}
 
 # TODO(julia): this is specific to GRCh37, populate these from the reference genome instead
-_CHR = [str(x) for x in range(1, 23)] + ['X', 'Y', 'MT']
+# _CHR = [str(x) for x in range(1, 23)] + ['X', 'Y', 'MT']
 
 # will default to false, if not present in config
 _PARALLEL_INDEL_REALIGNER = config.get("parallel_indel_realigner")

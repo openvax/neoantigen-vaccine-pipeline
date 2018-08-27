@@ -128,7 +128,7 @@ if _PARALLEL_INDEL_REALIGNER:
   rule parallel_dna_indel_realigner:
     input:
       bam = expand("{{prefix}}_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam",
-                   chr=_get_chr_list)
+                   chr=config["contigs"])
     output:
       bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
     benchmark:

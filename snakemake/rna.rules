@@ -191,7 +191,7 @@ if _PARALLEL_INDEL_REALIGNER:
   rule parallel_rna_indel_realigner:
     input:
       bam = expand("{{prefix}}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam",
-                   chr=_get_chr_list)
+                   chr=config["contigs"])
     output:
       bam = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"
     benchmark:

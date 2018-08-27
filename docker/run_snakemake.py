@@ -219,13 +219,17 @@ def run_neoantigen_pipeline(args, parsed_config, configfile):
     targets = [x for x in get_and_check_targets(args, parsed_config) if x.startswith(output_dir)]
     print("Running neoantigen pipeline with targets %s " % targets)
 
+    # include all relevant contigs in the pipeline config
+    with open(config["reference"]["genome"] + ".contigs") as f:
+        contigs = [x.strip() for x in f.readlines()]
+
     # parse out targets that start with output directory (not reference)
     start_time = datetime.datetime.now()
     if not snakemake.snakemake(
             'snakemake/Snakefile',
             cores=args.cores,
             resources={'mem_mb': int(1024 * args.memory)},
-            config={'num_threads': args.cores, 'mem_gb': args.memory},
+            config={'num_threads': args.cores, 'mem_gb': args.memory, 'contigs': contigs},
             configfile=configfile.name,
             printshellcmds=True,
             dryrun=args.dry_run,

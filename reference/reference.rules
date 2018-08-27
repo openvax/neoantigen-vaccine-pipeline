@@ -119,10 +119,10 @@ rule extract_contig_names:
     with open(input.fai) as f, open(output.contigs, 'w') as o:
       reader = csv.reader(f, delimiter='\t')
       for i in reader:
-        contig = i[0].lower()
-        if contig.startswith('chr'):
+        contig = i[0]
+        if contig.lower().startswith('chr'):
           contig = contig[3:]
-        if contig.isdigit() or contig in ['x', 'y', 'm' ,'mt']:
+        if contig.isdigit() or contig.lower() in ['x', 'y', 'm' ,'mt']:
           o.write(contig + '\n')
 
 rule picard_sequence_dict_reference:
@@ -133,7 +133,9 @@ rule picard_sequence_dict_reference:
   resources:
     mem_mb = int(config["mem_gb"]) * 1024
   output:
-    config["reference"]["genome"] + ".dict"
+    config["reference"]["genome"].replace("fasta", "dict") if \
+      config["reference"]["genome"].endswith(".fasta") else \
+      config["reference"]["genome"].replace("fa", "dict")
   benchmark:
     os.path.join(BENCHMARKDIR, "picard_sequence_dict_reference_benchmark.txt")
   log:

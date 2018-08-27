@@ -54,7 +54,7 @@ def _mem_gb_for_alignment():
   return min(_IDEAL_ALIGNMENT_MEM_GB, int(config["mem_gb"]))
 
 def _get_intervals_str(wildcards):
-  return "--intervals %s" % wildcards.chr if wildcards.chr in _get_chr_list() else ""
+  return "--intervals %s" % wildcards.chr if wildcards.chr in _get_chr_list(wildcards) else ""
 
 def _get_chr_list(_):
   if _CHR is None:

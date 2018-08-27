@@ -119,8 +119,10 @@ rule extract_contig_names:
     with open(input.fai) as f, open(output.contigs, 'w') as o:
       reader = csv.reader(f, delimiter='\t')
       for i in reader:
-        contig = i[0]
-        if contig.isdigit() or contig.lower() in ['x', 'y', 'mt', 'chrx', 'chry', 'chrm']:
+        contig = i[0].lower()
+        if contig.startswith('chr'):
+          contig = contig[3:]
+        if contig.isdigit() or contig in ['x', 'y', 'm' ,'mt']:
           o.write(contig + '\n')
 
 rule picard_sequence_dict_reference:

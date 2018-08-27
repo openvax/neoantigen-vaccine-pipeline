@@ -18,8 +18,8 @@ SAMPLE_ID = config["input"]["id"]
 WORKDIR = os.path.join(config["workdir"], SAMPLE_ID)
 SUPPORTED_FILETYPES = {".fastq.gz", ".fastq", ".bam"}
 
-# TODO(julia): this is specific to GRCh37, populate these from the reference genome instead
-# _CHR = [str(x) for x in range(1, 23)] + ['X', 'Y', 'MT']
+# used to hold a list of all chromosomes
+_CHR = None
 
 # will default to false, if not present in config
 _PARALLEL_INDEL_REALIGNER = config.get("parallel_indel_realigner")
@@ -55,6 +55,12 @@ def _mem_gb_for_alignment():
 
 def _get_intervals_str(wildcards):
   return "--intervals %s" % wildcards.chr if wildcards.chr in _CHR else ""
+
+def _get_chr_list(_):
+  if _CHR is None:
+    with open(config["reference"]["genome"] + ".contigs") as f:
+      _CHR = [x.strip() for x in f.readlines()]
+  return _CHR
 
 rule gunzip:
   input:

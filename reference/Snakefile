@@ -24,3 +24,5 @@ rule all:
     rules.samtools_index_reference.output,
     rules.extract_contig_names.output,
     rules.picard_sequence_dict_reference.output
+  output:
+    touch(config["reference"]["genome"] + ".done")

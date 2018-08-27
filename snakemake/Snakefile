@@ -19,8 +19,6 @@ import subprocess
 include:
     "common.rules"
 include:
-    "reference.rules"
-include:
     "gatk.rules"
 include:
     "alignment.rules"

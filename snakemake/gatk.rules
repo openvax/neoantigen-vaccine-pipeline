@@ -55,16 +55,15 @@ rule sambamba_index_bam:
 
 # TODO(julia): figure out how to combine with RNA IndelRealigner rules, very similar
 
-# if this rule is triggered with "chr" mapping to a chromosome in the _CHR list, it'll be run
-# for that chromosome alone. If "chr" matches any other string, IndelRealigner will run for all
-# chromosomes.
-rule dna_indel_realigner_target_creator_per_chr:
+# if this rule is triggered with "chr" mapping to a chromosome in the input list of contigs, it'll
+# run for that chromosome alone. If "chr" matches any other string, IndelRealignerTargetCreator
+# will run for all chromosomes.
+rule indel_realigner_target_creator:
   input:
     expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai", type=["normal", "tumor"]),
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups.bam",
     tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups.bam",
-    reference_fai = rules.samtools_index_reference.output,
-    reference_dict = rules.picard_sequence_dict_reference.output,
+    rna = "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam",
     reference = config["reference"]["genome"]
   output:
     "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals"
@@ -72,9 +71,9 @@ rule dna_indel_realigner_target_creator_per_chr:
     mem_gb = _mem_gb_for_ram_hungry_jobs()
   threads: _get_half_cores
   benchmark:
-    "{prefix}/dna_indel_realigner_target_creator_{chr}_benchmark.txt"
+    "{prefix}/indel_realigner_target_creator_{chr}_benchmark.txt"
   log:
-    "{prefix}/dna_indel_realigner_target_creator_{chr}.log"
+    "{prefix}/indel_realigner_target_creator_{chr}.log"
   resources:
     mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   run:
@@ -82,15 +81,15 @@ rule dna_indel_realigner_target_creator_per_chr:
     shell("""
       gatk -Xmx{params.mem_gb}g -T RealignerTargetCreator -R {input.reference} \
       %s \
-      -I {input.normal} -I {input.tumor} -o {output} -nt {threads} \
+      -I {input.normal} -I {input.tumor} -I {input.rna} -o {output} -nt {threads} \
       --filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored \
       2> {log}
     """ % intervals_str)
 
-# if this rule is triggered with "chr" mapping to a chromosome in the _CHR list, it'll be run
-# for that chromosome alone. If "chr" matches any other string, IndelRealigner will run for all
+# if this rule is triggered with "chr" mapping to a chromosome in the input list of contigs, it'll
+# run for that chromosome alone. If "chr" matches any other string, IndelRealigner will run for all
 # chromosomes.
-rule dna_indel_realigner_per_chr:
+rule dna_indel_realigner:
   input:
     expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai", type=["normal", "tumor"]),
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups.bam",
@@ -124,20 +123,12 @@ rule dna_indel_realigner_per_chr:
       {wildcards.prefix}
     """ % intervals_str)
 
-def _get_dna_indel_realigner_input(wildcards):
-  if _PARALLEL_INDEL_REALIGNER:
-    return ["%s_aligned_coordinate_sorted_dups_indelreal_chr_%s.bam" % (
-        wildcards.prefix, chromosome) for chromosome in _CHR]
-  else:
-    return "%s_aligned_coordinate_sorted_dups_indelreal_chr_ALL.bam" % wildcards.prefix
-
 
 if _PARALLEL_INDEL_REALIGNER:
   rule parallel_dna_indel_realigner:
     input:
-      bam = dynamic("{prefix}_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam")
-      # bam = expand("{{prefix}}_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam", chr=_CHR)
-      # contig_names = rules.extract_contig_names.output
+      bam = expand("{{prefix}}_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam",
+                   chr=_get_chr_list)
     output:
       bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
     benchmark:
@@ -147,7 +138,7 @@ if _PARALLEL_INDEL_REALIGNER:
     shell:
       "sambamba merge {output.bam} {input.bam}"
 else:
-  rule dna_indel_realigner:
+  rule non_parallel_dna_indel_realigner:
     input:
       bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal_chr_ALL.bam"
     output:

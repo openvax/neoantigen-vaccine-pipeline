@@ -195,18 +195,6 @@ class TestPipeline(unittest.TestCase):
         ]
         docker_entrypoint(reference_cli_args)
 
-    def test_docker_entrypoint_script_dynamic(self):
-        dynamic_cli_args = [
-            '--configfile', self.config_tmpfile.name,
-            '--dry-run',
-            '--memory', '15',
-            '--target', join(
-                self.workdir.name, 
-                'idh1-test-sample',
-                'normal_aligned_coordinate_sorted_dups_indelreal.bam'),
-        ]
-        docker_entrypoint(dynamic_cli_args)
-
     def test_docker_entrypoint_script_failures(self):
         # check that invalid targets fail
         fake_target_cli_args = [

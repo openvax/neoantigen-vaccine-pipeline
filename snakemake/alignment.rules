@@ -45,8 +45,8 @@ def _get_read_group_header(wildcards):
 rule bwa_mem_single_end:
   input:
     r = "{prefix}.fastq.gz",
-    reference_index = rules.bwa_index_reference.output,
-    reference = config["reference"]["genome"]
+    reference = config["reference"]["genome"],
+    done = config["reference"]["genome"] + ".done"
   output:
     "{prefix}_aligned.sam"
   params:
@@ -67,8 +67,8 @@ rule bwa_mem_paired_end:
   input:
     r1 = "{prefix}_R1.fastq.gz",
     r2 = "{prefix}_R2.fastq.gz",
-    reference_index = rules.bwa_index_reference.output,
-    reference = config["reference"]["genome"]
+    reference = config["reference"]["genome"],
+    done = config["reference"]["genome"] + ".done"
   output:
     "{prefix}_aligned.sam"
   params:

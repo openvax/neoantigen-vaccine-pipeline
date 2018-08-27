@@ -33,7 +33,7 @@ parser = ArgumentParser()
 parser.add_argument(
     "--configfile",
     default="",
-    help="Docker-relative Snakemake YAML config file path")
+    help="Snakemake YAML config file path")
 
 parser.add_argument(
     "--target",
@@ -47,9 +47,10 @@ parser.add_argument(
     action="store_true")
 
 parser.add_argument(
-    "--snakefile",
-    default="snakemake/Snakefile",
-    help="Docker-relative path to Snakefile")
+    "--process-reference-only",
+    help="If this argument is present, will only process the input reference files - no pipeline "
+        "run beyond that",
+    action="store_true")
 
 parser.add_argument(
     "--cores",
@@ -86,27 +87,21 @@ overrides_group.add_argument(
     default="",
     help="Directory that should be treated as /reference-genome: mimicking Docker volume mounting")
 
+
 def get_output_dir(config):
     return join(config["workdir"], config["input"]["id"])
+
 
 def get_reference_genome_dir(config):
     return dirname(config["reference"]["genome"])
 
-def default_vaxrank_targets(config):
-    mhc_predictor = config["mhc_predictor"]
-    vcfs = "-".join(config["variant_callers"])
-    path_without_ext = join(
-        get_output_dir(config),
-        "vaccine-peptide-report_%s_%s" % (mhc_predictor, vcfs))
-    return ['%s.%s' % (path_without_ext, ext) for ext in ('txt', 'json', 'pdf', 'xlsx')]
 
-def somatic_vcf_targets(config):
-    return [join(
-        get_output_dir(config),
-        "%s.vcf" % vcf_type
-        ) for vcf_type in config["variant_callers"]]
+######################################################################################
+#########################          Validation        #################################
+######################################################################################
 
-def check_inputs(config):
+
+def validate_config(config):
     """
     Check that the paths specified in the config exist and are readable.
     """
@@ -138,85 +133,134 @@ def check_inputs(config):
     if not access(workdir, W_OK):
         raise ValueError("Workdir %s does not exist or is not writable" % workdir)
 
-# Contains validation specific to pipeline config details
-def check_target_against_config(target, config):
+
+def validate_target(target, args, config):
+    if args.memory < 6.5:
+        raise ValueError("Must provide at least 6.5GB RAM")
+
     output_dir = get_output_dir(config)
     reference_genome_dir = get_reference_genome_dir(config)
-    if not (target.startswith(output_dir) or \
-            target.startswith(reference_genome_dir)):
+
+    if target.startswith(reference_genome_dir):
+        if args.memory < 32:
+            raise ValueError(
+                "Must provide at least 32GB RAM for reference genome processing")
+
+    elif target.startswith(output_dir):
+        if "vaccine-peptide-report" in target and target not in default_vaxrank_targets(config):
+            raise ValueError(
+                "Invalid target, vaccine peptide output must match config file specs: %s" % target)
+        # if the target is a somatic VCF file, make sure it's in the config
+        root, ext = splitext(basename(target))
+        if ext == ".vcf" and not "germline" in root and not root in config["variant_callers"]:
+            raise ValueError(
+                "Invalid target, somatic VCF must be part of config file "
+                "variant_callers: %s" % target)
+
+        # if any of the targets are RNA or vaxrank report outputs, needs >=32GB RAM
+        if "vaccine-peptide-report" in target or basename(target).startswith("rna"):
+            if args.memory < 32:
+                raise ValueError(
+                    "Must provide at least 32GB RAM for RNA processing or full peptide computation")
+            if args.somatic_variant_calling_only:
+                raise ValueError(
+                    "Cannot request --somatic-variant-calling-only in combination with any RNA "
+                    "processing or vaccine peptide targets")
+
+    else:
         raise ValueError(
             "Invalid target %s, must start with output (%s) or genome (%s) directory" % (
                 target, output_dir, reference_genome_dir))
-    if "vaccine-peptide-report" in target and target not in default_vaxrank_targets(config):
-        raise ValueError(
-            "Invalid target, vaccine peptide output must match config file specs: %s" % target)
-    # if the target is a VCF file, make sure it's in the config
-    root, ext = splitext(basename(target))
-    if ext == ".vcf" and not "germline" in root and not root in config["variant_callers"]:
-        raise ValueError(
-            "Invalid target, must be part of config file variant_callers: %s" % root)
 
-# Contains validation specific to runtime args: memory/CPU resources, etc.
-def check_target_against_args(target, args):
-    if args.memory < 6.5:
-        raise ValueError("Must provide at least 6.5GB RAM")
-    # if any of the targets are RNA or vaxrank report outputs, needs >=32GB RAM
-    if "vaccine-peptide-report" in target or basename(target).startswith("rna"):
-        if args.memory < 32:
-            raise ValueError(
-                "Must provide at least 32GB RAM for RNA processing or full peptide computation")
-        if args.somatic_variant_calling_only:
-            raise ValueError(
-                "Cannot request --somatic-variant-calling-only in combination with any RNA "
-                "processing or vaccine peptide targets")
 
-def process_reference(args, configfile_path):
-    start_time = datetime.datetime.now()
-    if not snakemake.snakemake(
-        'reference/Snakefile',
-        cores=args.cores,
-        resources={'mem_mb': int(1024 * args.memory)},
-        configfile=configfile_path,
-        config={'num_threads': args.cores, 'mem_gb': args.memory},
-        printshellcmds=True,
-        dryrun=args.dry_run):
-            raise ValueError("Reference processing failed, see Snakemake error message for details")
-    end_time = datetime.datetime.now()
-    print("--- Reference processing time: %s ---" % (str(end_time - start_time)))
+######################################################################################
+#########################          Target processing        ##########################
+######################################################################################
 
-def run_neoantigen_pipeline():
-    output_dir = get_output_dir(config)
+
+def default_vaxrank_targets(config):
+    mhc_predictor = config["mhc_predictor"]
+    vcfs = "-".join(config["variant_callers"])
+    path_without_ext = join(
+        get_output_dir(config),
+        "vaccine-peptide-report_%s_%s" % (mhc_predictor, vcfs))
+    return ['%s.%s' % (path_without_ext, ext) for ext in ('txt', 'json', 'pdf', 'xlsx')]
+
+
+def somatic_vcf_targets(config):
+    return [join(
+        get_output_dir(config),
+        "%s.vcf" % vcf_type
+        ) for vcf_type in config["variant_callers"]]
+
+
+def get_and_check_targets(args, config):
     targets = args.target
     if targets is None:
         if args.somatic_variant_calling_only:
             targets = somatic_vcf_targets(config)
+        elif args.process_reference_only:
+            targets = [config["reference"]["genome"] + ".done"]
         else:
             targets = default_vaxrank_targets(config)
-
-    # input validation
-    check_inputs(config)
+    
     if len(targets) == 0:
         raise ValueError("Must specify at least one target")
     for target in targets:
-        check_target_against_config(target, config)
-        check_target_against_args(target, args)
+        validate_target(target, args, config)
+    return targets
 
+
+def run_neoantigen_pipeline(args, parsed_config, configfile):
+    configfile.seek(0)
+
+    output_dir = get_output_dir(parsed_config)
+    stats_file = join(output_dir, "stats.json")
+    targets = [x for x in get_and_check_targets(args, parsed_config) if x.startswith(output_dir)]
+    print("Running neoantigen pipeline with targets %s " % targets)
+
+    # parse out targets that start with output directory (not reference)
     start_time = datetime.datetime.now()
     if not snakemake.snakemake(
-        args.snakefile,
-        cores=args.cores,
-        resources={'mem_mb': int(1024 * args.memory)},
-        configfile=config_tmpfile.name,
-        config={'num_threads': args.cores, 'mem_gb': args.memory},
-        printshellcmds=True,
-        dryrun=args.dry_run,
-        targets=targets,
-        stats=join(output_dir, "stats.json"),
-    ):
+            'snakemake/Snakefile',
+            cores=args.cores,
+            resources={'mem_mb': int(1024 * args.memory)},
+            config={'num_threads': args.cores, 'mem_gb': args.memory},
+            configfile=configfile.name,
+            printshellcmds=True,
+            dryrun=args.dry_run,
+            targets=targets,
+            stats=stats_file):
         raise ValueError("Pipeline failed, see Snakemake error message for details")
 
     end_time = datetime.datetime.now()
     print("--- Pipeline running time: %s ---" % (str(end_time - start_time)))
+
+
+def process_reference(args, parsed_config, configfile):
+    configfile.seek(0)
+
+    reference_genome_dir = get_reference_genome_dir(parsed_config)
+    stats_file = join(reference_genome_dir, "stats.json")
+    targets = [
+        x for x in get_and_check_targets(args, parsed_config) if x.startswith(reference_genome_dir)]
+    print("Processing reference with targets: %s" % targets)
+
+    start_time = datetime.datetime.now()
+    if not snakemake.snakemake(
+            'reference/Snakefile',
+            cores=args.cores,
+            resources={'mem_mb': int(1024 * args.memory)},
+            config={'num_threads': args.cores, 'mem_gb': args.memory},
+            configfile=configfile.name,
+            printshellcmds=True,
+            dryrun=args.dry_run,
+            targets=targets,
+            stats=stats_file):
+        raise ValueError("Reference processing failed, see Snakemake error message for details")
+    end_time = datetime.datetime.now()
+    print("--- Reference processing time: %s ---" % (str(end_time - start_time)))
+
 
 def main(args_list=None):
     if args_list is None:
@@ -239,47 +283,18 @@ def main(args_list=None):
             '/reference-genome', args.reference_genome).replace(
             '/inputs', args.inputs)
 
+    parsed_config = yaml.load(configfile_contents)
+    validate_config(parsed_config)
+
     with tempfile.NamedTemporaryFile(mode='w') as config_tmpfile:
         config_tmpfile.write(configfile_contents)
-        config_tmpfile.seek(0)
-        config = yaml.load(configfile_contents)
-
-        # process the reference, if necessary
-        process_reference(args, config_tmpfile.name)
-
-        # output_dir = get_output_dir(config)
-        # targets = args.target
-        # if targets is None:
-        #     if args.somatic_variant_calling_only:
-        #         targets = somatic_vcf_targets(config)
-        #     else:
-        #         targets = default_vaxrank_targets(config)
-
-        # # input validation
-        # check_inputs(config)
-        # if len(targets) == 0:
-        #     raise ValueError("Must specify at least one target")
-        # for target in targets:
-        #     check_target_against_config(target, config)
-        #     check_target_against_args(target, args)
-
-        # start_time = datetime.datetime.now()
-        # if not snakemake.snakemake(
-        #     args.snakefile,
-        #     cores=args.cores,
-        #     resources={'mem_mb': int(1024 * args.memory)},
-        #     configfile=config_tmpfile.name,
-        #     config={'num_threads': args.cores, 'mem_gb': args.memory},
-        #     printshellcmds=True,
-        #     dryrun=args.dry_run,
-        #     targets=targets,
-        #     stats=join(output_dir, "stats.json"),
-        # ):
-        #     raise ValueError("Pipeline failed, see Snakemake error message for details")
-
-        # end_time = datetime.datetime.now()
-        # print("--- Pipeline running time: %s ---" % (str(end_time - start_time)))
-
+        process_reference(args, parsed_config, config_tmpfile)
+        if args.process_reference_only:
+            if args.target is not None:
+                raise ValueError("If requesting --process-reference-only, cannot specify targets")
+        else:
+            run_neoantigen_pipeline(args, parsed_config, config_tmpfile)
+    
 
 if __name__ == "__main__":
     main()

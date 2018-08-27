@@ -27,7 +27,7 @@ The steps performed by the workflow are as follows.
 
 For best results, you will need a machine with Docker [installed](https://docs.docker.com/install/) and the following requirements:
 - at least 16 cores
-- 32GB RAM if you want to run the full pipeline to compute vaccine peptides. 8GB of RAM is enough if you only want to run variant calling.
+- 32GB RAM if you want to run the full pipeline to compute vaccine peptides, or if you are running the pipeline for the first time with your own reference genome and it has not yet been processed. Otherwise, 8GB of RAM is enough if you only want to run variant calling.
 - suggested: 500GB free disk space, if running on real human sequence data (okay to have ~60GB if running with test data) 
 
 The pipeline is run by invoking a Docker entrypoint in the image while providing three directories as mounted Docker [volumes](https://docs.docker.com/storage/volumes/): `/inputs` (FASTQ files and a configuration YAML), `/outputs` (directory to write results to), and `/reference-genome` (data shared across patients, such as the genome reference).

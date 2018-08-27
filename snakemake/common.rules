@@ -18,9 +18,6 @@ SAMPLE_ID = config["input"]["id"]
 WORKDIR = os.path.join(config["workdir"], SAMPLE_ID)
 SUPPORTED_FILETYPES = {".fastq.gz", ".fastq", ".bam"}
 
-# used to hold a list of all chromosomes
-_CHR = None
-
 # will default to false, if not present in config
 _PARALLEL_INDEL_REALIGNER = config.get("parallel_indel_realigner")
 
@@ -57,10 +54,8 @@ def _get_intervals_str(wildcards):
   return "--intervals %s" % wildcards.chr if wildcards.chr in _get_chr_list(wildcards) else ""
 
 def _get_chr_list(_):
-  if _CHR is None:
     with open(config["reference"]["genome"] + ".contigs") as f:
-      _CHR = [x.strip() for x in f.readlines()]
-  return _CHR
+      return [x.strip() for x in f.readlines()]
 
 rule gunzip:
   input:

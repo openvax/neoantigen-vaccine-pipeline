@@ -20,13 +20,14 @@ NOTE: the reference genome directory must be writeable for these rules to work
 
 import csv
 import os
+from os.path import join, splitext
 
 SAMPLE_ID = config["input"]["id"]
-WORKDIR = os.path.join(config["workdir"], SAMPLE_ID)
-LOGDIR = os.path.join(WORKDIR, "logs")
-BENCHMARKDIR = os.path.join(WORKDIR, "benchmarks")
+WORKDIR = join(config["workdir"], SAMPLE_ID)
+LOGDIR = join(WORKDIR, "logs")
+BENCHMARKDIR = join(WORKDIR, "benchmarks")
 _READ_LENGTH = 124
-_STAR_GENOME_DIR = os.path.join(
+_STAR_GENOME_DIR = join(
     os.path.dirname(config["reference"]["genome"]), "star-genome-%d" % _READ_LENGTH)
 
 # See this thread for explanation of some STAR genomeGenerate parameters:
@@ -125,6 +126,10 @@ rule extract_contig_names:
         if contig.isdigit() or contig.lower() in ['x', 'y', 'm' ,'mt']:
           o.write(contig + '\n')
 
+def sequence_dict_output():
+  root, ext = splitext(config["reference"]["genome"])
+  return root + ".dict"
+
 rule picard_sequence_dict_reference:
   input:
     reference = config["reference"]["genome"]
@@ -133,9 +138,7 @@ rule picard_sequence_dict_reference:
   resources:
     mem_mb = int(config["mem_gb"]) * 1024
   output:
-    config["reference"]["genome"].replace("fasta", "dict") if \
-      config["reference"]["genome"].endswith(".fasta") else \
-      config["reference"]["genome"].replace("fa", "dict")
+    sequence_dict_output()
   benchmark:
     os.path.join(BENCHMARKDIR, "picard_sequence_dict_reference_benchmark.txt")
   log:

@@ -15,6 +15,8 @@
 from __future__ import print_function, division, absolute_import
 from argparse import ArgumentParser
 import datetime
+import logging
+
 from os import access, R_OK, W_OK
 from os.path import dirname, isfile, join, basename, splitext
 import psutil
@@ -23,6 +25,9 @@ import tempfile
 
 import snakemake
 import yaml
+
+logger = logging.getLogger(__name__)
+
 
 def total_memory_gb():
     n_bytes = psutil.virtual_memory().total
@@ -211,22 +216,30 @@ def get_and_check_targets(args, config):
     return targets
 
 
+######################################################################################
+#########################          Execution         #################################
+######################################################################################
+
+
 def run_neoantigen_pipeline(args, parsed_config, configfile):
     configfile.seek(0)
 
     output_dir = get_output_dir(parsed_config)
     stats_file = join(output_dir, "stats.json")
     targets = [x for x in get_and_check_targets(args, parsed_config) if x.startswith(output_dir)]
-    print("Running neoantigen pipeline with targets %s " % targets)
+    if not targets:
+        return
+
+    logger.info("Running neoantigen pipeline with targets %s " % targets)
 
     # include all relevant contigs in the pipeline config
-    with open(config["reference"]["genome"] + ".contigs") as f:
+    with open(parsed_config["reference"]["genome"] + ".contigs") as f:
         contigs = [x.strip() for x in f.readlines()]
 
     # parse out targets that start with output directory (not reference)
     start_time = datetime.datetime.now()
     if not snakemake.snakemake(
-            'snakemake/Snakefile',
+            'pipeline/Snakefile',
             cores=args.cores,
             resources={'mem_mb': int(1024 * args.memory)},
             config={'num_threads': args.cores, 'mem_gb': args.memory, 'contigs': contigs},
@@ -238,7 +251,7 @@ def run_neoantigen_pipeline(args, parsed_config, configfile):
         raise ValueError("Pipeline failed, see Snakemake error message for details")
 
     end_time = datetime.datetime.now()
-    print("--- Pipeline running time: %s ---" % (str(end_time - start_time)))
+    logger.info("--- Pipeline running time: %s ---" % (str(end_time - start_time)))
 
 
 def process_reference(args, parsed_config, configfile):
@@ -248,7 +261,9 @@ def process_reference(args, parsed_config, configfile):
     stats_file = join(reference_genome_dir, "stats.json")
     targets = [
         x for x in get_and_check_targets(args, parsed_config) if x.startswith(reference_genome_dir)]
-    print("Processing reference with targets: %s" % targets)
+    if not targets:
+        return
+    logger.info("Processing reference with targets: %s" % targets)
 
     start_time = datetime.datetime.now()
     if not snakemake.snakemake(
@@ -263,14 +278,14 @@ def process_reference(args, parsed_config, configfile):
             stats=stats_file):
         raise ValueError("Reference processing failed, see Snakemake error message for details")
     end_time = datetime.datetime.now()
-    print("--- Reference processing time: %s ---" % (str(end_time - start_time)))
+    logger.info("--- Reference processing time: %s ---" % (str(end_time - start_time)))
 
 
 def main(args_list=None):
     if args_list is None:
         args_list = sys.argv[1:]
     args = parser.parse_args(args_list)
-    print(args)
+    logger.info(args)
 
     with open(args.configfile) as configfile:
         configfile_contents = configfile.read()

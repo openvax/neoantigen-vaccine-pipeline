@@ -47,7 +47,7 @@ rule mutect_per_chr:
 # is it okay to use vcf-concat and not vcf-merge?
 rule mutect:
   input:
-    expand("{{prefix}}/mutect_{chr}.vcf", chr=_CHR)
+    expand("{{prefix}}/mutect_{chr}.vcf", chr=_get_chr_list)
   output:
     "{prefix}/mutect.vcf"
   shell:
@@ -79,7 +79,7 @@ rule mutect2_per_chr:
 
 rule mutect2:
   input:
-    expand("{{prefix}}/mutect2_{chr}.vcf", chr=_CHR)
+    expand("{{prefix}}/mutect2_{chr}.vcf", chr=_get_chr_list)
   output:
     "{prefix}/mutect2.vcf"
   shell:
@@ -161,7 +161,7 @@ rule haplotype_caller_per_chr:
 
 rule haplotype_caller:
   input:
-    expand("{{prefix}}/normal_germline_snps_indels_{chr}.vcf", chr=_CHR)
+    expand("{{prefix}}/normal_germline_snps_indels_{chr}.vcf", chr=_get_chr_list)
   output:
     "{prefix}/normal_germline_snps_indels.vcf"
   shell:

@@ -117,21 +117,22 @@ rule merge_tumor_aligned_fragments:
     else:
       shell("cp {input} {output}")
 
-rule merge_rna_aligned_fragments:
-  input:
-    expand("{{prefix}}_{fragment_id}Aligned.sortedByCoord.out.bam",
-      fragment_id=FRAGMENT_IDS["rna"])
-  output:
-    "{prefix}_merged_aligned_coordinate_sorted.bam"
-  wildcard_constraints:
-    prefix=".*rna.*"
-  benchmark:
-    "{prefix}_merge_rna_aligned_fragments_benchmark.txt"
-  log:
-    "{prefix}_merge_rna_aligned_fragments.log"
-  threads: 12
-  run:
-    if len(input) > 1:
-      shell("sambamba merge -t {threads} {output} {input} 2> {log}")
-    else:
-      shell("cp {input} {output}")
+if FRAGMENT_IDS["rna"]:
+  rule merge_rna_aligned_fragments:
+    input:
+      expand("{{prefix}}_{fragment_id}Aligned.sortedByCoord.out.bam",
+        fragment_id=FRAGMENT_IDS["rna"])
+    output:
+      "{prefix}_merged_aligned_coordinate_sorted.bam"
+    wildcard_constraints:
+      prefix=".*rna.*"
+    benchmark:
+      "{prefix}_merge_rna_aligned_fragments_benchmark.txt"
+    log:
+      "{prefix}_merge_rna_aligned_fragments.log"
+    threads: 12
+    run:
+      if len(input) > 1:
+        shell("sambamba merge -t {threads} {output} {input} 2> {log}")
+      else:
+        shell("cp {input} {output}")

@@ -57,6 +57,9 @@ def _get_chr_list(_):
     with open(config["reference"]["genome"] + ".contigs") as f:
       return [x.strip() for x in f.readlines()]
 
+def _rna_exists():
+  return "rna" in config["input"]
+
 rule gunzip:
   input:
     "{prefix}.{ext}.gz"

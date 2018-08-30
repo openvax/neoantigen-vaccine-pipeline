@@ -55,15 +55,25 @@ rule sambamba_index_bam:
 
 # TODO(julia): figure out how to combine with RNA IndelRealigner rules, very similar
 
+def _get_indel_realigner_target_creator_input(wildcards):
+  inputs = [
+    "%s/normal_aligned_coordinate_sorted_dups.bam" % wildcards.prefix,
+    "%s/tumor_aligned_coordinate_sorted_dups.bam" % wildcards.prefix,
+  ]
+  if _rna_exists():
+    inputs.append("%s/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam" % \
+      wildcards.prefix)
+  return inputs
+  
+
 # if this rule is triggered with "chr" mapping to a chromosome in the input list of contigs, it'll
 # run for that chromosome alone. If "chr" matches any other string, IndelRealignerTargetCreator
 # will run for all chromosomes.
 rule indel_realigner_target_creator:
   input:
-    expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai", type=["normal", "tumor"]),
-    normal = "{prefix}/normal_aligned_coordinate_sorted_dups.bam",
-    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups.bam",
-    rna = "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam",
+    _get_indel_realigner_target_creator_input,
+    bais = expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai",
+      type=["normal", "tumor"]),
     reference = config["reference"]["genome"]
   output:
     "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals"
@@ -78,13 +88,16 @@ rule indel_realigner_target_creator:
     mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   run:
     intervals_str = _get_intervals_str(wildcards)
+    input_str = ' '.join(['-I ' + x for x in input])
+    import pdb; pdb.set_trace()
     shell("""
       gatk -Xmx{params.mem_gb}g -T RealignerTargetCreator -R {input.reference} \
       %s \
-      -I {input.normal} -I {input.tumor} -I {input.rna} -o {output} -nt {threads} \
+      %s \
+      -o {output} -nt {threads} \
       --filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored \
       2> {log}
-    """ % intervals_str)
+    """ % (intervals_str, input_str))
 
 # if this rule is triggered with "chr" mapping to a chromosome in the input list of contigs, it'll
 # run for that chromosome alone. If "chr" matches any other string, IndelRealigner will run for all
@@ -153,26 +166,6 @@ else:
       output_bai = output.bam.replace(".bam", ".bai")
       # also need to rename the .bai from the .bam
       shell("mv %s %s" % (input_bai, output_bai))
-
-# rule dna_indel_realigner:
-#   input:
-#     bam = _get_dna_indel_realigner_input,
-#     contig_names = rules.extract_contig_names.output
-#   output:
-#     bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
-#   benchmark:
-#     "{prefix}_indel_realigner_benchmark.txt"
-#   log:
-#     "{prefix}_indel_realigner.log"
-#   run:
-#     if _PARALLEL_INDEL_REALIGNER:
-#       shell("sambamba merge {output.bam} {input.bam}")
-#     else:
-#       shell("mv {input.bam} {output.bam}")
-#       input_bai = input.bam.replace(".bam", ".bai")
-#       output_bai = output.bam.replace(".bam", ".bai")
-#       # also need to rename the .bai from the .bam
-#       shell("mv %s %s" % (input_bai, output_bai))
 
 rule base_recalibrator:
   input:

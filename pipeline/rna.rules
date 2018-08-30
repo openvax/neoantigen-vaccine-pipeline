@@ -18,238 +18,184 @@ This contains RNA processing rules.
 
 import os
 
-rule star_align_paired_end:
-  input:
-    r1 = "{prefix}_R1.fastq.gz",
-    r2 = "{prefix}_R2.fastq.gz",
-    done = config["reference"]["genome"] + ".done"
-  output:
-    "{prefix}Aligned.sortedByCoord.out.bam"
-  params:
-    genome_dir = _STAR_GENOME_DIR,
-    rg_sm = config["input"]["id"] + "_rna"
-  resources:
-    mem_mb = _mem_gb_for_alignment() * 1024
-  benchmark:
-    "{prefix}_star_align_benchmark.txt"
-  log:
-    "{prefix}_star_align.log"
-  threads: _get_threads_for_alignment
-  shell:
-    "STAR "
-    "--genomeDir {params.genome_dir} "
-    "--runThreadN {threads} "
-    "--outSAMtype BAM SortedByCoordinate "
-    "--outSAMstrandField intronMotif "
-    "--outSAMattributes NH HI NM MD "
-    "--outSAMmapqUnique 60 "
-    "--outFilterIntronMotifs RemoveNoncanonical "
-    "--outSAMattrRGline ID:{wildcards.prefix} SM:'{params.rg_sm}' "
-    "--outFileNamePrefix {wildcards.prefix} "
-    "--readFilesCommand zcat "
-    "--readFilesIn {input.r1} {input.r2} "
-    ">> {log} 2>&1"
-
-rule star_align_single_end:
-  input:
-    r = "{prefix}.fastq.gz",
-    done = config["reference"]["genome"] + ".done"
-  output:
-    "{prefix}Aligned.sortedByCoord.out.bam"
-  params:
-    genome_dir = _STAR_GENOME_DIR,
-    rg_sm = config["input"]["id"] + "_rna"
-  resources:
-    mem_mb = _mem_gb_for_alignment() * 1024
-  benchmark:
-    "{prefix}_star_align_benchmark.txt"
-  log:
-    "{prefix}_star_align.log"
-  threads: _get_threads_for_alignment
-  shell:
-    "STAR "
-    "--genomeDir {params.genome_dir} "
-    "--runThreadN {threads} "
-    "--outSAMtype BAM SortedByCoordinate "
-    "--outSAMstrandField intronMotif "
-    "--outSAMattributes NH HI NM MD "
-    "--outSAMmapqUnique 60 "
-    "--outFilterIntronMotifs RemoveNoncanonical "
-    "--outSAMattrRGline ID:{wildcards.prefix} SM:'{params.rg_sm}' "
-    "--outFileNamePrefix {wildcards.prefix} "
-    "--readFilesCommand zcat "
-    "--readFilesIn {input.r} "
-    ">> {log} 2>&1"
-
-# then we run mark duplicates on the RNA, which can just reuse the mark_dups rule from gatk.rules
-
-# split the resulting BAM by CIGAR string; only want to do indel realignment on reads that don't
-# contain any Ns. This file will contain all reads with Ns
-rule filter_n:
-  input:
-    "{prefix}_aligned_coordinate_sorted_dups.bam"
-  output:
-    "{prefix}_aligned_coordinate_sorted_dups_cigar_N_filtered.bam"
-  benchmark:
-    "{prefix}_filter_N_benchmark.txt"
-  shell:
-    "sambamba view "
-    "--format=bam "
-    "-F 'cigar =~ /^.*N.*$/' "
-    "{input} > {output}"
-
-# This file should contain all reads without Ns
-rule filter_other:
-  input:
-    "{prefix}_aligned_coordinate_sorted_dups.bam"
-  output:
-    "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered.bam"
-  benchmark:
-    "{prefix}_split_out_other_benchmark.txt"
-  shell:
-    "sambamba view "
-    "--format=bam "
-    "-F 'cigar =~ /^[0-9MIDSHPX=]*$/' "
-    "{input} > {output}"
-
-# apparently this also creates an index file? awesome
-rule sort_rna_bam:
-  input:
-    "{prefix}.bam"
-  output:
-    bam = "{prefix}_sorted.bam"
-  threads: _get_half_cores
-  benchmark:
-    "{prefix}_sort_benchmark.txt"
-  log:
-    "{prefix}_sort.log"
-  shell:
-    "sambamba sort -t {threads} -m 4GB "
-    "--tmpdir {wildcards.prefix}_sort_tmp "
-    "-o {output.bam} "
-    "{input} "
-    "2> {log}"
-
-# run indel realignment on the reads without Ns
-
-# # if this rule is triggered with "chr" mapping to a chromosome in the _CHR list, it'll be run
-# # for that chromosome alone. If "chr" matches any other string, IndelRealigner will run for all
-# # chromosomes.
-# rule rna_indel_realigner_target_creator_per_chr:
-#   input:
-#     "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam.bai",
-#     rna = "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam",
-#     reference = config["reference"]["genome"]
-#   output:
-#     "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_{chr}.intervals"
-#   params:
-#     mem_gb = _mem_gb_for_ram_hungry_jobs()
-#   threads: _get_half_cores
-#   benchmark:
-#     "{prefix}/rna_indel_realigner_target_creator_{chr}_benchmark.txt"
-#   log:
-#     "{prefix}/rna_indel_realigner_target_creator_{chr}.log"
-#   resources:
-#     mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
-#   run:
-#     intervals_str = _get_intervals_str(wildcards)
-#     shell("""
-#       gatk -Xmx{params.mem_gb}g -T RealignerTargetCreator -R {input.reference} \
-#       %s \
-#       -I {input.rna} -o {output} -nt {threads} \
-#       --filter_mismatching_base_and_quals --filter_bases_not_stored \
-#       2> {log}
-#     """ % intervals_str)
-
-rule rna_indel_realigner_per_chr:
-  input:
-    bam = "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam",
-    intervals = "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals",
-    reference = config["reference"]["genome"]
-  output:
-    "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam"
-  params:
-    mem_gb = _mem_gb_for_ram_hungry_jobs()
-  benchmark:
-    "{prefix}/rna_indel_realigner_{chr}_benchmark.txt"
-  log:
-    "{prefix}/rna_indel_realigner_{chr}.log"
-  resources:
-    mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
-  run:
-    intervals_str = _get_intervals_str(wildcards)
-    shell("""
-      gatk -Xmx{params.mem_gb}g -T IndelRealigner -compress 0 -R {input.reference} \
-      -I {input.bam} \
-      -targetIntervals {input.intervals} %s \
-      --filter_mismatching_base_and_quals --filter_bases_not_stored \
-      -o {output} \
-      2> {log}
-    """ % intervals_str)
-
-if _PARALLEL_INDEL_REALIGNER:
-  rule parallel_rna_indel_realigner:
+if _rna_exists():
+  rule star_align_paired_end:
     input:
-      bam = expand("{{prefix}}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam",
-                   chr=config["contigs"])
+      r1 = "{prefix}_R1.fastq.gz",
+      r2 = "{prefix}_R2.fastq.gz",
+      done = config["reference"]["genome"] + ".done"
     output:
-      bam = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"
+      "{prefix}Aligned.sortedByCoord.out.bam"
+    params:
+      genome_dir = _STAR_GENOME_DIR,
+      rg_sm = config["input"]["id"] + "_rna"
+    resources:
+      mem_mb = _mem_gb_for_alignment() * 1024
     benchmark:
-      "{prefix}/rna_indel_realigner_benchmark.txt"
+      "{prefix}_star_align_benchmark.txt"
     log:
-      "{prefix}/rna_indel_realigner.log"
+      "{prefix}_star_align.log"
+    threads: _get_threads_for_alignment
     shell:
-      "sambamba merge {output.bam} {input.bam}"
-else:
-  rule non_parallel_rna_indel_realigner:
+      "STAR "
+      "--genomeDir {params.genome_dir} "
+      "--runThreadN {threads} "
+      "--outSAMtype BAM SortedByCoordinate "
+      "--outSAMstrandField intronMotif "
+      "--outSAMattributes NH HI NM MD "
+      "--outSAMmapqUnique 60 "
+      "--outFilterIntronMotifs RemoveNoncanonical "
+      "--outSAMattrRGline ID:{wildcards.prefix} SM:'{params.rg_sm}' "
+      "--outFileNamePrefix {wildcards.prefix} "
+      "--readFilesCommand zcat "
+      "--readFilesIn {input.r1} {input.r2} "
+      ">> {log} 2>&1"
+
+  rule star_align_single_end:
     input:
-      bam = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_ALL.bam"
+      r = "{prefix}.fastq.gz",
+      done = config["reference"]["genome"] + ".done"
     output:
-      bam = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"
+      "{prefix}Aligned.sortedByCoord.out.bam"
+    params:
+      genome_dir = _STAR_GENOME_DIR,
+      rg_sm = config["input"]["id"] + "_rna"
+    resources:
+      mem_mb = _mem_gb_for_alignment() * 1024
     benchmark:
-      "{prefix}/rna_indel_realigner_benchmark.txt"
+      "{prefix}_star_align_benchmark.txt"
     log:
-      "{prefix}/rna_indel_realigner.log"
+      "{prefix}_star_align.log"
+    threads: _get_threads_for_alignment
+    shell:
+      "STAR "
+      "--genomeDir {params.genome_dir} "
+      "--runThreadN {threads} "
+      "--outSAMtype BAM SortedByCoordinate "
+      "--outSAMstrandField intronMotif "
+      "--outSAMattributes NH HI NM MD "
+      "--outSAMmapqUnique 60 "
+      "--outFilterIntronMotifs RemoveNoncanonical "
+      "--outSAMattrRGline ID:{wildcards.prefix} SM:'{params.rg_sm}' "
+      "--outFileNamePrefix {wildcards.prefix} "
+      "--readFilesCommand zcat "
+      "--readFilesIn {input.r} "
+      ">> {log} 2>&1"
+
+  # then we run mark duplicates on the RNA, which can just reuse the mark_dups rule from gatk.rules
+
+  # split the resulting BAM by CIGAR string; only want to do indel realignment on reads that don't
+  # contain any Ns. This file will contain all reads with Ns
+  rule filter_n:
+    input:
+      "{prefix}_aligned_coordinate_sorted_dups.bam"
+    output:
+      "{prefix}_aligned_coordinate_sorted_dups_cigar_N_filtered.bam"
+    benchmark:
+      "{prefix}_filter_N_benchmark.txt"
+    shell:
+      "sambamba view "
+      "--format=bam "
+      "-F 'cigar =~ /^.*N.*$/' "
+      "{input} > {output}"
+
+  # This file should contain all reads without Ns
+  rule filter_other:
+    input:
+      "{prefix}_aligned_coordinate_sorted_dups.bam"
+    output:
+      "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered.bam"
+    benchmark:
+      "{prefix}_split_out_other_benchmark.txt"
+    shell:
+      "sambamba view "
+      "--format=bam "
+      "-F 'cigar =~ /^[0-9MIDSHPX=]*$/' "
+      "{input} > {output}"
+
+  # apparently this also creates an index file? awesome
+  rule sort_rna_bam:
+    input:
+      "{prefix}.bam"
+    output:
+      bam = "{prefix}_sorted.bam"
+    threads: _get_half_cores
+    benchmark:
+      "{prefix}_sort_benchmark.txt"
+    log:
+      "{prefix}_sort.log"
+    shell:
+      "sambamba sort -t {threads} -m 4GB "
+      "--tmpdir {wildcards.prefix}_sort_tmp "
+      "-o {output.bam} "
+      "{input} "
+      "2> {log}"
+
+  # run indel realignment on the reads without Ns
+
+  rule rna_indel_realigner_per_chr:
+    input:
+      bam = "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam",
+      intervals = "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals",
+      reference = config["reference"]["genome"]
+    output:
+      "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam"
+    params:
+      mem_gb = _mem_gb_for_ram_hungry_jobs()
+    benchmark:
+      "{prefix}/rna_indel_realigner_{chr}_benchmark.txt"
+    log:
+      "{prefix}/rna_indel_realigner_{chr}.log"
+    resources:
+      mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
     run:
-      shell("mv {input.bam} {output.bam}")
-      input_bai = input.bam.replace(".bam", ".bai")
-      output_bai = output.bam.replace(".bam", ".bai")
-      # also need to rename the .bai from the .bam
-      shell("mv %s %s" % (input_bai, output_bai))
+      intervals_str = _get_intervals_str(wildcards)
+      shell("""
+        gatk -Xmx{params.mem_gb}g -T IndelRealigner -compress 0 -R {input.reference} \
+        -I {input.bam} \
+        -targetIntervals {input.intervals} %s \
+        --filter_mismatching_base_and_quals --filter_bases_not_stored \
+        -o {output} \
+        2> {log}
+      """ % intervals_str)
 
-# def _get_rna_indel_realigner_input(wildcards):
-#   if _PARALLEL_INDEL_REALIGNER:
-#     return ["%s/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_%s.bam" % (
-#       wildcards.prefix, chromosome) for chromosome in _CHR]
-#   else:
-#     return "%s/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_ALL.bam" % wildcards.prefix
+  if _PARALLEL_INDEL_REALIGNER:
+    rule parallel_rna_indel_realigner:
+      input:
+        bam = expand("{{prefix}}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam",
+                     chr=config["contigs"])
+      output:
+        bam = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"
+      benchmark:
+        "{prefix}/rna_indel_realigner_benchmark.txt"
+      log:
+        "{prefix}/rna_indel_realigner.log"
+      shell:
+        "sambamba merge {output.bam} {input.bam}"
+  else:
+    rule non_parallel_rna_indel_realigner:
+      input:
+        bam = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_ALL.bam"
+      output:
+        bam = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"
+      benchmark:
+        "{prefix}/rna_indel_realigner_benchmark.txt"
+      log:
+        "{prefix}/rna_indel_realigner.log"
+      run:
+        shell("mv {input.bam} {output.bam}")
+        input_bai = input.bam.replace(".bam", ".bai")
+        output_bai = output.bam.replace(".bam", ".bai")
+        # also need to rename the .bai from the .bam
+        shell("mv %s %s" % (input_bai, output_bai))
 
-# rule rna_indel_realigner:
-#   input:
-#     bam = _get_rna_indel_realigner_input
-#   output:
-#     bam = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"
-#   benchmark:
-#     "{prefix}/rna_indel_realigner_benchmark.txt"
-#   log:
-#     "{prefix}/rna_indel_realigner.log"
-#   run:
-#     if _PARALLEL_INDEL_REALIGNER:
-#       shell("sambamba merge {output.bam} {input.bam}")
-#     else:
-#       shell("mv {input.bam} {output.bam}")
-#       input_bai = input.bam.replace(".bam", ".bai")
-#       output_bai = output.bam.replace(".bam", ".bai")
-#       # also need to rename the .bai from the .bam
-#       shell("mv %s %s" % (input_bai, output_bai))
-
-rule merge_all_rna:
-  input:
-    "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam",
-    "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_N_filtered_sorted.bam"
-  output:
-    "{prefix}/rna_final.bam"
-  benchmark:
-    "{prefix}/rna_final_merge_benchmark.txt"
-  shell:
-    "sambamba merge {output} {input}"
+  rule merge_all_rna:
+    input:
+      "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam",
+      "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_N_filtered_sorted.bam"
+    output:
+      "{prefix}/rna_final.bam"
+    benchmark:
+      "{prefix}/rna_final_merge_benchmark.txt"
+    shell:
+      "sambamba merge {output} {input}"

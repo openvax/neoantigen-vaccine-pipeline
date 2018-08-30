@@ -15,12 +15,16 @@
 # run a separate mutect task for each chromosome
 # TODO(julia): need a better solution for running Java 1.7, for now hard-coding the path to that
 # Java version as well as to the downloaded MuTect jar on PGVNode
+
+def _get_cosmic_str():
+  cosmic = config["reference"].get("cosmic", None)
+  return "--cosmic " + cosmic if cosmic else ""
+      
 rule mutect_per_chr:
   input:
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
     tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
     reference = config["reference"]["genome"],
-    cosmic = config["reference"]["cosmic"],
     dbsnp = config["reference"]["dbsnp"]
   output:
     "{prefix}/mutect_{chr}.vcf"
@@ -30,19 +34,21 @@ rule mutect_per_chr:
     "{prefix}/mutect_{chr}.log"
   resources:
     mem_mb = 2000
-  shell:
-    "$JAVA7_BIN/java -Xmx2g -jar $MUTECT "
-    "--analysis_type MuTect "
-    "--reference_sequence {input.reference} "
-    "--cosmic {input.cosmic} "
-    "--dbsnp {input.dbsnp} "
-    "--intervals {wildcards.chr} "
-    "--input_file:normal {input.normal} "
-    "--input_file:tumor {input.tumor} "
-    "--out {output}.out "
-    "--vcf {output} "
-    "--coverage_file {output}_coverage.wig "
-    "2> {log}"
+  run:
+    shell("""
+        $JAVA7_BIN/java -Xmx2g -jar $MUTECT \
+        --analysis_type MuTect \
+        --reference_sequence {input.reference} \
+        %s \
+        --dbsnp {input.dbsnp} \
+        --intervals {wildcards.chr} \
+        --input_file:normal {input.normal} \
+        --input_file:tumor {input.tumor} \
+        --out {output}.out \
+        --vcf {output} \
+        --coverage_file {output}_coverage.wig \
+        2> {log}
+        """ % _get_cosmic_str())
 
 # is it okay to use vcf-concat and not vcf-merge?
 rule mutect:
@@ -58,7 +64,6 @@ rule mutect2_per_chr:
     normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
     tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
     reference = config["reference"]["genome"],
-    cosmic = config["reference"]["cosmic"],
     dbsnp = config["reference"]["dbsnp"]
   output:
     "{prefix}/mutect2_{chr}.vcf"
@@ -66,16 +71,18 @@ rule mutect2_per_chr:
     "{prefix}/mutect2_{chr}_benchmark.txt"
   log:
     "{prefix}/mutect2_{chr}.log"
-  shell:
-    "gatk -T MuTect2 "
-    "-I:normal {input.normal} "
-    "-I:tumor {input.tumor} "
-    "-R {input.reference} "
-    "--dbsnp {input.dbsnp} "
-    "--cosmic {input.cosmic} "
-    "--intervals {wildcards.chr} "
-    "-o {output} "
-    "2> {log}"
+  run:
+    shell("""
+    gatk -T MuTect2 \
+    -I:normal {input.normal} \
+    -I:tumor {input.tumor} \
+    -R {input.reference} \
+    --dbsnp {input.dbsnp} \
+    %s \
+    --intervals {wildcards.chr} \
+    -o {output} \
+    2> {log}
+    """ % _get_cosmic_str())
 
 rule mutect2:
   input:

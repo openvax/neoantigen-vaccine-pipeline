@@ -71,7 +71,7 @@ def _get_indel_realigner_target_creator_input(wildcards):
 # will run for all chromosomes.
 rule indel_realigner_target_creator:
   input:
-    _get_indel_realigner_target_creator_input,
+    bams = _get_indel_realigner_target_creator_input,
     bais = expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai",
       type=["normal", "tumor"]),
     reference = config["reference"]["genome"]
@@ -88,8 +88,7 @@ rule indel_realigner_target_creator:
     mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   run:
     intervals_str = _get_intervals_str(wildcards)
-    input_str = ' '.join(['-I ' + x for x in input])
-    import pdb; pdb.set_trace()
+    input_str = ' '.join(['-I ' + x for x in input.bams])
     shell("""
       gatk -Xmx{params.mem_gb}g -T RealignerTargetCreator -R {input.reference} \
       %s \

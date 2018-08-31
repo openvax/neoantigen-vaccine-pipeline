@@ -124,7 +124,7 @@ rule extract_contig_names:
         if contig.lower().startswith('chr'):
           contig = contig[3:]
         if contig.isdigit() or contig.lower() in ['x', 'y', 'm' ,'mt']:
-          o.write(contig + '\n')
+          o.write(i[0] + '\n')
 
 def sequence_dict_output():
   root, ext = splitext(config["reference"]["genome"])

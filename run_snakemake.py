@@ -262,7 +262,7 @@ def process_reference(args, parsed_config, configfile):
     targets = [
         x for x in get_and_check_targets(args, parsed_config) if x.startswith(reference_genome_dir)]
     if not targets:
-        return
+        targets = [parsed_config["reference"]["genome"] + '.done']
     logger.info("Processing reference with targets: %s" % targets)
 
     start_time = datetime.datetime.now()
@@ -282,6 +282,7 @@ def process_reference(args, parsed_config, configfile):
 
 
 def main(args_list=None):
+    logging.basicConfig(level=logging.INFO)
     if args_list is None:
         args_list = sys.argv[1:]
     args = parser.parse_args(args_list)
@@ -307,6 +308,7 @@ def main(args_list=None):
 
     with tempfile.NamedTemporaryFile(mode='w') as config_tmpfile:
         config_tmpfile.write(configfile_contents)
+        logger.info("Processing reference...")
         process_reference(args, parsed_config, config_tmpfile)
         if args.process_reference_only:
             if args.target is not None:

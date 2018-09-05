@@ -55,7 +55,7 @@ rule star_align_reference:
     mem_mb = _mem_gb_for_star_genome_generate() * 1024
   output:
     join(_STAR_GENOME_DIR, "SA")
-  threads: config["num_threads"]
+  threads: _get_all_cores
   log:
     join(LOGDIR, "star_align_reference.log")
   benchmark:

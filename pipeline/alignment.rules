@@ -16,7 +16,7 @@
 This contains alignment-related processing rules.
 """
 
-from os.path import basename
+from os.path import basename, join
 
 def _get_read_group_header(wildcards):
   prefix_basename = basename(wildcards.prefix)
@@ -36,10 +36,6 @@ def _get_read_group_header(wildcards):
       "LB:%s" % library,
       "PL:Illumina"
   ])
-
-def _benchmark_path(wildcards):
-  # Returns a path in the benchmark directory that can be used for stuff
-  return join(BENCHMARKDIR, basename(wildcards.prefix) + ".benchmark.txt")
 
 # TODO(julia): if we need to bring back alignment for BAMs, make something similar to this and run
 # "samtools fastq <input.bam> | <bwa command>" where the bwa command is identical to this one except
@@ -106,3 +102,29 @@ rule convert_alignment_to_sorted_bam:
   shell:
     "picard -Xmx{params.mem_gb}g "
     "SortSam INPUT={input} OUTPUT={output} SORT_ORDER=coordinate 2> {log}"
+
+rule merge_normal_aligned_fragments:
+  input:
+    expand(join(WORKDIR, "normal_{fragment_id}_aligned_coordinate_sorted.bam"),
+      fragment_id=_get_fragment_ids("normal"))
+  output:
+    join(WORKDIR, "normal_merged_aligned_coordinate_sorted.bam")
+  threads: _get_half_cores
+  run:
+    if len(input) > 1:
+      shell("sambamba merge -t {threads} {output} {input}")
+    else:
+      shell("cp {input} {output}")
+
+rule merge_tumor_aligned_fragments:
+  input:
+    expand(join(WORKDIR, "tumor_{fragment_id}_aligned_coordinate_sorted.bam"),
+      fragment_id=_get_fragment_ids("tumor"))
+  output:
+    join(WORKDIR, "tumor_merged_aligned_coordinate_sorted.bam")
+  threads: _get_half_cores
+  run:
+    if len(input) > 1:
+      shell("sambamba merge -t {threads} {output} {input}")
+    else:
+      shell("cp {input} {output}")

@@ -82,6 +82,23 @@ if _rna_exists():
       "--readFilesIn {input.r} "
       ">> {log} 2>&1"
 
+  rule merge_rna_aligned_fragments:
+    input:
+      expand(join(WORKDIR, "rna_{fragment_id}Aligned.sortedByCoord.out.bam"),
+        fragment_id=_get_fragment_ids("rna"))
+    output:
+      join(WORKDIR, "rna_merged_aligned_coordinate_sorted.bam")
+    benchmark:
+      join(BENCHMARKDIR, "merge_rna_aligned_fragments.txt")
+    log:
+      join(LOGDIR, "merge_rna_aligned_fragments.log")
+    threads: _get_half_cores
+    run:
+      if len(input) > 1:
+        shell("sambamba merge -t {threads} {output} {input} 2> {log}")
+      else:
+        shell("cp {input} {output}")
+
   # then we run mark duplicates on the RNA, which can just reuse the mark_dups rule from gatk.rules
 
   # split the resulting BAM by CIGAR string; only want to do indel realignment on reads that don't

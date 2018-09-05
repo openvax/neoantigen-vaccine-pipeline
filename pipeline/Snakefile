@@ -33,12 +33,6 @@ include:
 if not os.path.exists(WORKDIR):
   os.makedirs(WORKDIR)
 
-FRAGMENT_IDS = {
-  "normal": set(),
-  "tumor": set(),
-  "rna": set()
-}
-
 # support any type of paired-end and single-end input, figure out what kind of input it is,
 # copy over with a predictable name. Naming convention for files in workdir: normal_L1_R1.fastq.gz
 # TODO(julia): make sure alignment works with any of those start points
@@ -51,8 +45,8 @@ def _determine_filetype(filename):
 for input_type in ["normal", "tumor", "rna"]:
   if input_type not in config["input"]:
     continue
+    
   for fragment in config["input"][input_type]:
-    FRAGMENT_IDS[input_type].add(fragment["fragment_id"])
 
     if fragment["type"] == "paired-end":
       # TODO(julia): this assumes split FASTQs, which might not be the case: we might see a single
@@ -86,53 +80,3 @@ for input_type in ["normal", "tumor", "rna"]:
 
     else:
       raise ValueError("Unsupported input type: expected single-end or paired-end")
-
-
-# merge a bunch of BAMs into one thing
-rule merge_normal_aligned_fragments:
-  input:
-    expand("{{prefix}}_{fragment_id}_aligned_coordinate_sorted.bam",
-      fragment_id=FRAGMENT_IDS["normal"])
-  output:
-    "{prefix}_merged_aligned_coordinate_sorted.bam"
-  wildcard_constraints:
-    prefix=".*normal.*"
-  run:
-    if len(input) > 1:
-      shell("sambamba merge {output} {input}")
-    else:
-      shell("cp {input} {output}")
-
-rule merge_tumor_aligned_fragments:
-  input:
-    expand("{{prefix}}_{fragment_id}_aligned_coordinate_sorted.bam",
-      fragment_id=FRAGMENT_IDS["tumor"])
-  output:
-    "{prefix}_merged_aligned_coordinate_sorted.bam"
-  wildcard_constraints:
-    prefix=".*tumor.*"
-  run:
-    if len(input) > 1:
-      shell("sambamba merge {output} {input}")
-    else:
-      shell("cp {input} {output}")
-
-if FRAGMENT_IDS["rna"]:
-  rule merge_rna_aligned_fragments:
-    input:
-      expand("{{prefix}}_{fragment_id}Aligned.sortedByCoord.out.bam",
-        fragment_id=FRAGMENT_IDS["rna"])
-    output:
-      "{prefix}_merged_aligned_coordinate_sorted.bam"
-    wildcard_constraints:
-      prefix=".*rna.*"
-    benchmark:
-      "{prefix}_merge_rna_aligned_fragments_benchmark.txt"
-    log:
-      "{prefix}_merge_rna_aligned_fragments.log"
-    threads: 12
-    run:
-      if len(input) > 1:
-        shell("sambamba merge -t {threads} {output} {input} 2> {log}")
-      else:
-        shell("cp {input} {output}")

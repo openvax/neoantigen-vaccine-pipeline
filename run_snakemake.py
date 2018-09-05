@@ -268,7 +268,7 @@ def process_reference(args, parsed_config, configfile):
 
     start_time = datetime.datetime.now()
     if not snakemake.snakemake(
-            'reference/Snakefile',
+            'pipeline/reference_Snakefile',
             cores=args.cores,
             resources={'mem_mb': int(1024 * args.memory)},
             config={'num_threads': args.cores, 'mem_gb': args.memory},

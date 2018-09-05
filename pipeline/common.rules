@@ -61,6 +61,13 @@ def _get_intervals_str(wildcards):
 def _rna_exists():
   return "rna" in config["input"]
 
+def _get_fragment_ids(input_type):
+  fragment_ids = []
+  if input_type in config["input"]:
+    for fragment in config["input"][input_type]:
+      fragment_ids.append(fragment["fragment_id"])
+  return fragment_ids
+
 rule gunzip:
   input:
     "{prefix}.{ext}.gz"

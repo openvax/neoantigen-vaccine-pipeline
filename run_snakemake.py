@@ -29,9 +29,10 @@ import yaml
 logger = logging.getLogger(__name__)
 
 
+# Returns an integer value for total available memory, in GB.
 def total_memory_gb():
     n_bytes = psutil.virtual_memory().total
-    return n_bytes / (1024 * 1024 * 1024)
+    return int(n_bytes / (1024 * 1024 * 1024))
 
 parser = ArgumentParser()
 
@@ -65,8 +66,8 @@ parser.add_argument(
 
 parser.add_argument(
     "--memory",
-    default=max(1.0, total_memory_gb() - 1),
-    type=float,
+    default=max(1, total_memory_gb() - 1),
+    type=int,
     help="Total memory (in GB) allowed for use by the Snakemake scheduler (default %(default)s)")
 
 parser.add_argument(

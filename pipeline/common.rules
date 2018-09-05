@@ -14,16 +14,21 @@
 
 # This file contains pipeline constants and a few functions.
 
+from os.path import join, dirname
+
 SAMPLE_ID = config["input"]["id"]
-WORKDIR = os.path.join(config["workdir"], SAMPLE_ID)
+WORKDIR = join(config["workdir"], SAMPLE_ID)
+LOGDIR = join(WORKDIR, "logs")
+BENCHMARKDIR = join(WORKDIR, "benchmarks")
+
 SUPPORTED_FILETYPES = {".fastq.gz", ".fastq", ".bam"}
 
 # will default to false, if not present in config
 _PARALLEL_INDEL_REALIGNER = config.get("parallel_indel_realigner")
 
+# Needed for RNA processing
 _READ_LENGTH = 124
-_STAR_GENOME_DIR = os.path.join(
-    os.path.dirname(config["reference"]["genome"]), "star-genome-%d" % _READ_LENGTH)
+_STAR_GENOME_DIR = join(dirname(config["reference"]["genome"]), "star-genome-%d" % _READ_LENGTH)
 
 _IDEAL_ALIGNMENT_MEM_GB = 6
 _IDEAL_LARGE_MEM_GB = 20
@@ -34,7 +39,7 @@ def _get_half_cores(_):
   return max(1, int(config["num_threads"]/2))
 
 def _get_all_cores(_):
-  return int(config["num_threads"])
+  return config["num_threads"]
 
 def _get_threads_for_alignment(_):
   if _mem_gb_for_alignment() < _IDEAL_ALIGNMENT_MEM_GB:
@@ -44,18 +49,14 @@ def _get_threads_for_alignment(_):
 
 # if available, return the ideal pretty-large amount for most jobs (20GB)
 def _mem_gb_for_ram_hungry_jobs():
-  return min(_IDEAL_LARGE_MEM_GB, int(config["mem_gb"]))
+  return min(_IDEAL_LARGE_MEM_GB, config["mem_gb"])
 
 # if available, return the ideal alignment amount (6GB)
 def _mem_gb_for_alignment():
-  return min(_IDEAL_ALIGNMENT_MEM_GB, int(config["mem_gb"]))
+  return min(_IDEAL_ALIGNMENT_MEM_GB, config["mem_gb"])
 
 def _get_intervals_str(wildcards):
-  return "--intervals %s" % wildcards.chr if wildcards.chr in config['contigs'] else ""
-
-def _get_chr_list(_):
-    with open(config["reference"]["genome"] + ".contigs") as f:
-      return [x.strip() for x in f.readlines()]
+  return "--intervals %s" % wildcards.chr if wildcards.chr in config["contigs"] else ""
 
 def _rna_exists():
   return "rna" in config["input"]

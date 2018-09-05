@@ -13,6 +13,8 @@
 # limitations under the License.
 
 include:
+    "common.rules"
+include:
     "reference.rules"
 
 # This file exists only to prepare the reference data.

@@ -16,25 +16,25 @@
 This contains RNA processing rules.
 """
 
-import os
+from os.path import join
 
 if _rna_exists():
   rule star_align_paired_end:
     input:
-      r1 = "{prefix}_R1.fastq.gz",
-      r2 = "{prefix}_R2.fastq.gz",
+      r1 = join(WORKDIR, "{prefix}_R1.fastq.gz"),
+      r2 = join(WORKDIR, "{prefix}_R2.fastq.gz"),
       done = config["reference"]["genome"] + ".done"
     output:
-      "{prefix}Aligned.sortedByCoord.out.bam"
+      join(WORKDIR, "{prefix}Aligned.sortedByCoord.out.bam")
     params:
       genome_dir = _STAR_GENOME_DIR,
       rg_sm = config["input"]["id"] + "_rna"
     resources:
       mem_mb = _mem_gb_for_alignment() * 1024
     benchmark:
-      "{prefix}_star_align_benchmark.txt"
+      join(BENCHMARKDIR, "{prefix}_star_align.txt")
     log:
-      "{prefix}_star_align.log"
+      join(LOGDIR, "{prefix}_star_align.log")
     threads: _get_threads_for_alignment
     shell:
       "STAR "
@@ -53,19 +53,19 @@ if _rna_exists():
 
   rule star_align_single_end:
     input:
-      r = "{prefix}.fastq.gz",
+      r = join(WORKDIR, "{prefix}.fastq.gz"),
       done = config["reference"]["genome"] + ".done"
     output:
-      "{prefix}Aligned.sortedByCoord.out.bam"
+      join(WORKDIR, "{prefix}Aligned.sortedByCoord.out.bam")
     params:
       genome_dir = _STAR_GENOME_DIR,
       rg_sm = config["input"]["id"] + "_rna"
     resources:
       mem_mb = _mem_gb_for_alignment() * 1024
     benchmark:
-      "{prefix}_star_align_benchmark.txt"
+      join(BENCHMARKDIR, "{prefix}_star_align.txt")
     log:
-      "{prefix}_star_align.log"
+      join(LOGDIR, "{prefix}_star_align.log")
     threads: _get_threads_for_alignment
     shell:
       "STAR "
@@ -86,13 +86,14 @@ if _rna_exists():
 
   # split the resulting BAM by CIGAR string; only want to do indel realignment on reads that don't
   # contain any Ns. This file will contain all reads with Ns
+  # TODO(julia): is there a file called "rna_aligned_coordinate_sorted_dups.bam"? is that the input?
   rule filter_n:
     input:
-      "{prefix}_aligned_coordinate_sorted_dups.bam"
+      join(WORKDIR, "rna_aligned_coordinate_sorted_dups.bam")
     output:
-      "{prefix}_aligned_coordinate_sorted_dups_cigar_N_filtered.bam"
+      join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_N_filtered.bam")
     benchmark:
-      "{prefix}_filter_N_benchmark.txt"
+      join(BENCHMARKDIR, "rna_filter_N.txt")
     shell:
       "sambamba view "
       "--format=bam "
@@ -102,11 +103,11 @@ if _rna_exists():
   # This file should contain all reads without Ns
   rule filter_other:
     input:
-      "{prefix}_aligned_coordinate_sorted_dups.bam"
+      join(WORKDIR, "rna_aligned_coordinate_sorted_dups.bam")
     output:
-      "{prefix}_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered.bam"
+      join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered.bam")
     benchmark:
-      "{prefix}_split_out_other_benchmark.txt"
+      join(BENCHMARKDIR, "rna_split_out_other.txt")
     shell:
       "sambamba view "
       "--format=bam "
@@ -116,14 +117,14 @@ if _rna_exists():
   # apparently this also creates an index file? awesome
   rule sort_rna_bam:
     input:
-      "{prefix}.bam"
+      join(WORKDIR, "{prefix}.bam")
     output:
-      bam = "{prefix}_sorted.bam"
+      bam = join(WORKDIR, "{prefix}_sorted.bam")
     threads: _get_half_cores
     benchmark:
-      "{prefix}_sort_benchmark.txt"
+      join(BENCHMARKDIR, "{prefix}_sort.txt")
     log:
-      "{prefix}_sort.log"
+      join(BENCHMARKDIR, "{prefix}_sort.log")
     shell:
       "sambamba sort -t {threads} -m 4GB "
       "--tmpdir {wildcards.prefix}_sort_tmp "
@@ -135,23 +136,23 @@ if _rna_exists():
 
   rule rna_indel_realigner_per_chr:
     input:
-      bam = "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam",
-      intervals = "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals",
-      reference = config["reference"]["genome"]
+      bam = join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam"),
+      intervals = join(WORKDIR, "aligned_coordinate_sorted_dups_indelreal_{chr}.intervals")
     output:
-      "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam"
+      join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam")
     params:
-      mem_gb = _mem_gb_for_ram_hungry_jobs()
+      mem_gb = _mem_gb_for_ram_hungry_jobs(),
+      reference = config["reference"]["genome"]
     benchmark:
-      "{prefix}/rna_indel_realigner_{chr}_benchmark.txt"
+      join(BENCHMARKDIR, "rna_indel_realigner_{chr}.txt")
     log:
-      "{prefix}/rna_indel_realigner_{chr}.log"
+      join(LOGDIR, "rna_indel_realigner_{chr}.log")
     resources:
       mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
     run:
       intervals_str = _get_intervals_str(wildcards)
       shell("""
-        gatk -Xmx{params.mem_gb}g -T IndelRealigner -compress 0 -R {input.reference} \
+        gatk -Xmx{params.mem_gb}g -T IndelRealigner -compress 0 -R {params.reference} \
         -I {input.bam} \
         -targetIntervals {input.intervals} %s \
         --filter_mismatching_base_and_quals --filter_bases_not_stored \
@@ -162,26 +163,26 @@ if _rna_exists():
   if _PARALLEL_INDEL_REALIGNER:
     rule parallel_rna_indel_realigner:
       input:
-        bam = expand("{{prefix}}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam",
+        bam = expand(join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam"),
                      chr=config["contigs"])
       output:
-        bam = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"
+        bam = join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam")
       benchmark:
-        "{prefix}/rna_indel_realigner_benchmark.txt"
+        join(BENCHMARKDIR, "rna_indel_realigner_benchmark.txt")
       log:
-        "{prefix}/rna_indel_realigner.log"
+        join(LOGDIR, "rna_indel_realigner.log")
       shell:
         "sambamba merge {output.bam} {input.bam}"
   else:
     rule non_parallel_rna_indel_realigner:
       input:
-        bam = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_ALL.bam"
+        bam = join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_ALL.bam")
       output:
-        bam = "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"
+        bam = join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam")
       benchmark:
-        "{prefix}/rna_indel_realigner_benchmark.txt"
+        join(BENCHMARKDIR, "rna_indel_realigner.txt")
       log:
-        "{prefix}/rna_indel_realigner.log"
+        join(LOGDIR, "rna_indel_realigner.log")
       run:
         shell("mv {input.bam} {output.bam}")
         input_bai = input.bam.replace(".bam", ".bai")
@@ -191,11 +192,11 @@ if _rna_exists():
 
   rule merge_all_rna:
     input:
-      "{prefix}/rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam",
-      "{prefix}/rna_aligned_coordinate_sorted_dups_cigar_N_filtered_sorted.bam"
+      join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"),
+      join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_N_filtered_sorted.bam")
     output:
-      "{prefix}/rna_final.bam"
+      join(WORKDIR, "rna_final.bam")
     benchmark:
-      "{prefix}/rna_final_merge_benchmark.txt"
+      join(BENCHMARKDIR, "rna_final_merge.txt")
     shell:
       "sambamba merge {output} {input}"

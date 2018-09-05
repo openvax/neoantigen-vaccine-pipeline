@@ -19,31 +19,22 @@ NOTE: the reference genome directory must be writeable for these rules to work
 """
 
 import csv
-import os
-from os.path import join, splitext
-
-SAMPLE_ID = config["input"]["id"]
-WORKDIR = join(config["workdir"], SAMPLE_ID)
-LOGDIR = join(WORKDIR, "logs")
-BENCHMARKDIR = join(WORKDIR, "benchmarks")
-_READ_LENGTH = 124
-_STAR_GENOME_DIR = join(
-    os.path.dirname(config["reference"]["genome"]), "star-genome-%d" % _READ_LENGTH)
+from os.path import exists, join, splitext
 
 # See this thread for explanation of some STAR genomeGenerate parameters:
 # https://groups.google.com/forum/#!topic/rna-star/q3CZKHf9LOc
 # We want to support both high- and low-memory runs, so need to tweak the defaults sometimes
 def _mem_gb_for_star_genome_generate():
-  return min(31, int(config["mem_gb"]))
+  return min(31, config["mem_gb"])
 
 def _suffix_array_sparsity_for_star_genome_generate():
-  if int(config["mem_gb"]) < 31:
+  if config["mem_gb"] < 31:
     return 2
   else:
     return 1  # default
 
 def _num_junctions_for_star_genome_generate():
-  if int(config["mem_gb"]) < 31:
+  if config["mem_gb"] < 31:
     return 300000
   else:
     return 1000000  # default
@@ -63,14 +54,14 @@ rule star_align_reference:
   resources:
     mem_mb = _mem_gb_for_star_genome_generate() * 1024
   output:
-    os.path.join(_STAR_GENOME_DIR, "SA")
-  threads: int(config["num_threads"])
+    join(_STAR_GENOME_DIR, "SA")
+  threads: config["num_threads"]
   log:
-    os.path.join(LOGDIR, "star_align_reference.log")
+    join(LOGDIR, "star_align_reference.log")
   benchmark:
-    os.path.join(BENCHMARKDIR, "star_align_reference_benchmark.txt")
+    join(BENCHMARKDIR, "star_align_reference.txt")
   run:
-    if not os.path.exists(params.genome_dir):
+    if not exists(params.genome_dir):
         shell("mkdir {params.genome_dir}")
     shell("""
         STAR \
@@ -92,9 +83,9 @@ rule bwa_index_reference:
   output:
     expand("%s.{ext}" % config["reference"]["genome"], ext=["amb", "ann", "bwt", "pac", "sa"])
   benchmark:
-    os.path.join(BENCHMARKDIR, "bwa_index_reference_benchmark.txt")
+    join(BENCHMARKDIR, "bwa_index_reference.txt")
   log:
-    os.path.join(LOGDIR, "bwa_index_reference.log")
+    join(LOGDIR, "bwa_index_reference.log")
   shell:
     "bwa index {input.reference} >> {log} 2>&1"
 
@@ -104,9 +95,9 @@ rule samtools_index_reference:
   output:
     config["reference"]["genome"] + ".fai"
   benchmark:
-    os.path.join(BENCHMARKDIR, "samtools_index_reference_benchmark.txt")
+    join(BENCHMARKDIR, "samtools_index_reference.txt")
   log:
-    os.path.join(LOGDIR, "samtools_index_reference.log")
+    join(LOGDIR, "samtools_index_reference.log")
   shell:
     "samtools faidx {input.reference} >> {log} 2>&1"
 
@@ -134,15 +125,15 @@ rule picard_sequence_dict_reference:
   input:
     reference = config["reference"]["genome"]
   params:
-    mem_gb = int(config["mem_gb"])
+    mem_gb = config["mem_gb"]
   resources:
-    mem_mb = int(config["mem_gb"]) * 1024
+    mem_mb = config["mem_gb"] * 1024
   output:
     sequence_dict_output()
   benchmark:
-    os.path.join(BENCHMARKDIR, "picard_sequence_dict_reference_benchmark.txt")
+    join(BENCHMARKDIR, "picard_sequence_dict_reference.txt")
   log:
-    os.path.join(LOGDIR, "picard_sequence_dict_reference.log")
+    join(LOGDIR, "picard_sequence_dict_reference.log")
   shell:
     "picard -Xmx{params.mem_gb}g "
     "CreateSequenceDictionary R={input.reference} O={output} >> {log} 2>&1"

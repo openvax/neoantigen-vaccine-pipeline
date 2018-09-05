@@ -12,35 +12,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# run a separate mutect task for each chromosome
-# TODO(julia): need a better solution for running Java 1.7, for now hard-coding the path to that
-# Java version as well as to the downloaded MuTect jar on PGVNode
+from os.path import join
 
 def _get_cosmic_str():
   cosmic = config["reference"].get("cosmic", None)
   return "--cosmic " + cosmic if cosmic else ""
-      
+
+# run a separate mutect task for each chromosome
+#
+# If not running in a Docker image, user must have these environment variables set:
+# - JAVA7_BIN: directory of Java 1.7 installation, must contain java executable
+# - MUTECT: path to MuTect executable
+# TODO(julia): this should go in the config instead of being set by env variables
 rule mutect_per_chr:
   input:
-    normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
-    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
+    normal = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"),
+    tumor = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam")
+  output:
+    join(WORKDIR, "mutect_{chr}.vcf")
+  params:
     reference = config["reference"]["genome"],
     dbsnp = config["reference"]["dbsnp"]
-  output:
-    "{prefix}/mutect_{chr}.vcf"
   benchmark:
-    "{prefix}/mutect_{chr}_benchmark.txt"
+    join(BENCHMARKDIR, "mutect_{chr}.txt")
   log:
-    "{prefix}/mutect_{chr}.log"
+    join(LOGDIR, "mutect_{chr}.log")
   resources:
     mem_mb = 2000
   run:
     shell("""
         $JAVA7_BIN/java -Xmx2g -jar $MUTECT \
         --analysis_type MuTect \
-        --reference_sequence {input.reference} \
+        --reference_sequence {params.reference} \
         %s \
-        --dbsnp {input.dbsnp} \
+        --dbsnp {params.dbsnp} \
         --intervals {wildcards.chr} \
         --input_file:normal {input.normal} \
         --input_file:tumor {input.tumor} \
@@ -50,75 +55,72 @@ rule mutect_per_chr:
         2> {log}
         """ % _get_cosmic_str())
 
-# is it okay to use vcf-concat and not vcf-merge?
 rule mutect:
   input:
-    expand("{{prefix}}/mutect_{chr}.vcf", chr=config["contigs"])
+    expand(join(WORKDIR, "mutect_{chr}.vcf"), chr=config["contigs"])
   output:
-    "{prefix}/mutect.vcf"
+    join(WORKDIR, "mutect.vcf")
   shell:
     "vcf-concat {input} > {output}"
 
 rule mutect2_per_chr:
   input:
-    normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
-    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
+    normal = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"),
+    tumor = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam")
+  output:
+    join(WORKDIR, "mutect2_{chr}.vcf")
+  params:
     reference = config["reference"]["genome"],
     dbsnp = config["reference"]["dbsnp"]
-  output:
-    "{prefix}/mutect2_{chr}.vcf"
   benchmark:
-    "{prefix}/mutect2_{chr}_benchmark.txt"
+    join(BENCHMARKDIR, "mutect2_{chr}.txt")
   log:
-    "{prefix}/mutect2_{chr}.log"
+    join(LOGDIR, "mutect2_{chr}.log")
   run:
     shell("""
-    gatk -T MuTect2 \
-    -I:normal {input.normal} \
-    -I:tumor {input.tumor} \
-    -R {input.reference} \
-    --dbsnp {input.dbsnp} \
-    %s \
-    --intervals {wildcards.chr} \
-    -o {output} \
-    2> {log}
-    """ % _get_cosmic_str())
+        gatk -T MuTect2 \
+        -I:normal {input.normal} \
+        -I:tumor {input.tumor} \
+        -R {input.reference} \
+        --dbsnp {input.dbsnp} \
+        %s \
+        --intervals {wildcards.chr} \
+        -o {output} \
+        2> {log}
+        """ % _get_cosmic_str())
 
 rule mutect2:
   input:
-    expand("{{prefix}}/mutect2_{chr}.vcf", chr=config["contigs"])
+    expand(join(WORKDIR, "mutect2_{chr}.vcf"), chr=config["contigs"])
   output:
-    "{prefix}/mutect2.vcf"
+    join(WORKDIR, "mutect2.vcf")
   shell:
     "vcf-concat {input} > {output}"
 
-# TODO(julia): the logs here print to stdout still, need to figure out what the logs are coming from
-# and print to the logfile instead
-#
 # If not running in a Docker image, user must have these environment variables set:
 # - STRELKA_BIN: directory of Strelka installation, must contain configureStrelkaWorkflow.pl
 # - STRELKA_CONFIG: path to Strelka config file
 rule strelka:
   input:
-    normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
-    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
-    reference = config["reference"]["genome"]
+    normal = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"),
+    tumor = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam")
   output:
-    "{prefix}/strelka_output/results/passed.somatic.snvs.vcf",
-    "{prefix}/strelka_output/results/passed.somatic.indels.vcf"
+    expand(join(WORKDIR, "strelka_output/results/passed.somatic.{type}.vcf"),
+      type=['snvs', 'indels'])
   params:
-    output_dir = "{prefix}/strelka_output"
+    output_dir = join(WORKDIR, "strelka_output"),
+    reference = config["reference"]["genome"]
   benchmark:
-    "{prefix}/strelka_benchmark.txt"
+    join(BENCHMARKDIR, "strelka.txt")
   log:
-    "{prefix}/strelka.log"
-  threads: 20
+    join(LOGDIR, "strelka.log")
+  threads: _get_all_cores
   shell:
     "rm -rf {params.output_dir}; "
     "$STRELKA_BIN/configureStrelkaWorkflow.pl "
     "--normal {input.normal} "
     "--tumor {input.tumor} "
-    "--ref {input.reference} "
+    "--ref {params.reference} "
     "--config $STRELKA_CONFIG "
     "--output-dir {params.output_dir} &> {log}; "
     "cd {params.output_dir}; "
@@ -127,20 +129,21 @@ rule strelka:
 
 rule strelka_combine:
   input:
-    snvs = "{prefix}/strelka_output/results/passed.somatic.snvs.vcf",
-    indels = "{prefix}/strelka_output/results/passed.somatic.indels.vcf",
-    reference = config["reference"]["genome"]
+    snvs = join(WORKDIR, "strelka_output/results/passed.somatic.snvs.vcf"),
+    indels = join(WORKDIR, "strelka_output/results/passed.somatic.indels.vcf")
   output:
-    "{prefix}/strelka.vcf"
+    join(WORKDIR, "strelka.vcf")
+  params:
+    reference = config["reference"]["genome"]
   benchmark:
-    "{prefix}/strelka_combine_benchmark.txt"
+    join(BENCHMARKDIR, "strelka_combine.txt")
   log:
-    "{prefix}/strelka_combine.log"
+    join(LOGDIR, "strelka_combine.log")
   shell:
     "gatk -T CombineVariants "
     "--variant:snvs {input.snvs} "
     "--variant:indels {input.indels} "
-    "-R {input.reference} "
+    "-R {params.reference} "
     "-genotypeMergeOptions PRIORITIZE "
     "-o {output} "
     "-priority snvs,indels "
@@ -148,47 +151,49 @@ rule strelka_combine:
 
 rule haplotype_caller_per_chr:
   input:
-    normal = "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam",
+    normal = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam")
+  output:
+    join(WORKDIR, "normal_germline_snps_indels_{chr}.vcf")
+  params:
     reference = config["reference"]["genome"],
     dbsnp = config["reference"]["dbsnp"]
-  output:
-    "{prefix}/normal_germline_snps_indels_{chr}.vcf"
   benchmark:
-    "{prefix}/haplotype_caller_benchmark_{chr}.txt"
+    join(BENCHMARKDIR, "haplotype_caller_{chr}.txt")
   log:
-    "{prefix}/haplotype_caller_{chr}.log"
+    join(LOGDIR, "haplotype_caller_{chr}.log")
   shell:
     "gatk -T HaplotypeCaller "
-    "-R {input.reference} "
+    "-R {params.reference} "
     "-I {input.normal} "
-    "--dbsnp {input.dbsnp} "
+    "--dbsnp {params.dbsnp} "
     "--intervals {wildcards.chr} "
     "-o {output} "
     ">> {log} 2>&1"
 
 rule haplotype_caller:
   input:
-    expand("{{prefix}}/normal_germline_snps_indels_{chr}.vcf", chr=config["contigs"])
+    expand(join(WORKDIR, "normal_germline_snps_indels_{chr}.vcf"), chr=config["contigs"])
   output:
-    "{prefix}/normal_germline_snps_indels.vcf"
+    join(WORKDIR, "normal_germline_snps_indels.vcf")
   shell:
     "vcf-concat {input} > {output}"
 
 rule extract_snps:
   input:
-    reference = config["reference"]["genome"],
-    all_germline_variants = "{prefix}/normal_germline_snps_indels.vcf"
+    join(WORKDIR, "normal_germline_snps_indels.vcf")
   output:
-    "{prefix}/normal_germline_snps.vcf"
+    join(WORKDIR, "normal_germline_snps.vcf")
+  params:
+    reference = config["reference"]["genome"]
   benchmark:
-    "{prefix}/extract_snps_benchmark.txt"
+    join(BENCHMARKDIR, "extract_snps.txt")
   log:
-    "{prefix}/extract_snps.log"
+    join(LOGDIR, "extract_snps.log")
   shell:
     "gatk "
     "-T SelectVariants "
-    "-R {input.reference} "
-    "-V {input.all_germline_variants} "
+    "-R {params.reference} "
+    "-V {input} "
     "-selectType SNP "
     "-o {output} "
     ">> {log} 2>&1"
@@ -196,19 +201,20 @@ rule extract_snps:
 # Filters recommended at https://software.broadinstitute.org/gatk/documentation/article.php?id=2806
 rule filter_snps:
   input:
-    reference = config["reference"]["genome"],
-    germline_snps = "{prefix}/normal_germline_snps.vcf"
+    join(WORKDIR, "normal_germline_snps.vcf")
   output:
-    "{prefix}/filtered_normal_germline_snps.vcf"
+    join(WORKDIR, "filtered_normal_germline_snps.vcf")
+  params:
+    reference = config["reference"]["genome"]
   benchmark:
-    "{prefix}/filter_snps_benchmark.txt"
+    join(BENCHMARKDIR, "filter_snps_benchmark.txt")
   log:
-    "{prefix}/filter_snps.log"
+    join(LOGDIR, "filter_snps.log")
   shell:
     "gatk " 
     "-T VariantFiltration "
-    "-R {input.reference} "
-    "-V {input.germline_snps} "
+    "-R {params.reference} "
+    "-V {input} "
     "--filterExpression \"QD < 2.0 || FS > 60.0 || MQ < 40.0 || SOR > 3.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0\" "
     "--filterName \"gatk_snp_filter\" "
     "-o {output} "
@@ -216,19 +222,20 @@ rule filter_snps:
 
 rule extract_indels:
   input:
-    reference = config["reference"]["genome"],
-    all_germline_variants = "{prefix}/normal_germline_snps_indels.vcf"
+    join(WORKDIR, "normal_germline_snps_indels.vcf")
   output:
-    "{prefix}/normal_germline_indels.vcf"
+    join(WORKDIR, "normal_germline_indels.vcf")
+  params:
+    reference = config["reference"]["genome"]
   benchmark:
-    "{prefix}/extract_indels_benchmark.txt"
+    join(BENCHMARKDIR, "extract_indels.txt")
   log:
-    "{prefix}/extract_indels.log"
+    join(LOGDIR, "extract_indels.log")
   shell:
     "gatk "
     "-T SelectVariants "
-    "-R {input.reference} "
-    "-V {input.all_germline_variants} "
+    "-R {params.reference} "
+    "-V {input} "
     "-selectType INDEL "
     "-o {output} "
     ">> {log} 2>&1"
@@ -236,19 +243,20 @@ rule extract_indels:
 # Filters recommended at https://software.broadinstitute.org/gatk/documentation/article.php?id=2806
 rule filter_indels:
   input:
-    reference = config["reference"]["genome"],
-    germline_indels = "{prefix}/normal_germline_indels.vcf"
+    join(WORKDIR, "normal_germline_indels.vcf")
   output:
-    "{prefix}/filtered_normal_germline_indels.vcf"
+    join(WORKDIR, "filtered_normal_germline_indels.vcf")
+  params:
+    reference = config["reference"]["genome"]
   benchmark:
-    "{prefix}/filter_indels_benchmark.txt"
+    join(BENCHMARKDIR, "filter_indels.txt")
   log:
-    "{prefix}/filter_indels.log"
+    join(LOGDIR, "filter_indels.log")
   shell:
     "gatk " 
     "-T VariantFiltration "
-    "-R {input.reference} "
-    "-V {input.germline_indels} "
+    "-R {params.reference} "
+    "-V {input} "
     "--filterExpression \"QD < 2.0 || FS > 200.0 || SOR > 10.0 || ReadPosRankSum < -20.0\" "
     "--filterName \"gatk_indel_filter\" "
     "-o {output} "
@@ -256,18 +264,19 @@ rule filter_indels:
 
 rule combine_germline_variants:
   input:
-    expand("{{prefix}}/filtered_normal_germline_{var}.vcf", var=["snps", "indels"])
+    expand(join(WORKDIR, "filtered_normal_germline_{var}.vcf"), var=["snps", "indels"])
   output:
-    "{prefix}/filtered_normal_germline_snps_indels.vcf"
+    join(WORKDIR, "filtered_normal_germline_snps_indels.vcf")
   shell:
     "vcf-concat {input} > {output}"
 
 if "capture_kit_coverage_file" in config["reference"]:
   rule intersect_with_coverage_file:
     input:
-      coverage_file = config["reference"]["capture_kit_coverage_file"],
-      germline_variants = "{prefix}/filtered_normal_germline_snps_indels.vcf"
+      join(WORKDIR, "filtered_normal_germline_snps_indels.vcf")
     output:
-      "{prefix}/filtered_covered_normal_germline_snps_indels.vcf"
+      join(WORKDIR, "filtered_covered_normal_germline_snps_indels.vcf")
+    params:
+      coverage_file = config["reference"]["capture_kit_coverage_file"]
     shell:
-      "bedtools intersect -a {input.germline_variants} -b {input.coverage_file} -header > {output}"
+      "bedtools intersect -a {input} -b {params.coverage_file} -header > {output}"

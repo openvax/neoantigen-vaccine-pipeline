@@ -16,17 +16,19 @@
 This contains GATK-related processing rules.
 """
 
+from os.path import join
+
 rule mark_dups:
   input:
-    "{prefix}_merged_aligned_coordinate_sorted.bam"
+    join(WORKDIR, "{prefix}_merged_aligned_coordinate_sorted.bam")
   output:
-    "{prefix}_aligned_coordinate_sorted_dups.bam"
+    join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups.bam")
   params:
     mem_gb = _mem_gb_for_ram_hungry_jobs()
   benchmark:
-    "{prefix}_mark_dups_benchmark.txt"
+    join(BENCHMARKDIR, "{prefix}_mark_dups.txt")
   log:
-    "{prefix}_mark_dups.log"
+    join(LOGDIR, "{prefix}_mark_dups.log")
   resources:
     mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   shell:
@@ -42,14 +44,14 @@ rule mark_dups:
 
 rule sambamba_index_bam:
   input:
-    "{prefix}.bam"
+    join(WORKDIR, "{prefix}.bam")
   output:
-    "{prefix}.bam.bai"
+    join(WORKDIR, "{prefix}.bam.bai")
   threads: _get_half_cores
   benchmark:
-    "{prefix}_index_benchmark.txt"
+    join(BENCHMARKDIR, "{prefix}_sambamba_index.txt")
   log:
-    "{prefix}_index.log"
+    join(LOGDIR, "{prefix}_sambamba_index.log")
   shell:
     "sambamba index -t {threads} {input} {output} 2> {log}"
 
@@ -57,12 +59,12 @@ rule sambamba_index_bam:
 
 def _get_indel_realigner_target_creator_input(wildcards):
   inputs = [
-    "%s/normal_aligned_coordinate_sorted_dups.bam" % wildcards.prefix,
-    "%s/tumor_aligned_coordinate_sorted_dups.bam" % wildcards.prefix,
+    join(WORKDIR, "normal_aligned_coordinate_sorted_dups.bam"),
+    join(WORKDIR, "tumor_aligned_coordinate_sorted_dups.bam"),
   ]
   if _rna_exists():
-    inputs.append("%s/rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam" % \
-      wildcards.prefix)
+    inputs.append(
+      join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam"))
   return inputs
   
 
@@ -72,25 +74,25 @@ def _get_indel_realigner_target_creator_input(wildcards):
 rule indel_realigner_target_creator:
   input:
     bams = _get_indel_realigner_target_creator_input,
-    bais = expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai",
-      type=["normal", "tumor"]),
-    reference = config["reference"]["genome"]
+    bais = expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups.bam.bai"),
+      type=["normal", "tumor"])
   output:
-    "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals"
+    join(WORKDIR, "aligned_coordinate_sorted_dups_indelreal_{chr}.intervals")
   params:
-    mem_gb = _mem_gb_for_ram_hungry_jobs()
+    mem_gb = _mem_gb_for_ram_hungry_jobs(),
+    reference = config["reference"]["genome"]
   threads: _get_half_cores
   benchmark:
-    "{prefix}/indel_realigner_target_creator_{chr}_benchmark.txt"
+    join(BENCHMARKDIR, "indel_realigner_target_creator_{chr}.txt")
   log:
-    "{prefix}/indel_realigner_target_creator_{chr}.log"
+    join(LOGDIR, "indel_realigner_target_creator_{chr}.log")
   resources:
     mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   run:
     intervals_str = _get_intervals_str(wildcards)
     input_str = ' '.join(['-I ' + x for x in input.bams])
     shell("""
-      gatk -Xmx{params.mem_gb}g -T RealignerTargetCreator -R {input.reference} \
+      gatk -Xmx{params.mem_gb}g -T RealignerTargetCreator -R {params.reference} \
       %s \
       %s \
       -o {output} -nt {threads} \
@@ -103,27 +105,28 @@ rule indel_realigner_target_creator:
 # chromosomes.
 rule dna_indel_realigner:
   input:
-    expand("{{prefix}}/{type}_aligned_coordinate_sorted_dups.bam.bai", type=["normal", "tumor"]),
-    normal = "{prefix}/normal_aligned_coordinate_sorted_dups.bam",
-    tumor = "{prefix}/tumor_aligned_coordinate_sorted_dups.bam",
-    intervals = "{prefix}/aligned_coordinate_sorted_dups_indelreal_{chr}.intervals",
-    reference = config["reference"]["genome"]
+    expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups.bam.bai"),
+      type=["normal", "tumor"]),
+    normal = join(WORKDIR, "normal_aligned_coordinate_sorted_dups.bam"),
+    tumor = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups.bam"),
+    intervals = join(WORKDIR, "aligned_coordinate_sorted_dups_indelreal_{chr}.intervals")
   output:
-    "{prefix}/normal_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam",
-    "{prefix}/tumor_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam"
+    expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups_indelreal_chr_{{chr}}.bam"),
+      type=["normal", "tumor"])
   params:
-    mem_gb = _mem_gb_for_ram_hungry_jobs()
+    mem_gb = _mem_gb_for_ram_hungry_jobs(),
+    reference = config["reference"]["genome"]
   benchmark:
-    "{prefix}/dna_indel_realigner_{chr}_benchmark.txt"
+    join(BENCHMARKDIR, "dna_indel_realigner_{chr}.txt")
   log:
-    "{prefix}/dna_indel_realigner_{chr}.log"
+    join(LOGDIR, "dna_indel_realigner_{chr}.log")
   resources:
     mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   # IndelRealigner writes the output to this directory; need to move the files manually after
   run:
     intervals_str = _get_intervals_str(wildcards)
     shell("""
-      gatk -Xmx{params.mem_gb}g -T IndelRealigner -compress 0 -R {input.reference} \
+      gatk -Xmx{params.mem_gb}g -T IndelRealigner -compress 0 -R {params.reference} \
       -I {input.normal} -I {input.tumor} \
       -targetIntervals {input.intervals} %s \
       --filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored \
@@ -139,26 +142,27 @@ rule dna_indel_realigner:
 if _PARALLEL_INDEL_REALIGNER:
   rule parallel_dna_indel_realigner:
     input:
-      bam = expand("{{prefix}}_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam",
-                   chr=config["contigs"])
+      bam = expand(
+        join(WORKDIR, "{{prefix}}_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam"),
+        chr=config["contigs"])
     output:
-      bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
+      bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam")
     benchmark:
-      "{prefix}_indel_realigner_benchmark.txt"
+      join(BENCHMARKDIR, "{prefix}_indel_realigner.txt")
     log:
-      "{prefix}_indel_realigner.log"
+      join(LOGDIR, "{prefix}_indel_realigner.log")
     shell:
       "sambamba merge {output.bam} {input.bam}"
 else:
   rule non_parallel_dna_indel_realigner:
     input:
-      bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal_chr_ALL.bam"
+      bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_chr_ALL.bam")
     output:
-      bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"
+      bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam")
     benchmark:
-      "{prefix}_indel_realigner_benchmark.txt"
+      join(BENCHMARKDIR, "{prefix}_indel_realigner.txt")
     log:
-      "{prefix}_indel_realigner.log"
+      join(LOGDIR, "{prefix}_indel_realigner.log")
     run:
       shell("mv {input.bam} {output.bam}")
       input_bai = input.bam.replace(".bam", ".bai")
@@ -168,42 +172,42 @@ else:
 
 rule base_recalibrator:
   input:
-    bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam",
+    bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam")
+  output:
+    join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table")
+  params:
+    mem_gb = _mem_gb_for_ram_hungry_jobs(),
     reference = config["reference"]["genome"],
     known_sites = config["reference"]["dbsnp"]
-  output:
-    "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table"
-  params:
-    mem_gb = _mem_gb_for_ram_hungry_jobs()
   threads: _get_half_cores
   benchmark:
-    "{prefix}_base_recalibrator_benchmark.txt"
+    join(BENCHMARKDIR, "{prefix}_base_recalibrator.txt")
   log:
-    "{prefix}_base_recalibrator.log"
+    join(LOGDIR, "{prefix}_base_recalibrator.log")
   resources:
     mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   shell:
     "gatk -Xmx{params.mem_gb}g "
-    "-T BaseRecalibrator -nct {threads} -R {input.reference} -I {input.bam} "
-    "-knownSites {input.known_sites} -o {output} 2> {log}"
+    "-T BaseRecalibrator -nct {threads} -R {params.reference} -I {input.bam} "
+    "-knownSites {params.known_sites} -o {output} 2> {log}"
 
 rule bqsr_print_reads:
   input:
-    bam = "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam",
-    bqsr = "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table",
-    reference = config["reference"]["genome"]
+    bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"),
+    bqsr = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table")
   output:
-    "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"
+    join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.bam")
   params:
-    mem_gb = _mem_gb_for_ram_hungry_jobs()
+    mem_gb = _mem_gb_for_ram_hungry_jobs(),
+    reference = config["reference"]["genome"]
   threads: _get_half_cores
   benchmark:
-    "{prefix}_base_recalibrator_print_reads_benchmark.txt"
+    join(BENCHMARKDIR, "{prefix}_base_recalibrator_print_reads.txt")
   log:
-    "{prefix}_base_recalibrator_print_reads.log"
+    join(LOGDIR, "{prefix}_base_recalibrator_print_reads.log")
   resources:
     mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   shell:
     "gatk -Xmx{params.mem_gb}g "
-    "-T PrintReads -nct {threads} -R {input.reference} -I {input.bam} -BQSR {input.bqsr} "
+    "-T PrintReads -nct {threads} -R {params.reference} -I {input.bam} -BQSR {input.bqsr} "
     "-o {output} 2> {log}"

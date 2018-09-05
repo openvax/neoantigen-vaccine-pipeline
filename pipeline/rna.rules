@@ -28,6 +28,7 @@ if _rna_exists():
       join(WORKDIR, "{prefix}Aligned.sortedByCoord.out.bam")
     params:
       genome_dir = _STAR_GENOME_DIR,
+      output_dir = WORKDIR,
       rg_sm = config["input"]["id"] + "_rna"
     resources:
       mem_mb = _mem_gb_for_alignment() * 1024
@@ -46,7 +47,7 @@ if _rna_exists():
       "--outSAMmapqUnique 60 "
       "--outFilterIntronMotifs RemoveNoncanonical "
       "--outSAMattrRGline ID:{wildcards.prefix} SM:'{params.rg_sm}' "
-      "--outFileNamePrefix {wildcards.prefix} "
+      "--outFileNamePrefix {params.output_dir}/{wildcards.prefix} "
       "--readFilesCommand zcat "
       "--readFilesIn {input.r1} {input.r2} "
       ">> {log} 2>&1"
@@ -59,6 +60,7 @@ if _rna_exists():
       join(WORKDIR, "{prefix}Aligned.sortedByCoord.out.bam")
     params:
       genome_dir = _STAR_GENOME_DIR,
+      output_dir = WORKDIR,
       rg_sm = config["input"]["id"] + "_rna"
     resources:
       mem_mb = _mem_gb_for_alignment() * 1024
@@ -77,7 +79,7 @@ if _rna_exists():
       "--outSAMmapqUnique 60 "
       "--outFilterIntronMotifs RemoveNoncanonical "
       "--outSAMattrRGline ID:{wildcards.prefix} SM:'{params.rg_sm}' "
-      "--outFileNamePrefix {wildcards.prefix} "
+      "--outFileNamePrefix {params.output_dir}/{wildcards.prefix} "
       "--readFilesCommand zcat "
       "--readFilesIn {input.r} "
       ">> {log} 2>&1"

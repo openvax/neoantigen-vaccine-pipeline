@@ -27,6 +27,7 @@ import snakemake
 import yaml
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 # Returns an integer value for total available memory, in GB.
@@ -283,7 +284,6 @@ def process_reference(args, parsed_config, configfile):
 
 
 def main(args_list=None):
-    logging.basicConfig(level=logging.INFO)
     if args_list is None:
         args_list = sys.argv[1:]
     args = parser.parse_args(args_list)

@@ -115,6 +115,7 @@ rule dna_indel_realigner:
       type=["normal", "tumor"])
   params:
     mem_gb = _mem_gb_for_ram_hungry_jobs(),
+    output_dir = WORKDIR,
     reference = config["reference"]["genome"]
   benchmark:
     join(BENCHMARKDIR, "dna_indel_realigner_{chr}.txt")
@@ -133,9 +134,9 @@ rule dna_indel_realigner:
       --nWayOut _indelreal_chr_{wildcards.chr}.bam \
       2> {log} && \
       mv {{normal,tumor}}_aligned_coordinate_sorted_dups_indelreal_chr_{wildcards.chr}.bam \
-      {wildcards.prefix} && \
+      {params.output_dir} && \
       mv {{normal,tumor}}_aligned_coordinate_sorted_dups_indelreal_chr_{wildcards.chr}.bai \
-      {wildcards.prefix}
+      {params.output_dir}
     """ % intervals_str)
 
 

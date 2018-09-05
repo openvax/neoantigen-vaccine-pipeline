@@ -139,21 +139,24 @@ if _rna_exists():
       join(WORKDIR, "{prefix}.bam")
     output:
       bam = join(WORKDIR, "{prefix}_sorted.bam")
+    params:
+      output_dir = WORKDIR
     threads: _get_half_cores
+    resources:
+      mem_mb = 4 * 1024
     benchmark:
       join(BENCHMARKDIR, "{prefix}_sort.txt")
     log:
       join(BENCHMARKDIR, "{prefix}_sort.log")
     shell:
       "sambamba sort -t {threads} -m 4GB "
-      "--tmpdir {wildcards.prefix}_sort_tmp "
+      "--tmpdir {params.output_dir}/{wildcards.prefix}_sort_tmp "
       "-o {output.bam} "
       "{input} "
       "2> {log}"
 
   # run indel realignment on the reads without Ns
-
-  rule rna_indel_realigner_per_chr:
+  rule rna_indel_realigner:
     input:
       bam = join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam"),
       intervals = join(WORKDIR, "aligned_coordinate_sorted_dups_indelreal_{chr}.intervals")

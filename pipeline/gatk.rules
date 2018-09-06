@@ -77,7 +77,7 @@ rule indel_realigner_target_creator:
     bais = expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups.bam.bai"),
       type=["normal", "tumor"])
   output:
-    join(WORKDIR, "aligned_coordinate_sorted_dups_indelreal_{chr}.intervals")
+    temp(join(WORKDIR, "aligned_coordinate_sorted_dups_indelreal_{chr}.intervals"))
   params:
     mem_gb = _mem_gb_for_ram_hungry_jobs(),
     reference = config["reference"]["genome"]

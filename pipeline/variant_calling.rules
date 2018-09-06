@@ -30,6 +30,8 @@ rule mutect_per_chr:
     tumor = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam")
   output:
     temp(join(WORKDIR, "mutect_{chr}.vcf.idx")),
+    temp(join(WORKDIR, "mutect_{chr}.vcf.out")),
+    temp(join(WORKDIR, "mutect_{chr}.vcf.coverage.wig")),
     vcf = temp(join(WORKDIR, "mutect_{chr}.vcf"))
   params:
     reference = config["reference"]["genome"],
@@ -51,6 +53,8 @@ rule mutect_per_chr:
         --input_file:normal {input.normal} \
         --input_file:tumor {input.tumor} \
         --vcf {output.vcf} \
+        --out {output.vcf}.out \
+        --coverage_file {output.vcf}.coverage.wig \
         2> {log}
         """ % _get_cosmic_str())
 

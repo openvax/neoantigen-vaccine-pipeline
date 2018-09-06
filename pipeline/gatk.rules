@@ -112,8 +112,6 @@ rule dna_indel_realigner_per_chr:
     intervals = join(WORKDIR, "aligned_coordinate_sorted_dups_indelreal_{chr}.intervals")
   output:
     temp(expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups_indelreal_chr_{{chr}}.bam"),
-      type=["normal", "tumor"])),
-    temp(expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups_indelreal_chr_{{chr}}.bam.bai"),
       type=["normal", "tumor"]))
   params:
     mem_gb = _mem_gb_for_ram_hungry_jobs(),

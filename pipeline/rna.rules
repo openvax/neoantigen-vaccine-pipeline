@@ -161,8 +161,7 @@ if _rna_exists():
       bam = join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam"),
       intervals = join(WORKDIR, "aligned_coordinate_sorted_dups_indelreal_{chr}.intervals")
     output:
-      temp(join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam")),
-      temp(join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam.bai")),
+      temp(join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam"))
     params:
       mem_gb = _mem_gb_for_ram_hungry_jobs(),
       reference = config["reference"]["genome"]

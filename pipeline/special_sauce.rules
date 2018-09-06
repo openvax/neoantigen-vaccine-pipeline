@@ -16,6 +16,8 @@
 This contains rules for our own data processing libraries.
 """
 
+from os.path import join
+
 rule pyensembl:
   output:
     touch("$PYENSEMBL_CACHE_DIR/homo_sapiens_75.cached")
@@ -23,7 +25,7 @@ rule pyensembl:
     "pyensembl install --release 75 --species 'homo sapiens'"
 
 def _get_vaxrank_input_vcfs(wildcards):
-    return ["%s/%s.vcf" % (wildcards.prefix, vcf_type) for vcf_type in config["variant_callers"]]
+    return [join(WORKDIR, "%s.vcf" % vcf_type) for vcf_type in config["variant_callers"]]
 
 def _check_vaxrank_wildcards(wildcards):
     if wildcards.mhc_predictor != config["mhc_predictor"]:
@@ -39,14 +41,14 @@ if "mhc_alleles" in config["input"]:
     rule vaxrank:
       input:
         vcfs = _get_vaxrank_input_vcfs,
-        rna = "{prefix}/rna_final_sorted.bam",
-        rna_index = "{prefix}/rna_final_sorted.bam.bai",
+        rna = join(WORKDIR, "rna_final_sorted.bam"),
+        rna_index = join(WORKDIR, "rna_final_sorted.bam.bai"),
         pyensembl_cache = "$PYENSEMBL_CACHE_DIR/homo_sapiens_75.cached"
       output:
-        ascii_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.txt",
-        json_file = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.json",
-        pdf_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.pdf",
-        xlsx_report = "{prefix}/vaccine-peptide-report_{mhc_predictor}_{vcf_types}.xlsx"
+        ascii_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.txt"),
+        json_file = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.json"),
+        pdf_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.pdf"),
+        xlsx_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.xlsx")
       params:
         mhc_alleles = config["input"]["mhc_alleles"],
         patient_id = config["input"]["id"],
@@ -58,9 +60,9 @@ if "mhc_alleles" in config["input"]:
         min_alt_rna_reads = 2,
         mhc_epitope_lengths = "8-11"
       benchmark:
-        "{prefix}/vaxrank_{mhc_predictor}_{vcf_types}_benchmark.txt"
+        join(BENCHMARKDIR, "vaxrank_{mhc_predictor}_{vcf_types}.txt")
       log:
-        "{prefix}/vaxrank_{mhc_predictor}_{vcf_types}.log"
+        join(LOGDIR, "vaxrank_{mhc_predictor}_{vcf_types}.log")
       run:
         _check_vaxrank_wildcards(wildcards)
         vcf_input_str = ' '.join(['--vcf %s' % x for x in input.vcfs])

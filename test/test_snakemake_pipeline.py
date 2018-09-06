@@ -22,7 +22,7 @@ import unittest
 import snakemake
 import yaml
 
-from docker.run_snakemake import main as docker_entrypoint, \
+from run_snakemake import main as docker_entrypoint, \
     default_vaxrank_targets, somatic_vcf_targets
 
 class TestPipeline(unittest.TestCase):
@@ -55,6 +55,10 @@ class TestPipeline(unittest.TestCase):
             dbsnp.write('placeholder')
         with open(join(cls.referencedir.name, 'cosmic.vcf'), 'w') as cosmic:
             cosmic.write('placeholder')
+        with open(join(cls.referencedir.name, 'b37decoy.fasta.contigs'), 'w') as contigs:
+            contigs.write('placeholder')
+        with open(join(cls.referencedir.name, 'b37decoy.fasta.done'), 'w') as done:
+            done.write('placeholder')
         with open(join(cls.referencedir.name, 'S04380110_Padded_grch37_with_M.bed'), 'w') as cover:
             cover.write('placeholder')
         for path in glob.glob('datagen/*.fastq.gz'):
@@ -78,8 +82,8 @@ class TestPipeline(unittest.TestCase):
         return dirname(__file__)
 
     @classmethod
-    def _get_snakemake_dir_path(cls):
-        return join(cls._get_test_dir_path(), '..', 'snakemake')
+    def _get_pipeline_dir_path(cls):
+        return join(cls._get_test_dir_path(), '..', 'pipeline')
 
     def test_vaxrank_targets(self):
         with open(join(self._get_test_dir_path(), 'idh1_config.yaml'), 'r') as idh1_config_file:
@@ -109,13 +113,13 @@ class TestPipeline(unittest.TestCase):
 
     # This simulates a dry run on the test data, and mostly checks rule graph validity.
     def test_workflow_compiles(self):
-        chdir(self._get_snakemake_dir_path())
+        chdir(self._get_pipeline_dir_path())
         self.assertTrue(snakemake.snakemake(
             'Snakefile',
             cores=20,
             resources={'mem_mb': 160000},
             configfile=self.config_tmpfile.name,
-            config={'num_threads': 22, 'mem_gb': 160},
+            config={'num_threads': 22, 'mem_gb': 160, 'contigs': ['2']},
             dryrun=True,
             printshellcmds=True,
             targets=[
@@ -147,7 +151,7 @@ class TestPipeline(unittest.TestCase):
             '--dry-run',
             '--memory', '32',
             '--target', join(
-                self.workdir.name, 
+                self.workdir.name,
                 'idh1-test-sample',
                 'rna_final.bam'),  # valid target
         ]
@@ -183,6 +187,17 @@ class TestPipeline(unittest.TestCase):
                 'filtered_covered_normal_germline_snps_indels.vcf'),
         ]
         docker_entrypoint(germline_variant_cli_args)
+
+    def test_docker_entrypoint_script_reference_target(self):
+        reference_cli_args = [
+            '--configfile', self.config_tmpfile.name,
+            '--dry-run',
+            '--memory', '33',
+            '--target', join(
+                self.referencedir.name,
+                'b37decoy.dict'),
+        ]
+        docker_entrypoint(reference_cli_args)
 
     def test_docker_entrypoint_script_failures(self):
         # check that invalid targets fail

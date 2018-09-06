@@ -1,0 +1,225 @@
+# Copyright (c) 2018. Mount Sinai School of Medicine
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+This contains RNA processing rules.
+"""
+
+from os.path import join
+
+if _rna_exists():
+  rule star_align_paired_end:
+    input:
+      r1 = join(WORKDIR, "{prefix}_R1.fastq.gz"),
+      r2 = join(WORKDIR, "{prefix}_R2.fastq.gz"),
+      done = config["reference"]["genome"] + ".done"
+    output:
+      join(WORKDIR, "{prefix}Aligned.sortedByCoord.out.bam")
+    params:
+      genome_dir = _STAR_GENOME_DIR,
+      output_dir = WORKDIR,
+      rg_sm = config["input"]["id"] + "_rna"
+    resources:
+      mem_mb = _mem_gb_for_alignment() * 1024
+    benchmark:
+      join(BENCHMARKDIR, "{prefix}_star_align.txt")
+    log:
+      join(LOGDIR, "{prefix}_star_align.log")
+    threads: _get_threads_for_alignment
+    shell:
+      "STAR "
+      "--genomeDir {params.genome_dir} "
+      "--runThreadN {threads} "
+      "--outSAMtype BAM SortedByCoordinate "
+      "--outSAMstrandField intronMotif "
+      "--outSAMattributes NH HI NM MD "
+      "--outSAMmapqUnique 60 "
+      "--outFilterIntronMotifs RemoveNoncanonical "
+      "--outSAMattrRGline ID:{wildcards.prefix} SM:'{params.rg_sm}' "
+      "--outFileNamePrefix {params.output_dir}/{wildcards.prefix} "
+      "--readFilesCommand zcat "
+      "--readFilesIn {input.r1} {input.r2} "
+      ">> {log} 2>&1"
+
+  rule star_align_single_end:
+    input:
+      r = join(WORKDIR, "{prefix}.fastq.gz"),
+      done = config["reference"]["genome"] + ".done"
+    output:
+      join(WORKDIR, "{prefix}Aligned.sortedByCoord.out.bam")
+    params:
+      genome_dir = _STAR_GENOME_DIR,
+      output_dir = WORKDIR,
+      rg_sm = config["input"]["id"] + "_rna"
+    resources:
+      mem_mb = _mem_gb_for_alignment() * 1024
+    benchmark:
+      join(BENCHMARKDIR, "{prefix}_star_align.txt")
+    log:
+      join(LOGDIR, "{prefix}_star_align.log")
+    threads: _get_threads_for_alignment
+    shell:
+      "STAR "
+      "--genomeDir {params.genome_dir} "
+      "--runThreadN {threads} "
+      "--outSAMtype BAM SortedByCoordinate "
+      "--outSAMstrandField intronMotif "
+      "--outSAMattributes NH HI NM MD "
+      "--outSAMmapqUnique 60 "
+      "--outFilterIntronMotifs RemoveNoncanonical "
+      "--outSAMattrRGline ID:{wildcards.prefix} SM:'{params.rg_sm}' "
+      "--outFileNamePrefix {params.output_dir}/{wildcards.prefix} "
+      "--readFilesCommand zcat "
+      "--readFilesIn {input.r} "
+      ">> {log} 2>&1"
+
+  rule merge_rna_aligned_fragments:
+    input:
+      expand(join(WORKDIR, "rna_{fragment_id}Aligned.sortedByCoord.out.bam"),
+        fragment_id=_get_fragment_ids("rna"))
+    output:
+      join(WORKDIR, "rna_merged_aligned_coordinate_sorted.bam")
+    benchmark:
+      join(BENCHMARKDIR, "merge_rna_aligned_fragments.txt")
+    log:
+      join(LOGDIR, "merge_rna_aligned_fragments.log")
+    threads: _get_half_cores
+    run:
+      if len(input) > 1:
+        shell("sambamba merge -t {threads} {output} {input} 2> {log}")
+      else:
+        shell("cp {input} {output}")
+
+  # then we run mark duplicates on the RNA, which can just reuse the mark_dups rule from gatk.rules
+
+  # split the resulting BAM by CIGAR string; only want to do indel realignment on reads that don't
+  # contain any Ns. This file will contain all reads with Ns
+  # TODO(julia): is there a file called "rna_aligned_coordinate_sorted_dups.bam"? is that the input?
+  rule filter_n:
+    input:
+      join(WORKDIR, "rna_aligned_coordinate_sorted_dups.bam")
+    output:
+      join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_N_filtered.bam")
+    benchmark:
+      join(BENCHMARKDIR, "rna_filter_N.txt")
+    shell:
+      "sambamba view "
+      "--format=bam "
+      "-F 'cigar =~ /^.*N.*$/' "
+      "{input} > {output}"
+
+  # This file should contain all reads without Ns
+  rule filter_other:
+    input:
+      join(WORKDIR, "rna_aligned_coordinate_sorted_dups.bam")
+    output:
+      join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered.bam")
+    benchmark:
+      join(BENCHMARKDIR, "rna_split_out_other.txt")
+    shell:
+      "sambamba view "
+      "--format=bam "
+      "-F 'cigar =~ /^[0-9MIDSHPX=]*$/' "
+      "{input} > {output}"
+
+  # apparently this also creates an index file? awesome
+  rule sort_rna_bam:
+    input:
+      join(WORKDIR, "{prefix}.bam")
+    output:
+      bam = join(WORKDIR, "{prefix}_sorted.bam")
+    params:
+      output_dir = WORKDIR
+    threads: _get_half_cores
+    resources:
+      mem_mb = 4 * 1024
+    benchmark:
+      join(BENCHMARKDIR, "{prefix}_sort.txt")
+    log:
+      join(BENCHMARKDIR, "{prefix}_sort.log")
+    shell:
+      "sambamba sort -t {threads} -m 4GB "
+      "--tmpdir {params.output_dir}/{wildcards.prefix}_sort_tmp "
+      "-o {output.bam} "
+      "{input} "
+      "2> {log}"
+
+  # run indel realignment on the reads without Ns
+  rule rna_indel_realigner_per_chr:
+    input:
+      bam = join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered_sorted.bam"),
+      intervals = join(WORKDIR, "aligned_coordinate_sorted_dups_indelreal_{chr}.intervals")
+    output:
+      temp(join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bai")),
+      bam = temp(join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam"))
+    params:
+      mem_gb = _mem_gb_for_ram_hungry_jobs(),
+      reference = config["reference"]["genome"]
+    benchmark:
+      join(BENCHMARKDIR, "rna_indel_realigner_{chr}.txt")
+    log:
+      join(LOGDIR, "rna_indel_realigner_{chr}.log")
+    resources:
+      mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
+    run:
+      intervals_str = _get_intervals_str(wildcards)
+      shell("""
+        gatk -Xmx{params.mem_gb}g -T IndelRealigner -compress 0 -R {params.reference} \
+        -I {input.bam} \
+        -targetIntervals {input.intervals} %s \
+        --filter_mismatching_base_and_quals --filter_bases_not_stored \
+        -o {output.bam} \
+        2> {log}
+      """ % intervals_str)
+
+  if _PARALLEL_INDEL_REALIGNER:
+    rule parallel_rna_indel_realigner:
+      input:
+        bam = expand(join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bam"),
+                     chr=config["contigs"])
+      output:
+        bam = join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam")
+      benchmark:
+        join(BENCHMARKDIR, "rna_indel_realigner_benchmark.txt")
+      log:
+        join(LOGDIR, "rna_indel_realigner.log")
+      shell:
+        "sambamba merge {output.bam} {input.bam}"
+  else:
+    rule non_parallel_rna_indel_realigner:
+      input:
+        bam = join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_ALL.bam")
+      output:
+        bam = join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam")
+      benchmark:
+        join(BENCHMARKDIR, "rna_indel_realigner.txt")
+      log:
+        join(LOGDIR, "rna_indel_realigner.log")
+      run:
+        shell("mv {input.bam} {output.bam}")
+        input_bai = input.bam.replace(".bam", ".bai")
+        output_bai = output.bam.replace(".bam", ".bai")
+        # also need to rename the .bai from the .bam
+        shell("mv %s %s" % (input_bai, output_bai))
+
+  rule merge_all_rna:
+    input:
+      join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"),
+      join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_N_filtered_sorted.bam")
+    output:
+      join(WORKDIR, "rna_final.bam")
+    benchmark:
+      join(BENCHMARKDIR, "rna_final_merge.txt")
+    shell:
+      "sambamba merge {output} {input}"

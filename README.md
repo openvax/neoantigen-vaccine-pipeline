@@ -27,7 +27,7 @@ The steps performed by the workflow are as follows.
 
 For best results, you will need a machine with Docker [installed](https://docs.docker.com/install/) and the following requirements:
 - at least 16 cores
-- 32GB RAM if you want to run the full pipeline to compute vaccine peptides. 8GB of RAM is enough if you only want to run variant calling.
+- 32GB RAM if you want to run the full pipeline to compute vaccine peptides, or if you are running the pipeline for the first time with your own reference genome and it has not yet been processed. Otherwise, 8GB of RAM is enough if you only want to run variant calling.
 - suggested: 500GB free disk space, if running on real human sequence data (okay to have ~60GB if running with test data) 
 
 The pipeline is run by invoking a Docker entrypoint in the image while providing three directories as mounted Docker [volumes](https://docs.docker.com/storage/volumes/): `/inputs` (FASTQ files and a configuration YAML), `/outputs` (directory to write results to), and `/reference-genome` (data shared across patients, such as the genome reference).
@@ -40,7 +40,9 @@ mkdir -p reference-genome
 chmod -R a+w reference-genome
 ```
 
-While the pipeline supports preparing your choice of reference FASTA for use by aligners and other tools, for a quick start we have made available a processed version of the b37decoy genome in Google Cloud. Visit https://storage.cloud.google.com/reference-genomes/b37decoy.tar.gz to download a zipped version of all b37decoy files (~30GB), and save it to the `reference-genome` directory. If you have installed `gsutil`, you can download the file faster. See [here](https://cloud.google.com/storage/docs/access-public-data) for more details on accessing public data in Google Cloud.
+While the pipeline supports preparing your choice of reference FASTA for use by aligners and other tools, for a quick start we have made available a processed version of the b37decoy and mm10 genomes in Google Cloud. Visit https://storage.cloud.google.com/reference-genomes/b37decoy.tar.gz to download a zipped version of all b37decoy files (~30GB), or https://storage.cloud.google.com/reference-genomes/mm10.tar.gz for the zipped mm10 archive (~28GB), and save it to the `reference-genome` directory. If you have installed `gsutil`, you can download the file faster. See [here](https://cloud.google.com/storage/docs/access-public-data) for more details on accessing public data in Google Cloud.
+
+For the remainder of this README, we will assume that you are working with the b37decoy reference data.
 ```sh
 gsutil -m cp gs://reference-genomes/b37decoy.tar.gz reference-genome/
 ```
@@ -107,6 +109,15 @@ Use the [test IDH config file](https://github.com/openvax/neoantigen-vaccine-pip
 Please note:
 - The input FASTQ files must live in the same directory as your config YAML file. You should only need to modify the basename of the sample file paths, leaving the `/inputs` part of the filename unchanged.
 - If your data is paired-end FASTQ files, you must specify the two files as `r1` and `r2` entries instead of the singular `r` entry in the config template. You must also change the `type` to say `paired-end`.
+
+#### Using the mm10 or your own reference genome
+
+The pipeline supports processing for any reference genome you want to use. You must include:
+- the reference FASTA or FA file
+- a GTF file containing known transcripts
+- a known sites/dbSNP VCF file
+
+A link to COSMIC is only relevant for human genomes, and is optional in any config used to run the pipeline. For the mm10 genome, we have provided these reference files, contained in the archive on Google Cloud. See the [test IDH config file](https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/test/idh1_config.yaml) as an example of how to specify the aforementioned 3 reference paths.
 
 ### Intermediate files
 

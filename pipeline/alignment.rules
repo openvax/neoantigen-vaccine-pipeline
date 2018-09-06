@@ -16,21 +16,22 @@
 This contains alignment-related processing rules.
 """
 
+from os.path import basename, join
+
 def _get_read_group_header(wildcards):
-  prefix = wildcards.prefix
-  basename = os.path.basename(prefix)
-  if basename.startswith("normal"):
+  prefix_basename = basename(wildcards.prefix)
+  if prefix_basename.startswith("normal"):
     sample = "normal"
-  elif basename.startswith("tumor"):
+  elif prefix_basename.startswith("tumor"):
     sample = "tumor"
   else:
-    raise ValueError("Unexpected prefix, cannot extract SM tag: %s" % prefix)
+    raise ValueError("Unexpected prefix, cannot extract SM tag: %s" % wildcards.prefix)
   patient_id = config["input"]["id"]
   sample_id = "%s_%s" % (patient_id, sample)
   library = sample_id
   return "\\t".join([
       "@RG",
-      "ID:%s" % prefix,
+      "ID:%s" % wildcards.prefix,
       "SM:%s" % sample_id,
       "LB:%s" % library,
       "PL:Illumina"
@@ -44,60 +45,86 @@ def _get_read_group_header(wildcards):
 # NB: this will not work correctly on a paired-end interleaved FASTQ input
 rule bwa_mem_single_end:
   input:
-    r = "{prefix}.fastq.gz",
-    reference_index = rules.bwa_index_reference.output,
-    reference = config["reference"]["genome"]
+    r = join(WORKDIR, "{prefix}.fastq.gz"),
+    done = config["reference"]["genome"] + ".done"
   output:
-    "{prefix}_aligned.sam"
+    join(WORKDIR, "{prefix}_aligned.sam")
   params:
-    rg = _get_read_group_header
+    rg = _get_read_group_header,
+    reference = config["reference"]["genome"]
   resources:
     mem_mb = _mem_gb_for_alignment() * 1024
   benchmark:
-    "{prefix}_bwa_mem_benchmark.txt"
+    join(BENCHMARKDIR, "{prefix}_bwa_mem.txt")
   log:
-    "{prefix}_bwa_mem.log"
+    join(LOGDIR, "{prefix}_bwa_mem.log")
   threads: _get_threads_for_alignment
   shell:
     "bwa mem -R '{params.rg}' -M -t {threads} -O 6 -E 1 -B 4 "
-    "{input.reference} {input.r} "
+    "{params.reference} {input.r} "
     "> {output} 2> {log}"
 
 rule bwa_mem_paired_end:
   input:
-    r1 = "{prefix}_R1.fastq.gz",
-    r2 = "{prefix}_R2.fastq.gz",
-    reference_index = rules.bwa_index_reference.output,
-    reference = config["reference"]["genome"]
+    r1 = join(WORKDIR, "{prefix}_R1.fastq.gz"),
+    r2 = join(WORKDIR, "{prefix}_R2.fastq.gz"),
+    done = config["reference"]["genome"] + ".done"
   output:
-    "{prefix}_aligned.sam"
+    join(WORKDIR, "{prefix}_aligned.sam")
   params:
-    rg = _get_read_group_header
+    rg = _get_read_group_header,
+    reference = config["reference"]["genome"]
   resources:
     mem_mb = _mem_gb_for_alignment() * 1024
   benchmark:
-    "{prefix}_bwa_mem_benchmark.txt"
+    join(BENCHMARKDIR, "{prefix}_bwa_mem.txt")
   log:
-    "{prefix}_bwa_mem.log"
+    join(LOGDIR, "{prefix}_bwa_mem.log")
   threads: _get_threads_for_alignment
   shell:
     "bwa mem -R '{params.rg}' -M -t {threads} -O 6 -E 1 -B 4 "
-    "{input.reference} {input.r1} {input.r2} "
+    "{params.reference} {input.r1} {input.r2} "
     "> {output} 2> {log}"
 
 rule convert_alignment_to_sorted_bam:
   input:
-    "{prefix}_aligned.sam"
+    join(WORKDIR, "{prefix}_aligned.sam")
   output:
-    "{prefix}_aligned_coordinate_sorted.bam"
+    join(WORKDIR, "{prefix}_aligned_coordinate_sorted.bam")
   params:
     mem_gb = _mem_gb_for_ram_hungry_jobs()
   benchmark:
-    "{prefix}_convert_alignment_to_sorted_bam_benchmark.txt"
+    join(BENCHMARKDIR, "{prefix}_convert_alignment_to_sorted_bam.txt")
   log:
-    "{prefix}_convert_alignment_to_sorted_bam.log"
+    join(LOGDIR, "{prefix}_convert_alignment_to_sorted_bam.log")
   resources:
     mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   shell:
     "picard -Xmx{params.mem_gb}g "
     "SortSam INPUT={input} OUTPUT={output} SORT_ORDER=coordinate 2> {log}"
+
+rule merge_normal_aligned_fragments:
+  input:
+    expand(join(WORKDIR, "normal_{fragment_id}_aligned_coordinate_sorted.bam"),
+      fragment_id=_get_fragment_ids("normal"))
+  output:
+    join(WORKDIR, "normal_merged_aligned_coordinate_sorted.bam")
+  threads: _get_half_cores
+  run:
+    if len(input) > 1:
+      shell("sambamba merge -t {threads} {output} {input}")
+    else:
+      shell("cp {input} {output}")
+
+rule merge_tumor_aligned_fragments:
+  input:
+    expand(join(WORKDIR, "tumor_{fragment_id}_aligned_coordinate_sorted.bam"),
+      fragment_id=_get_fragment_ids("tumor"))
+  output:
+    join(WORKDIR, "tumor_merged_aligned_coordinate_sorted.bam")
+  threads: _get_half_cores
+  run:
+    if len(input) > 1:
+      shell("sambamba merge -t {threads} {output} {input}")
+    else:
+      shell("cp {input} {output}")

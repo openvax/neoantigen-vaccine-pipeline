@@ -103,7 +103,7 @@ rule indel_realigner_target_creator:
 # if this rule is triggered with "chr" mapping to a chromosome in the input list of contigs, it'll
 # run for that chromosome alone. If "chr" matches any other string, IndelRealigner will run for all
 # chromosomes.
-rule dna_indel_realigner:
+rule dna_indel_realigner_per_chr:
   input:
     expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups.bam.bai"),
       type=["normal", "tumor"]),
@@ -111,8 +111,10 @@ rule dna_indel_realigner:
     tumor = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups.bam"),
     intervals = join(WORKDIR, "aligned_coordinate_sorted_dups_indelreal_{chr}.intervals")
   output:
-    expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups_indelreal_chr_{{chr}}.bam"),
-      type=["normal", "tumor"])
+    temp(expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups_indelreal_chr_{{chr}}.bam"),
+      type=["normal", "tumor"])),
+    temp(expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups_indelreal_chr_{{chr}}.bam.bai"),
+      type=["normal", "tumor"]))
   params:
     mem_gb = _mem_gb_for_ram_hungry_jobs(),
     output_dir = WORKDIR,

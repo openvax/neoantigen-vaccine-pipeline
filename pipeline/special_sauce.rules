@@ -20,9 +20,13 @@ from os.path import join
 
 rule pyensembl:
   output:
-    touch("$PYENSEMBL_CACHE_DIR/homo_sapiens_75.cached")
+    touch("$PYENSEMBL_CACHE_DIR/homo_sapiens_75.cached"),
+    touch("$PYENSEMBL_CACHE_DIR/mus_musculus_93.cached")
+  log:
+    join(LOGDIR, "pyensembl_install.log")
   shell:
-    "pyensembl install --release 75 --species 'homo sapiens'"
+    "pyensembl install --release 75 --species 'homo sapiens' >> {log} 2>&1 && "
+    "pyensembl install --release 93 --species 'mus musculus' >> {log} 2>&1"
 
 def _get_vaxrank_input_vcfs(wildcards):
     return [join(WORKDIR, "%s.vcf" % vcf_type) for vcf_type in config["variant_callers"]]
@@ -48,7 +52,8 @@ if "mhc_alleles" in config["input"]:
         ascii_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.txt"),
         json_file = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.json"),
         pdf_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.pdf"),
-        xlsx_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.xlsx")
+        xlsx_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.xlsx"),
+        all_passing_variants = join(WORKDIR, "all-passing-variants_{mhc_predictor}_{vcf_types}.csv")
       params:
         mhc_alleles = config["input"]["mhc_alleles"],
         patient_id = config["input"]["id"],
@@ -75,6 +80,7 @@ if "mhc_alleles" in config["input"]:
             --output-pdf-report {output.pdf_report} \
             --output-xlsx-report {output.xlsx_report} \
             --output-json-file {output.json_file} \
+            --output-passing-variants-csv {output.all_passing_variants} \
             --output-patient-id {params.patient_id} \
             --log-path {log} \
             --vaccine-peptide-length {params.vaccine_peptide_length} \

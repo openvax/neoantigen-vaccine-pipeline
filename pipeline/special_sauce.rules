@@ -18,30 +18,30 @@ This contains rules for our own data processing libraries.
 
 from os.path import join, dirname
 
-rule pyensembl:
-  output:
-    touch(join(dirname(config["reference"]["genome"]), "homo_sapiens_75.cached")),
-    touch(join(dirname(config["reference"]["genome"]), "mus_musculus_93.cached"))
-  log:
-    join(LOGDIR, "pyensembl_install.log")
-  shell:
-    "pyensembl install --release 75 --species 'homo sapiens' >> {log} 2>&1 && "
-    "pyensembl install --release 93 --species 'mus musculus' >> {log} 2>&1"
-
-def _get_vaxrank_input_vcfs(wildcards):
-    return [join(WORKDIR, "%s.vcf" % vcf_type) for vcf_type in config["variant_callers"]]
-
-def _check_vaxrank_wildcards(wildcards):
-    if wildcards.mhc_predictor != config["mhc_predictor"]:
-        raise ValueError("Vaccine peptide report output filenames must match MHC predictor "
-            "specified in config: %s" % config["mhc_predictor"])
-    if wildcards.vcf_types != "-".join(config["variant_callers"]):
-        raise ValueError("Vaccine peptide report output filenames must match variant callers "
-            "specified in config: %s" % config["variant_callers"])
-
 # only define the Vaxrank rule if we have RNA and MHC alleles specified in the config
 # TODO(julia): support inferring MHC alleles from seq2hla instead of requiring user input
 if "mhc_alleles" in config["input"] and _rna_exists():
+    rule pyensembl:
+      output:
+        touch(join(dirname(config["reference"]["genome"]), "homo_sapiens_75.cached")),
+        touch(join(dirname(config["reference"]["genome"]), "mus_musculus_93.cached"))
+      log:
+        join(LOGDIR, "pyensembl_install.log")
+      shell:
+        "pyensembl install --release 75 --species 'homo sapiens' >> {log} 2>&1 && "
+        "pyensembl install --release 93 --species 'mus musculus' >> {log} 2>&1"
+
+    def _get_vaxrank_input_vcfs(wildcards):
+        return [join(WORKDIR, "%s.vcf" % vcf_type) for vcf_type in config["variant_callers"]]
+
+    def _check_vaxrank_wildcards(wildcards):
+        if wildcards.mhc_predictor != config["mhc_predictor"]:
+            raise ValueError("Vaccine peptide report output filenames must match MHC predictor "
+                "specified in config: %s" % config["mhc_predictor"])
+        if wildcards.vcf_types != "-".join(config["variant_callers"]):
+            raise ValueError("Vaccine peptide report output filenames must match variant callers "
+                "specified in config: %s" % config["variant_callers"])
+    
     rule vaxrank:
       input:
         vcfs = _get_vaxrank_input_vcfs,

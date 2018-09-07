@@ -16,12 +16,12 @@
 This contains rules for our own data processing libraries.
 """
 
-from os.path import join
+from os.path import join, dirname
 
 rule pyensembl:
   output:
-    touch("$PYENSEMBL_CACHE_DIR/homo_sapiens_75.cached"),
-    touch("$PYENSEMBL_CACHE_DIR/mus_musculus_93.cached")
+    touch(join(dirname(config["reference"]["genome"]), "homo_sapiens_75.cached")),
+    touch(join(dirname(config["reference"]["genome"]), "mus_musculus_93.cached"))
   log:
     join(LOGDIR, "pyensembl_install.log")
   shell:

@@ -39,15 +39,15 @@ def _check_vaxrank_wildcards(wildcards):
         raise ValueError("Vaccine peptide report output filenames must match variant callers "
             "specified in config: %s" % config["variant_callers"])
 
-# only define the Vaxrank rule if we have MHC alleles specified in the config
+# only define the Vaxrank rule if we have RNA and MHC alleles specified in the config
 # TODO(julia): support inferring MHC alleles from seq2hla instead of requiring user input
-if "mhc_alleles" in config["input"]:
+if "mhc_alleles" in config["input"] and _rna_exists():
     rule vaxrank:
       input:
         vcfs = _get_vaxrank_input_vcfs,
         rna = join(WORKDIR, "rna_final_sorted.bam"),
         rna_index = join(WORKDIR, "rna_final_sorted.bam.bai"),
-        pyensembl_cache = "$PYENSEMBL_CACHE_DIR/homo_sapiens_75.cached"
+        pyensembl_cache = rules.pyensembl.output
       output:
         ascii_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.txt"),
         json_file = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.json"),

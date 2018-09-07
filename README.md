@@ -119,6 +119,8 @@ The pipeline supports processing for any reference genome you want to use. You m
 
 A link to COSMIC is only relevant for human genomes, and is optional in any config used to run the pipeline. For the mm10 genome, we have provided these reference files, contained in the archive on Google Cloud. See the [test IDH config file](https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/test/idh1_config.yaml) as an example of how to specify the aforementioned 3 reference paths.
 
+Note that if the reference genome you want to use is not part of the Ensembl standard (GRCh37/hg19, GRCh38/hg20, GRCm38/mm10, etc.), you can use this pipeline to do Strelka/Mutect/Mutect2 variant calling. However, you cannot use this pipeline to compute ranked vaccine peptides. This will be available in a future version.
+
 ### Intermediate files
 
 As a result of the full pipeline run, many intermediate files are generated in the output directory. In case you want to reuse these for a different pipeline run (e.g. if you have one normal sample and several tumor samples, each of which you want to run against the normal), any intermediate file you copy to the new location will tell Snakemake to not repeat that step (or its substeps, unless they're needed for some other workflow node). For that reason, it's helpful to know the intermediate file paths. You can also run parts of the pipeline used to generate any of the intermediate files, specifying one or more as a target to the Docker run invocation. Example, if you use [the test IDH config](https://github.com/openvax/neoantigen-vaccine-pipeline/blob/master/test/idh1_config.yaml):

@@ -24,7 +24,8 @@ rule mark_dups:
   output:
     join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups.bam")
   params:
-    mem_gb = _mem_gb_for_ram_hungry_jobs()
+    mem_gb = _mem_gb_for_ram_hungry_jobs(),
+    metrics_file = join(WORKDIR, "{prefix}_markdups_metrics.txt")
   benchmark:
     join(BENCHMARKDIR, "{prefix}_mark_dups.txt")
   log:
@@ -39,7 +40,7 @@ rule mark_dups:
     "picard -Xmx{params.mem_gb}g -Djava.io.tmpdir={wildcards.prefix}_tmp "
     "MarkDuplicates "
     "INPUT={input} OUTPUT={output} "
-    "VALIDATION_STRINGENCY=LENIENT METRICS_FILE={wildcards.prefix}_markdups_metrics.txt "
+    "VALIDATION_STRINGENCY=LENIENT METRICS_FILE={params.metrics_file} "
     "2> {log}"
 
 rule sambamba_index_bam:
@@ -93,8 +94,7 @@ rule indel_realigner_target_creator:
     input_str = ' '.join(['-I ' + x for x in input.bams])
     shell("""
       gatk -Xmx{params.mem_gb}g -T RealignerTargetCreator -R {params.reference} \
-      %s \
-      %s \
+      %s %s \
       -o {output} -nt {threads} \
       --filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored \
       2> {log}
@@ -105,16 +105,14 @@ rule indel_realigner_target_creator:
 # chromosomes.
 rule dna_indel_realigner_per_chr:
   input:
-    expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups.bam.bai"),
+    bams = expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups.bam"),
       type=["normal", "tumor"]),
-    normal = join(WORKDIR, "normal_aligned_coordinate_sorted_dups.bam"),
-    tumor = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups.bam"),
+    bais = expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups.bam.bai"),
+      type=["normal", "tumor"]),
     intervals = join(WORKDIR, "aligned_coordinate_sorted_dups_indelreal_{chr}.intervals")
   output:
-    temp(expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups_indelreal_chr_{{chr}}.bam"),
-      type=["normal", "tumor"])),
-    temp(expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups_indelreal_chr_{{chr}}.bai"),
-      type=["normal", "tumor"]))
+    temp(expand(join(WORKDIR, "{type}_aligned_coordinate_sorted_dups_indelreal_chr_{{chr}}.{ext}"),
+      type=["normal", "tumor"], ext=["bam", "bai"]))
   params:
     mem_gb = _mem_gb_for_ram_hungry_jobs(),
     output_dir = WORKDIR,
@@ -128,10 +126,11 @@ rule dna_indel_realigner_per_chr:
   # IndelRealigner writes the output to this directory; need to move the files manually after
   run:
     intervals_str = _get_intervals_str(wildcards)
+    input_str = ' '.join(['-I ' + x for x in input.bams])
     shell("""
       gatk -Xmx{params.mem_gb}g -T IndelRealigner -compress 0 -R {params.reference} \
-      -I {input.normal} -I {input.tumor} \
-      -targetIntervals {input.intervals} %s \
+      %s %s \
+      -targetIntervals {input.intervals} \
       --filter_reads_with_N_cigar --filter_mismatching_base_and_quals --filter_bases_not_stored \
       --nWayOut _indelreal_chr_{wildcards.chr}.bam \
       2> {log} && \
@@ -139,43 +138,47 @@ rule dna_indel_realigner_per_chr:
       {params.output_dir} && \
       mv {{normal,tumor}}_aligned_coordinate_sorted_dups_indelreal_chr_{wildcards.chr}.bai \
       {params.output_dir}
-    """ % intervals_str)
-
+    """ % (input_str, intervals_str))
 
 if _PARALLEL_INDEL_REALIGNER:
   rule parallel_dna_indel_realigner:
     input:
       bam = expand(
         join(WORKDIR, "{{prefix}}_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bam"),
+        chr=config["contigs"]),
+      bai = expand(
+        join(WORKDIR, "{{prefix}}_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bai"),
         chr=config["contigs"])
     output:
-      bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam")
+      bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"),
+      bai = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam.bai")
     benchmark:
       join(BENCHMARKDIR, "{prefix}_indel_realigner.txt")
     log:
       join(LOGDIR, "{prefix}_indel_realigner.log")
     shell:
       "sambamba merge {output.bam} {input.bam}"
+  ruleorder: parallel_dna_indel_realigner > sambamba_index_bam
 else:
   rule non_parallel_dna_indel_realigner:
     input:
-      bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_chr_ALL.bam")
+      bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_chr_ALL.bam"),
+      bai = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_chr_ALL.bai")
     output:
-      bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam")
+      bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"),
+      bai = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam.bai")
     benchmark:
       join(BENCHMARKDIR, "{prefix}_indel_realigner.txt")
     log:
       join(LOGDIR, "{prefix}_indel_realigner.log")
-    run:
-      shell("mv {input.bam} {output.bam}")
-      input_bai = input.bam.replace(".bam", ".bai")
-      output_bai = output.bam.replace(".bam", ".bai")
-      # also need to rename the .bai from the .bam
-      shell("mv %s %s" % (input_bai, output_bai))
+    shell:
+      "mv {input.bam} {output.bam} && mv {input.bai} {output.bai}"
+  ruleorder: non_parallel_dna_indel_realigner > sambamba_index_bam
 
 rule base_recalibrator:
   input:
-    bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam")
+    bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"),
+    bai = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam.bai")
   output:
     join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table")
   params:

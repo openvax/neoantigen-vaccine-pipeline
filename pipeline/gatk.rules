@@ -137,7 +137,7 @@ rule dna_indel_realigner_per_chr:
       {params.output_dir} && \
       mv {{normal,tumor}}_aligned_coordinate_sorted_dups_indelreal_chr_{wildcards.chr}.bai \
       {params.output_dir}
-    """ % input_str, intervals_str)
+    """ % (input_str, intervals_str))
 
 if _PARALLEL_INDEL_REALIGNER:
   rule parallel_dna_indel_realigner:

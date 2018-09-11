@@ -24,7 +24,8 @@ rule mark_dups:
   output:
     join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups.bam")
   params:
-    mem_gb = _mem_gb_for_ram_hungry_jobs()
+    mem_gb = _mem_gb_for_ram_hungry_jobs(),
+    metrics_file = join(WORKDIR, "{prefix}_markdups_metrics.txt")
   benchmark:
     join(BENCHMARKDIR, "{prefix}_mark_dups.txt")
   log:
@@ -39,7 +40,7 @@ rule mark_dups:
     "picard -Xmx{params.mem_gb}g -Djava.io.tmpdir={wildcards.prefix}_tmp "
     "MarkDuplicates "
     "INPUT={input} OUTPUT={output} "
-    "VALIDATION_STRINGENCY=LENIENT METRICS_FILE={wildcards.prefix}_markdups_metrics.txt "
+    "VALIDATION_STRINGENCY=LENIENT METRICS_FILE={params.metrics_file} "
     "2> {log}"
 
 rule sambamba_index_bam:

@@ -84,7 +84,7 @@ rule mutect2_per_chr:
         gatk -T MuTect2 \
         -I:normal {input.normal} \
         -I:tumor {input.tumor} \
-        -R {input.reference} \
+        -R {params.reference} \
         --dbsnp {input.dbsnp} \
         %s \
         --intervals {wildcards.chr} \

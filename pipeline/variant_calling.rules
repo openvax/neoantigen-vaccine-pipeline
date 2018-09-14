@@ -85,7 +85,7 @@ rule mutect2_per_chr:
         -I:normal {input.normal} \
         -I:tumor {input.tumor} \
         -R {params.reference} \
-        --dbsnp {input.dbsnp} \
+        --dbsnp {params.dbsnp} \
         %s \
         --intervals {wildcards.chr} \
         -o {output} \

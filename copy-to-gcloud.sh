@@ -5,6 +5,13 @@
 #
 # Example usage: ./copy-to-gcloud.sh pgv001-012 pgv001/pt012
 
+set -e
+
+if [ $# -lt 2 ]; then
+    echo "Too few arguments supplied ($#)";
+    exit 1;
+fi
+
 DIRNAME=$1
 FOLDER=$2
 gsutil -m cp $DIRNAME/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam gs://$FOLDER/snake/normal.bam

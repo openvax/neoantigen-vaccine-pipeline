@@ -92,6 +92,7 @@ RUN conda config --add channels r && \
     bedtools \
     bwa==0.7.17 \
     cython \
+    fastqc \
     gatk==3.7 \
     java-jdk==8.0.92 \
     picard==2.18.5 \

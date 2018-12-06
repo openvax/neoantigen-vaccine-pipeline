@@ -28,6 +28,8 @@ include:
     "variant_calling.rules"
 include:
     "special_sauce.rules"
+include:
+    "qc.rules"
 
 # copy all fragments over to the sample-specific workdir, create if it doesn't exist
 if not os.path.exists(WORKDIR):

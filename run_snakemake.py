@@ -213,6 +213,12 @@ def get_and_check_targets(args, config):
     
     if len(targets) == 0:
         raise ValueError("Must specify at least one target")
+
+    # in all cases, run FASTQC
+    fastqc_target = join(get_output_dir(config), "fastqc.done")
+    if fastqc_target not in targets:
+        targets.append(fastqc_target)
+    
     for target in targets:
         validate_target(target, args, config)
     return targets
@@ -228,8 +234,11 @@ def run_neoantigen_pipeline(args, parsed_config, configfile):
 
     output_dir = get_output_dir(parsed_config)
     stats_file = join(output_dir, "stats.json")
+
+    # only run targets in the output directory (exclude reference processing)
     targets = [x for x in get_and_check_targets(args, parsed_config) if x.startswith(output_dir)]
     if not targets:
+        logger.info("No output targets specified")
         return
 
     logger.info("Running neoantigen pipeline with targets %s " % targets)
@@ -261,6 +270,8 @@ def process_reference(args, parsed_config, configfile):
 
     reference_genome_dir = get_reference_genome_dir(parsed_config)
     stats_file = join(reference_genome_dir, "stats.json")
+
+    # only run targets in the reference directory (exclude output processing)
     targets = [
         x for x in get_and_check_targets(args, parsed_config) if x.startswith(reference_genome_dir)]
     if not targets:

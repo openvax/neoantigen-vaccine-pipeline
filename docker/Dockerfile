@@ -142,6 +142,6 @@ COPY . $HOME
 ENV STRELKA_CONFIG $HOME/docker/strelka_config.txt
 
 # snakemake logs get written here (hidden dir)
-RUN sudo chown -R $USER $HOME/.snakemake
+RUN mkdir -p $HOME/.snakemake && sudo chown -R $USER $HOME/.snakemake
 
 ENTRYPOINT ["python", "run_snakemake.py"]

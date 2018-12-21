@@ -320,12 +320,13 @@ def main(args_list=None):
 
     with tempfile.NamedTemporaryFile(mode='w') as config_tmpfile:
         config_tmpfile.write(configfile_contents)
-        logger.info("Processing reference...")
+        print("Processing reference...")
         process_reference(args, parsed_config, config_tmpfile)
         if args.process_reference_only:
             if args.target is not None:
                 raise ValueError("If requesting --process-reference-only, cannot specify targets")
         else:
+            print("Running main pipeline...")
             run_neoantigen_pipeline(args, parsed_config, config_tmpfile)
     
 

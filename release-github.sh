@@ -3,6 +3,7 @@
 # This script will push a release to GitHub with a tag matching the version.
 #
 # Note that if a GitHub release already exists with this version tag, this script will error.
+# Also, this script MUST be run from this repository!
 
 set -ex
 

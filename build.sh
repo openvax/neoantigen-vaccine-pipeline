@@ -8,6 +8,8 @@ set -ex
 USERNAME=openvax
 # image name
 IMAGE=neoantigen-vaccine-pipeline
+# directory of this script
+BASEDIR=$(dirname "$0")
 
 # Build image
-docker build -t $USERNAME/$IMAGE:latest -f docker/Dockerfile .
+docker build -t $USERNAME/$IMAGE:latest -f $BASEDIR/docker/Dockerfile .

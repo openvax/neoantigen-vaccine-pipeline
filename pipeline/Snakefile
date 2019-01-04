@@ -43,6 +43,16 @@ def _determine_filetype(filename):
       return supported_filetype
   raise ValueError("Unsupported filetype in %s", filename)
 
+def _copy_input(source, dest):
+  print('Copying %s to %s' % (source, dest))
+  if source.startswith("gs://"):
+    # use gsutil cp to copy
+    # is this any less safe than snakemake's "shell" directive?
+    cmd = "gsutil -m cp %s %s" % (source, dest)
+  else:
+    cmd = "cp -p %s %s" % (source, dest)
+  subprocess.call(cmd, shell=True)
+
 for input_type in ["normal", "tumor", "rna"]:
   if input_type not in config["input"]:
     continue
@@ -59,13 +69,7 @@ for input_type in ["normal", "tumor", "rna"]:
         dest = os.path.join(WORKDIR,
           "%s_%s_R%d%s" % (input_type, fragment["fragment_id"], read, filetype))
         if not (os.path.exists(dest)):
-          print('Copying %s to %s' % (source, dest))
-          if source.startswith("gs://"):
-            # use gsutil cp to copy
-            # is this any less safe than snakemake's "shell" directive?
-            subprocess.call("gsutil -m cp %s %s" % (source, dest), shell=True)
-          else:
-            os.system('cp -p %s %s' % (source, dest))
+          _copy_input(source, dest)
 
     elif fragment["type"] == "single-end":
       source = fragment["r"]
@@ -73,11 +77,7 @@ for input_type in ["normal", "tumor", "rna"]:
       # if the files already exist, don't copy anew
       dest = os.path.join(WORKDIR, "%s_%s%s" % (input_type, fragment["fragment_id"], filetype))
       if not os.path.exists(dest):
-        print('Copying %s to %s' % (source, dest))
-        if source.startswith("gs://"):
-          subprocess.call("gsutil -m cp %s %s" % (source, dest), shell=True)
-        else:
-          os.system('cp -p %s %s' % (source, dest))
+        _copy_input(source, dest)
 
     else:
       raise ValueError("Unsupported input type: expected single-end or paired-end")

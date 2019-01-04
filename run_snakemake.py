@@ -258,6 +258,7 @@ def run_neoantigen_pipeline(args, parsed_config, configfile):
             printshellcmds=True,
             dryrun=args.dry_run,
             targets=targets,
+            workdir=parsed_config["workdir"],
             stats=stats_file):
         raise ValueError("Pipeline failed, see Snakemake error message for details")
 
@@ -288,6 +289,7 @@ def process_reference(args, parsed_config, configfile):
             printshellcmds=True,
             dryrun=args.dry_run,
             targets=targets,
+            workdir=parsed_config["workdir"],
             stats=stats_file):
         raise ValueError("Reference processing failed, see Snakemake error message for details")
     end_time = datetime.datetime.now()

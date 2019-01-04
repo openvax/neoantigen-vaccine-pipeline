@@ -326,6 +326,7 @@ def main(args_list=None):
             if args.target is not None:
                 raise ValueError("If requesting --process-reference-only, cannot specify targets")
         else:
+            logger.info("Running main pipeline...")
             run_neoantigen_pipeline(args, parsed_config, config_tmpfile)
     
 

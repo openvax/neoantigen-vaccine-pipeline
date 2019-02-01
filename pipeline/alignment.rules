@@ -92,7 +92,8 @@ rule convert_alignment_to_sorted_bam:
   output:
     join(WORKDIR, "{prefix}_aligned_coordinate_sorted.bam")
   params:
-    mem_gb = _mem_gb_for_ram_hungry_jobs()
+    mem_gb = _mem_gb_for_ram_hungry_jobs(),
+    tmpdir = join(WORKDIR, "{prefix}_tmp")
   benchmark:
     join(BENCHMARKDIR, "{prefix}_convert_alignment_to_sorted_bam.txt")
   log:
@@ -100,7 +101,8 @@ rule convert_alignment_to_sorted_bam:
   resources:
     mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
   shell:
-    "picard -Xmx{params.mem_gb}g "
+    "TMPDIR={params.tmpdir} "
+    "picard -Xmx{params.mem_gb}g -Djava.io.tmpdir={params.tmpdir} "
     "SortSam INPUT={input} OUTPUT={output} SORT_ORDER=coordinate 2> {log}"
 
 rule merge_normal_aligned_fragments:

@@ -26,6 +26,8 @@ gsutil -m cp $DIRNAME/strelka.vcf gs://$FOLDER/snake/strelka.vcf
 gsutil -m cp $DIRNAME/vaccine-peptide-report* gs://$FOLDER/snake/
 gsutil -m cp $DIRNAME/all-passing-variants*.csv gs://$FOLDER/snake/
 
+gsutil -m cp -r $DIRNAME/fastqc-output/ gs://$FOLDER/snake/
+
 # may or may not exist
 gsutil -m cp $DIRNAME/mutect2.vcf gs://$FOLDER/snake/mutect2.vcf
 

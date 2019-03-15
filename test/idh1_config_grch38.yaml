@@ -1,5 +1,7 @@
 input:
   id: idh1-test-sample
+  mhc_alleles:
+    - HLA-A*30:01
   # The input FASTQ files must live in the same directory as your config YAML file.
   # You should only need to modify the basename of the sample file paths, leaving the /inputs part
   # of the filename unchanged.
@@ -13,6 +15,10 @@ input:
     - fragment_id: L001
       type: single-end
       r: /inputs/idh1_r132h_tumor.fastq.gz
+  rna:
+    - fragment_id: L001
+      type: single-end
+      r: /inputs/idh1_r132h_tumor.fastq.gz
 # In most cases, you should not need to modify anything below this line.
 workdir:
   /outputs
@@ -21,7 +27,9 @@ reference:
   dbsnp: /reference-genome/grch38/Homo_sapiens_assembly38.dbsnp138.vcf
   cosmic: /reference-genome/grch38/CosmicCodingMuts.vcf
   transcripts: /reference-genome/grch38/gencode.v22.annotation.gtf
-parallel_indel_realigner: false
+  capture_kit_coverage_file: /reference-genome/grch38/S04380110_Padded_grch38.bed
+parallel_indel_realigner: true
+mhc_predictor: netmhcpan-iedb
 variant_callers:
   - mutect
   - strelka

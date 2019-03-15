@@ -25,7 +25,7 @@ workdir:
 reference:
   genome: /reference-genome/grch38/GRCh38.d1.vd1.fa
   dbsnp: /reference-genome/grch38/Homo_sapiens_assembly38.dbsnp138.vcf
-  cosmic: /reference-genome/grch38/CosmicCodingMuts.vcf
+  cosmic: /reference-genome/grch38/CosmicCodingMuts.grch38.vcf
   transcripts: /reference-genome/grch38/gencode.v22.annotation.gtf
   capture_kit_coverage_file: /reference-genome/grch38/S04380110_Padded_grch38.bed
 parallel_indel_realigner: true

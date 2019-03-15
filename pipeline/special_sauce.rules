@@ -24,6 +24,7 @@ if "mhc_alleles" in config["input"] and _rna_exists():
     rule pyensembl:
       output:
         touch(join(dirname(config["reference"]["genome"]), "homo_sapiens_75.cached")),
+        touch(join(dirname(config["reference"]["genome"]), "homo_sapiens_93.cached")),
         touch(join(dirname(config["reference"]["genome"]), "mus_musculus_93.cached"))
       log:
         join(LOGDIR, "pyensembl_install.log")

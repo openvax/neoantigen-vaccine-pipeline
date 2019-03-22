@@ -57,7 +57,7 @@ if "capture_kit_padded_file" in config["reference"] and \
         "capture_kit_coverage_file" in config["reference"]:
   rule hs_metrics:
     input:
-      bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"),
+      bam = join(WORKDIR, "{prefix}.bam"),
       bait_interval_list = config["reference"]["capture_kit_padded_file"] + ".interval_list",
       target_interval_list = config["reference"]["capture_kit_coverage_file"] + ".interval_list"
     output:

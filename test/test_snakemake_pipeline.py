@@ -214,7 +214,7 @@ class TestPipeline(unittest.TestCase):
             '--target', join(
                 self.workdir.name,
                 'idh1-test-sample',
-                'normal_hs_metrics.txt'),
+                'normal_aligned_coordinate_sorted_dups_indelreal_bqsr_hs_metrics.txt'),
         ]
         docker_entrypoint(qc_cli_args)
 

@@ -46,21 +46,16 @@ class TestPipeline(unittest.TestCase):
 
     @classmethod
     def populate_test_files(cls):
-        # populate reference files with random crap
-        with open(join(cls.referencedir.name, 'b37decoy.fasta'), 'w') as genome:
-            genome.write('placeholder')
-        with open(join(cls.referencedir.name, 'transcripts.gtf'), 'w') as transcripts:
-            transcripts.write('placeholder')
-        with open(join(cls.referencedir.name, 'dbsnp.vcf'), 'w') as dbsnp:
-            dbsnp.write('placeholder')
-        with open(join(cls.referencedir.name, 'cosmic.vcf'), 'w') as cosmic:
-            cosmic.write('placeholder')
-        with open(join(cls.referencedir.name, 'b37decoy.fasta.contigs'), 'w') as contigs:
-            contigs.write('placeholder')
-        with open(join(cls.referencedir.name, 'b37decoy.fasta.done'), 'w') as done:
-            done.write('placeholder')
-        with open(join(cls.referencedir.name, 'S04380110_Padded_grch37_with_M.bed'), 'w') as cover:
-            cover.write('placeholder')
+        # populate reference files with placeholder content
+        files_to_populate = [
+            'b37decoy.fasta', 'b37decoy.dict', 'b37decoy.fasta.contigs', 'b37decoy.fasta.done',
+            'transcripts.gtf', 'dbsnp.vcf', 'cosmic.vcf',
+            'S04380110_Covered_grch37_with_M.bed', 'S04380110_Padded_grch37_with_M.bed'
+        ]
+        for path in files_to_populate:
+            with open(join(cls.referencedir.name, path), 'w') as f:
+                f.write('placeholder')
+
         for path in glob.glob('datagen/*.fastq.gz'):
             copy2(path, cls.inputdir.name)
 
@@ -208,6 +203,18 @@ class TestPipeline(unittest.TestCase):
                 self.workdir.name,
                 'idh1-test-sample',
                 'fastqc.done'),
+        ]
+        docker_entrypoint(qc_cli_args)
+
+    def test_docker_entrypoint_script_picard(self):
+        qc_cli_args = [
+            '--configfile', self.config_tmpfile.name,
+            '--dry-run',
+            '--memory', '33',
+            '--target', join(
+                self.workdir.name,
+                'idh1-test-sample',
+                'normal_hs_metrics.txt'),
         ]
         docker_entrypoint(qc_cli_args)
 

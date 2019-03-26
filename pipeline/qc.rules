@@ -82,3 +82,4 @@ if "capture_kit_padded_file" in config["reference"] and \
       "BAIT_INTERVALS={input.bait_interval_list} "
       "TARGET_INTERVALS={input.target_interval_list} "
       "2> {log}"
+

@@ -21,18 +21,7 @@ from os.path import join, dirname
 # only define the Vaxrank rule if we have RNA and MHC alleles specified in the config
 # TODO(julia): support inferring MHC alleles from seq2hla instead of requiring user input
 if "mhc_alleles" in config["input"] and _rna_exists():
-    rule pyensembl:
-      output:
-        touch(join(dirname(config["reference"]["genome"]), "homo_sapiens_75.cached")),
-        touch(join(dirname(config["reference"]["genome"]), "homo_sapiens_93.cached")),
-        touch(join(dirname(config["reference"]["genome"]), "mus_musculus_93.cached"))
-      log:
-        join(LOGDIR, "pyensembl_install.log")
-      shell:
-        "pyensembl install --release 75 --species 'homo sapiens' >> {log} 2>&1 && "
-        "pyensembl install --release 93 --species 'homo sapiens' >> {log} 2>&1 && "
-        "pyensembl install --release 93 --species 'mus musculus' >> {log} 2>&1"
-
+    
     def _get_vaxrank_input_vcfs(wildcards):
         return [join(WORKDIR, "%s.vcf" % vcf_type) for vcf_type in config["variant_callers"]]
 
@@ -48,8 +37,7 @@ if "mhc_alleles" in config["input"] and _rna_exists():
       input:
         vcfs = _get_vaxrank_input_vcfs,
         rna = join(WORKDIR, "rna_final_sorted.bam"),
-        rna_index = join(WORKDIR, "rna_final_sorted.bam.bai"),
-        pyensembl_cache = rules.pyensembl.output
+        rna_index = join(WORKDIR, "rna_final_sorted.bam.bai")
       output:
         ascii_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.txt"),
         json_file = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.json"),
@@ -75,6 +63,7 @@ if "mhc_alleles" in config["input"] and _rna_exists():
         vcf_input_str = ' '.join(['--vcf %s' % x for x in input.vcfs])
         shell("""
             vaxrank %s \
+            --download-reference-genome-data \
             --bam {input.rna} \
             --mhc-predictor {wildcards.mhc_predictor} \
             --mhc-alleles %s \

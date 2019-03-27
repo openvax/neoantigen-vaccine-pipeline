@@ -2,4 +2,5 @@ cython
 psutil
 pyyaml
 snakemake
+varcode>=0.8.0
 vaxrank>=1.0.0

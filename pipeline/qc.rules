@@ -52,13 +52,11 @@ rule bed_to_interval_list:
     "O={output} "
     "SD={input.sequence_dict}"
 
-# only include this if we have a coverage and padded file listed in the config
-if "capture_kit_padded_file" in config["reference"] and \
-        "capture_kit_coverage_file" in config["reference"]:
+# only include this if we have a coverage file listed in the config
+if "capture_kit_coverage_file" in config["reference"]:
   rule hs_metrics:
     input:
       bam = join(WORKDIR, "{prefix}.bam"),
-      bait_interval_list = config["reference"]["capture_kit_padded_file"] + ".interval_list",
       target_interval_list = config["reference"]["capture_kit_coverage_file"] + ".interval_list"
     output:
       join(WORKDIR, "{prefix}_hs_metrics.txt")
@@ -79,7 +77,6 @@ if "capture_kit_padded_file" in config["reference"] and \
       "I={input.bam} "
       "O={output} "
       "R={params.reference} "
-      "BAIT_INTERVALS={input.bait_interval_list} "
+      "BAIT_INTERVALS={input.target_interval_list} "
       "TARGET_INTERVALS={input.target_interval_list} "
       "2> {log}"
-

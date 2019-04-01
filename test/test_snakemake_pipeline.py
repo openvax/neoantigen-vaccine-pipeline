@@ -49,7 +49,7 @@ class TestPipeline(unittest.TestCase):
         # populate reference files with placeholder content
         files_to_populate = [
             'b37decoy.fasta', 'b37decoy.dict', 'b37decoy.fasta.contigs', 'b37decoy.fasta.done',
-            'transcripts.gtf', 'dbsnp.vcf', 'cosmic.vcf', 'S04380110_Covered_grch37_with_M.bed'
+            'transcripts.gtf', 'dbsnp.vcf', 'cosmic.vcf', 'S04380110_Covered_grch37.bed'
         ]
         for path in files_to_populate:
             with open(join(cls.referencedir.name, path), 'w') as f:

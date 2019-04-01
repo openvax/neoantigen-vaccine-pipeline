@@ -27,7 +27,7 @@ reference:
   dbsnp: /reference-genome/b37decoy/dbsnp.vcf
   cosmic: /reference-genome/b37decoy/cosmic.vcf
   transcripts: /reference-genome/b37decoy/transcripts.gtf
-  capture_kit_coverage_file: /reference-genome/b37decoy/S04380110_Covered_grch37_with_M.bed
+  capture_kit_coverage_file: /reference-genome/b37decoy/S04380110_Covered_grch37.bed
 parallel_indel_realigner: true
 mhc_predictor: netmhcpan-iedb
 variant_callers:

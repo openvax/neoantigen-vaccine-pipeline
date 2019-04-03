@@ -76,10 +76,10 @@ def main(args_list=None):
     }
 
     with open(args.metrics_spec_file) as metrics_spec_file:
-        metric_specs = yaml.load(metrics_spec_file)
+        all_metric_specs = yaml.load(metrics_spec_file)
 
     with open(args.out, 'w') as error_msg_file:    
-        for file_type in metric_specs:
+        for file_type, metric_specs in all_metric_specs.items():
             # get actual metric counts
             path = metrics_file_to_path[file_type]
             with open(path) as metrics_file:
@@ -93,7 +93,7 @@ def main(args_list=None):
                     if metrics[key] < expected_value:
                         error_msg = '%s: %s expected to be at least %.3f but was %.3f' % (
                             file_type, key, expected_value, metrics[key]
-                            )
+                        )
                         print(error_msg)
                         f.write(error_msg_file + '\n')
 

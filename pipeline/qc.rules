@@ -52,7 +52,6 @@ rule bed_to_interval_list:
     "O={output} "
     "SD={input.sequence_dict}"
 
-# only include this if we have a coverage file listed in the config
 if "capture_kit_coverage_file" in config["reference"]:
   rule hs_metrics:
     input:
@@ -80,3 +79,12 @@ if "capture_kit_coverage_file" in config["reference"]:
       "BAIT_INTERVALS={input.target_interval_list} "
       "TARGET_INTERVALS={input.target_interval_list} "
       "2> {log}"
+
+  rule sequencing_qc:
+    input:
+      normal_hs_metrics = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr_hs_metrics.txt"),
+      tumor_hs_metrics = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr_hs_metrics.txt"),
+    output:
+      join(WORKDIR, "sequencing_qc_out.txt")
+    shell:
+      "python scripts/sequencing.py --out {output}"

@@ -43,23 +43,6 @@ parser.add_argument(
     help="Snakemake YAML config file path")
 
 parser.add_argument(
-    "--target",
-    action="append",
-    help="Snakemake target(s). For multiple targets, can specify --target t1 --target t2 ...")
-
-parser.add_argument(
-    "--somatic-variant-calling-only",
-    help="If this argument is present, will only call somatic variants - no RNA processing "
-        "or final vaccine peptide computation",
-    action="store_true")
-
-parser.add_argument(
-    "--process-reference-only",
-    help="If this argument is present, will only process the input reference files - no pipeline "
-        "run beyond that",
-    action="store_true")
-
-parser.add_argument(
     "--cores",
     default=max(1, psutil.cpu_count() - 1),
     type=int,
@@ -75,6 +58,30 @@ parser.add_argument(
     "--dry-run",
     help="If this argument is present, Snakemake will do a dry run of the pipeline",
     action="store_true")
+
+targets_group = parser.add_argument_group("Target arguments")
+
+targets_group.add_argument(
+    "--target",
+    action="append",
+    help="Snakemake target(s). For multiple targets, can specify --target t1 --target t2 ...")
+
+targets_group.add_argument(
+    "--somatic-variant-calling-only",
+    help="If this argument is present, will only call somatic variants - no RNA processing "
+        "or final vaccine peptide computation",
+    action="store_true")
+
+targets_group.add_argument(
+    "--process-reference-only",
+    help="If this argument is present, will only process the input reference files - no pipeline "
+        "run beyond that",
+    action="store_true")
+
+targets_group.add_argument(
+    "--run-qc",
+    help="If this argument is true (default), will run several QC metrics",
+    action="store_false")
 
 overrides_group = parser.add_argument_group("Dockerless runs: directory override options")
 
@@ -214,10 +221,13 @@ def get_and_check_targets(args, config):
     if len(targets) == 0:
         raise ValueError("Must specify at least one target")
 
-    # in all cases, run FASTQC
-    fastqc_target = join(get_output_dir(config), "fastqc.done")
-    if fastqc_target not in targets:
-        targets.append(fastqc_target)
+    # if QC requested, run FASTQC and a few Picard metrics
+    if args.run_qc:
+        fastqc_target = join(get_output_dir(config), "fastqc.done")
+        if fastqc_target not in targets:
+            targets.append(fastqc_target)
+        sequencing_qc_target = join(get_output_dir(config), "sequencing_qc_out.txt")
+        targets.append(sequencing_qc_target)
     
     for target in targets:
         validate_target(target, args, config)
@@ -322,14 +332,18 @@ def main(args_list=None):
 
     with tempfile.NamedTemporaryFile(mode='w') as config_tmpfile:
         config_tmpfile.write(configfile_contents)
-        logger.info("Processing reference...")
+        logger.info("Processing reference, if necessary...")
         process_reference(args, parsed_config, config_tmpfile)
+        logger.info("Reference processing done.")
         if args.process_reference_only:
             if args.target is not None:
                 raise ValueError("If requesting --process-reference-only, cannot specify targets")
         else:
             logger.info("Running main pipeline...")
             run_neoantigen_pipeline(args, parsed_config, config_tmpfile)
+            logger.info('Main pipeline done.')
+
+    # sanity-check post-processing: look at QC result files print contents of QC result file: 
     
 
 if __name__ == "__main__":

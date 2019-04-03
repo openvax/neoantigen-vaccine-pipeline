@@ -210,10 +210,7 @@ class TestPipeline(unittest.TestCase):
             '--configfile', self.config_tmpfile.name,
             '--dry-run',
             '--memory', '33',
-            '--target', join(
-                self.workdir.name,
-                'idh1-test-sample',
-                'normal_aligned_coordinate_sorted_dups_indelreal_bqsr_hs_metrics.txt'),
+            '--run-qc',
         ]
         docker_entrypoint(qc_cli_args)
 

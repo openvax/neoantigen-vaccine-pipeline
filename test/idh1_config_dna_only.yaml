@@ -21,6 +21,7 @@ reference:
   dbsnp: /reference-genome/b37decoy/dbsnp.vcf
   cosmic: /reference-genome/b37decoy/cosmic.vcf
   transcripts: /reference-genome/b37decoy/transcripts.gtf
+  capture_kit_coverage_file: /reference-genome/b37decoy/S04380110_Covered_grch37.bed
 parallel_indel_realigner: false
 variant_callers:
   - mutect

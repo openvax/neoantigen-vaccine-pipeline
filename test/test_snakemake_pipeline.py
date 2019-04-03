@@ -211,6 +211,7 @@ class TestPipeline(unittest.TestCase):
             '--dry-run',
             '--memory', '33',
             '--run-qc',
+            '--qc-metrics-file', self.config_tmpfile.name,  # this file just needs to exist
         ]
         docker_entrypoint(qc_cli_args)
 

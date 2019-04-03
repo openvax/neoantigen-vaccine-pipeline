@@ -78,10 +78,17 @@ targets_group.add_argument(
         "run beyond that",
     action="store_true")
 
-targets_group.add_argument(
+qc_group = parser.add_argument_group("QC-related arguments")
+
+qc_group.add_argument(
     "--run-qc",
     help="If this argument is present, will run several QC metrics",
     action="store_true")
+
+qc_group.add_argument(
+    "--qc-metrics-file",
+    default="",
+    help="Path to YAML file specifying Picard QC related metrics to run and check")
 
 overrides_group = parser.add_argument_group("Dockerless runs: directory override options")
 
@@ -238,6 +245,19 @@ def get_and_check_targets(args, config):
 #########################          Execution         #################################
 ######################################################################################
 
+# Returns a dictionary to be used as an add-on config for the Snakemake main pipeline run.
+def make_config_extension_dict(args, parsed_config):
+    # include all relevant contigs in the pipeline config
+    with open(parsed_config["reference"]["genome"] + ".contigs") as f:
+        contigs = [x.strip() for x in f.readlines()]
+    config = {
+        'num_threads': args.cores,
+        'mem_gb': args.memory,
+        'contigs': contigs,
+    }
+    if args.qc_metrics_file:
+        config['qc_metrics_file'] = args.qc_metrics_file
+    return config
 
 def run_neoantigen_pipeline(args, parsed_config, configfile):
     configfile.seek(0)
@@ -251,19 +271,15 @@ def run_neoantigen_pipeline(args, parsed_config, configfile):
         logger.info("No output targets specified")
         return
 
+    config_extension = make_config_extension_dict(args, parsed_config)
+
     logger.info("Running neoantigen pipeline with targets %s " % targets)
-
-    # include all relevant contigs in the pipeline config
-    with open(parsed_config["reference"]["genome"] + ".contigs") as f:
-        contigs = [x.strip() for x in f.readlines()]
-
-    # parse out targets that start with output directory (not reference)
     start_time = datetime.datetime.now()
     if not snakemake.snakemake(
             'pipeline/Snakefile',
             cores=args.cores,
             resources={'mem_mb': int(1024 * args.memory)},
-            config={'num_threads': args.cores, 'mem_gb': args.memory, 'contigs': contigs},
+            config=config_extension,
             configfile=configfile.name,
             printshellcmds=True,
             dryrun=args.dry_run,

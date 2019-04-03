@@ -86,7 +86,7 @@ def main(args_list=None):
                 metrics = get_metrics(path)
 
             # iterate through each metric rule, check that each isn't broken in the metric counts
-            for metric_rule in metric_rules:
+            for metric_spec in metric_specs:
                 key = metric_spec['key']
                 expected_value = metric_spec['value']
                 if metric_spec['comparator'] == 'MIN':

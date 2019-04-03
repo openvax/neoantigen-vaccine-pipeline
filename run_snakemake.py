@@ -80,8 +80,8 @@ targets_group.add_argument(
 
 targets_group.add_argument(
     "--run-qc",
-    help="If this argument is true (default), will run several QC metrics",
-    action="store_false")
+    help="If this argument is present, will run several QC metrics",
+    action="store_true")
 
 overrides_group = parser.add_argument_group("Dockerless runs: directory override options")
 

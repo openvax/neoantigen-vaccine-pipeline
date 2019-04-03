@@ -49,7 +49,7 @@ parser.add_argument(
 parser.add_argument(
     "--out",
     default="",
-    help="Output file path to which to write any failed tests")
+    help="Output file path for any failed tests")
 
 
 def get_metrics(path):

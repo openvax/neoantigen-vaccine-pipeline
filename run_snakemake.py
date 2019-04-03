@@ -360,7 +360,11 @@ def main(args_list=None):
             logger.info('Main pipeline done.')
 
     # sanity-check post-processing: look at QC result files print contents of QC result file: 
-    
+    with open(join(get_output_dir(config), "sequencing_qc_out.txt")) as sequencing_output:
+        if len(sequencing_output) > 0:
+            print('Some sequencing checks failed!')
+            print(sequencing_output)
+
 
 if __name__ == "__main__":
     main()

@@ -85,6 +85,8 @@ if "capture_kit_coverage_file" in config["reference"]:
       input:
         normal_hs_metrics = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr_hs_metrics.txt"),
         tumor_hs_metrics = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr_hs_metrics.txt"),
+        normal_markdups_metrics = join(WORKDIR, "normal_markdups_metrics.txt"),
+        tumor_markdups_metrics = join(WORKDIR, "tumor_markdups_metrics.txt"),
         qc_metrics_file = config["qc_metrics_file"]
       output:
         join(WORKDIR, "sequencing_qc_out.txt")
@@ -93,4 +95,6 @@ if "capture_kit_coverage_file" in config["reference"]:
         "--metrics-spec-file {input.qc_metrics_file} "
         "--normal-hs-metrics {input.normal_hs_metrics} "
         "--tumor-hs-metrics {input.tumor_hs_metrics} "
+        "--normal-duplication-metrics {input.normal_markdups_metrics} "
+        "--tumor-duplication-metrics {input.tumor_markdups_metrics} "
         "--out {output}"

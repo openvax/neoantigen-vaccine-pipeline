@@ -22,10 +22,10 @@ rule mark_dups:
   input:
     join(WORKDIR, "{prefix}_merged_aligned_coordinate_sorted.bam")
   output:
-    join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups.bam")
+    bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups.bam"),
+    metrics_file = join(WORKDIR, "{prefix}_markdups_metrics.txt")
   params:
     mem_gb = _mem_gb_for_ram_hungry_jobs(),
-    metrics_file = join(WORKDIR, "{prefix}_markdups_metrics.txt"),
     tmpdir = join(WORKDIR, "{prefix}_tmp")
   benchmark:
     join(BENCHMARKDIR, "{prefix}_mark_dups.txt")
@@ -40,8 +40,8 @@ rule mark_dups:
     "SORTING_COLLECTION_SIZE_RATIO=0.250000 "
     "picard -Xmx{params.mem_gb}g -Djava.io.tmpdir={params.tmpdir} "
     "MarkDuplicates "
-    "INPUT={input} OUTPUT={output} "
-    "VALIDATION_STRINGENCY=LENIENT METRICS_FILE={params.metrics_file} "
+    "INPUT={input} OUTPUT={output.bam} "
+    "VALIDATION_STRINGENCY=LENIENT METRICS_FILE={output.metrics_file} "
     "2> {log}"
 
 rule sambamba_index_bam:

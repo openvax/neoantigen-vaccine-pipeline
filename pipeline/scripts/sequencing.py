@@ -78,7 +78,10 @@ def main(args_list=None):
     with open(args.metrics_spec_file) as metrics_spec_file:
         metrics = yaml.load(metrics_spec_file)
         for file_type in metrics:
-            print(file_type)
+            path = metrics_file_to_path[file_type]
+            with open(path) as metrics_file:
+                metrics = get_metrics(path)
+                print(metrics)
 
     with open(args.out, 'w') as f:
         f.write('placeholder')

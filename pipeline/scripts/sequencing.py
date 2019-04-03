@@ -76,15 +76,26 @@ def main(args_list=None):
     }
 
     with open(args.metrics_spec_file) as metrics_spec_file:
-        metrics = yaml.load(metrics_spec_file)
-        for file_type in metrics:
+        metric_specs = yaml.load(metrics_spec_file)
+
+    with open(args.out, 'w') as error_msg_file:    
+        for file_type in metric_specs:
+            # get actual metric counts
             path = metrics_file_to_path[file_type]
             with open(path) as metrics_file:
                 metrics = get_metrics(path)
-                print(metrics)
 
-    with open(args.out, 'w') as f:
-        f.write('placeholder')
+            # iterate through each metric rule, check that each isn't broken in the metric counts
+            for metric_rule in metric_rules:
+                key = metric_spec['key']
+                expected_value = metric_spec['value']
+                if metric_spec['comparator'] == 'MIN':
+                    if metrics[key] < expected_value:
+                        error_msg = '%s: %s expected to be at least %.3f but was %.3f' % (
+                            file_type, key, expected_value, metrics[key]
+                            )
+                        print(error_msg)
+                        f.write(error_msg_file + '\n')
 
 
 if __name__ == "__main__":

@@ -96,7 +96,15 @@ def main(args_list=None):
                         )
                         print(error_msg)
                         error_msg_file.write(error_msg + '\n')
-
+                elif metric_spec['comparator'] == 'MAX':
+                    if metrics[key] > expected_value:
+                        error_msg = '%s: %s expected to be at most %.3f but was %.3f' % (
+                            file_type, key, expected_value, metrics[key]
+                        )
+                        print(error_msg)
+                        error_msg_file.write(error_msg + '\n')
+                else:
+                    print('Unknown comparator, skipping: %s' % metric_spec['comparator'])
 
 if __name__ == "__main__":
     main()

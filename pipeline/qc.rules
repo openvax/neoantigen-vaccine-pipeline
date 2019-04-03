@@ -87,4 +87,4 @@ if "capture_kit_coverage_file" in config["reference"]:
     output:
       join(WORKDIR, "sequencing_qc_out.txt")
     shell:
-      "python scripts/sequencing.py --out {output}"
+      "python $SCRIPTS/sequencing.py --out {output}"

@@ -28,7 +28,7 @@ def main(args_list=None):
         args_list = sys.argv[1:]
 
     args = parser.parse_args(args_list)
-    print 'wheeeeee'
+    print('wheeeeee')
     with open(args.out, 'w') as f:
         f.write('placeholder')
 

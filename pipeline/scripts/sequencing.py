@@ -95,7 +95,7 @@ def main(args_list=None):
                             file_type, key, expected_value, metrics[key]
                         )
                         print(error_msg)
-                        f.write(error_msg_file + '\n')
+                        error_msg_file.write(error_msg + '\n')
 
 
 if __name__ == "__main__":

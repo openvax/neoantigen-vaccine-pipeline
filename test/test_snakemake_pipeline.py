@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# NOTE: for easiest readability, run this with: "nosetests --nocapture --nologcapture"
 
 import glob
 from os import chdir, listdir
@@ -81,7 +83,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_vaxrank_targets(self):
         with open(join(self._get_test_dir_path(), 'idh1_config.yaml'), 'r') as idh1_config_file:
-            config = yaml.load(idh1_config_file)
+            config = yaml.safe_load(idh1_config_file)
         targets = default_vaxrank_targets(config)
         expected_targets = (
             '/outputs/idh1-test-sample/vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.txt',
@@ -95,7 +97,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_somatic_vcf_targets(self):
         with open(join(self._get_test_dir_path(), 'idh1_config.yaml'), 'r') as idh1_config_file:
-            config = yaml.load(idh1_config_file)
+            config = yaml.safe_load(idh1_config_file)
         targets = somatic_vcf_targets(config)
         expected_targets = (
             '/outputs/idh1-test-sample/mutect.vcf',
@@ -115,7 +117,6 @@ class TestPipeline(unittest.TestCase):
             configfile=self.config_tmpfile.name,
             config={'num_threads': 22, 'mem_gb': 160, 'contigs': ['2']},
             dryrun=True,
-            printshellcmds=True,
             targets=[
                 join(
                     self.workdir.name, 

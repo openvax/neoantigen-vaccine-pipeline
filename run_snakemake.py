@@ -18,7 +18,7 @@ import datetime
 import logging
 
 from os import access, R_OK, W_OK
-from os.path import dirname, isfile, join, basename, splitext
+from os.path import dirname, isfile, join, basename, splitext, exists
 import psutil
 import sys
 import tempfile
@@ -343,7 +343,7 @@ def main(args_list=None):
             '/reference-genome', args.reference_genome).replace(
             '/inputs', args.inputs)
 
-    parsed_config = yaml.load(configfile_contents)
+    parsed_config = yaml.safe_load(configfile_contents)
     validate_config(parsed_config)
 
     with tempfile.NamedTemporaryFile(mode='w') as config_tmpfile:
@@ -359,11 +359,13 @@ def main(args_list=None):
             run_neoantigen_pipeline(args, parsed_config, config_tmpfile)
             logger.info('Main pipeline done.')
 
-    # sanity-check post-processing: look at QC result files print contents of QC result file: 
-    with open(join(get_output_dir(config), "sequencing_qc_out.txt")) as sequencing_output:
-        if len(sequencing_output) > 0:
-            print('Some sequencing checks failed!')
-            print(sequencing_output)
+    # sanity-check post-processing: print any contents of QC result file
+    qc_contents_path = join(get_output_dir(parsed_config), "sequencing_qc_out.txt")
+    if args.run_qc and exists(qc_contents_path):
+        with open(qc_contents_path) as qc_out_contents:
+            if len(qc_out_contents) > 0:
+                print('Some sequencing checks failed!')
+                print(qc_out_contents)
 
 
 if __name__ == "__main__":

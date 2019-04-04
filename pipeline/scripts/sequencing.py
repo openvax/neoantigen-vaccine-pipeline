@@ -76,7 +76,7 @@ def main(args_list=None):
     }
 
     with open(args.metrics_spec_file) as metrics_spec_file:
-        all_metric_specs = yaml.load(metrics_spec_file)
+        all_metric_specs = yaml.safe_load(metrics_spec_file)
 
     with open(args.out, 'w') as error_msg_file:    
         for file_type, metric_specs in all_metric_specs.items():

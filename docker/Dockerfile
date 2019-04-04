@@ -139,7 +139,10 @@ RUN curl https://pastebin.com/raw/AmfYN3er > $HOME/.fonts.conf
 COPY . $HOME
 
 # Strelka setup
-ENV STRELKA_CONFIG $HOME/docker/strelka_config.txt
+ENV STRELKA_CONFIG $HOME/pipeline/strelka_config.txt
+
+# Python scripts setup, for things that are too small/simple to be their own modules
+ENV SCRIPTS $HOME/pipeline/scripts
 
 # snakemake logs get written here (hidden dir)
 RUN mkdir -p $HOME/.snakemake && sudo chown -R $USER $HOME/.snakemake

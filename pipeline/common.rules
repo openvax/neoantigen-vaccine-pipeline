@@ -20,6 +20,7 @@ SAMPLE_ID = config["input"]["id"]
 WORKDIR = join(config["workdir"], SAMPLE_ID)
 LOGDIR = join(WORKDIR, "logs")
 BENCHMARKDIR = join(WORKDIR, "benchmarks")
+GENOMEDIR = dirname(config["reference"]["genome"])
 
 SUPPORTED_FILETYPES = {".fastq.gz", ".fastq", ".bam"}
 
@@ -28,7 +29,7 @@ _PARALLEL_INDEL_REALIGNER = config.get("parallel_indel_realigner")
 
 # Needed for RNA processing
 _READ_LENGTH = 124
-_STAR_GENOME_DIR = join(dirname(config["reference"]["genome"]), "star-genome-%d" % _READ_LENGTH)
+_STAR_GENOME_DIR = join(GENOMEDIR, "star-genome-%d" % _READ_LENGTH)
 
 _IDEAL_ALIGNMENT_MEM_GB = 6
 _IDEAL_LARGE_MEM_GB = 20
@@ -67,6 +68,10 @@ def _get_fragment_ids(input_type):
     for fragment in config["input"][input_type]:
       fragment_ids.append(fragment["fragment_id"])
   return fragment_ids
+
+def sequence_dict_output():
+  root, ext = splitext(config["reference"]["genome"])
+  return root + ".dict"
 
 rule gunzip:
   input:

@@ -17,6 +17,7 @@ This file contains QC-related processing rules.
 """
 
 import glob
+from os.path import join
 
 def _get_all_fastq_files(_):
     return glob.glob("%s/*.fastq.gz" % WORKDIR)
@@ -35,3 +36,65 @@ rule fastqc:
     "mkdir -p {params.outdir} && "
     "fastqc -o {params.outdir} -t {threads} {input} && "
     "touch {output}"
+
+rule bed_to_interval_list:
+  input:
+    sequence_dict = sequence_dict_output(),
+    covered = join(GENOMEDIR, "{prefix}.bed")
+  params:
+    tmpdir = join(GENOMEDIR, "{prefix}_tmp")
+  output:
+    join(GENOMEDIR, "{prefix}.bed.interval_list")
+  shell:
+    "TMPDIR={params.tmpdir} "
+    "picard -Djava.io.tmpdir={params.tmpdir} BedToIntervalList "
+    "I={input.covered} "
+    "O={output} "
+    "SD={input.sequence_dict}"
+
+if "capture_kit_coverage_file" in config["reference"]:
+  rule hs_metrics:
+    input:
+      bam = join(WORKDIR, "{prefix}.bam"),
+      target_interval_list = config["reference"]["capture_kit_coverage_file"] + ".interval_list"
+    output:
+      join(WORKDIR, "{prefix}_hs_metrics.txt")
+    params:
+      reference = config["reference"]["genome"],
+      tmpdir = join(WORKDIR, "{prefix}_tmp"),
+      mem_gb = _mem_gb_for_ram_hungry_jobs()
+    resources:
+      mem_mb = _mem_gb_for_ram_hungry_jobs() * 1024
+    benchmark:
+      join(BENCHMARKDIR, "{prefix}_hs_metrics.txt")
+    log:
+      join(LOGDIR, "{prefix}_hs_metrics.log")
+    shell:
+      "TMPDIR={params.tmpdir} "
+      "picard -Xmx{params.mem_gb}g -Djava.io.tmpdir={params.tmpdir} "
+      "CollectHsMetrics "
+      "I={input.bam} "
+      "O={output} "
+      "R={params.reference} "
+      "BAIT_INTERVALS={input.target_interval_list} "
+      "TARGET_INTERVALS={input.target_interval_list} "
+      "2> {log}"
+
+  if "qc_metrics_file" in config:
+    rule sequencing_qc:
+      input:
+        normal_hs_metrics = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr_hs_metrics.txt"),
+        tumor_hs_metrics = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr_hs_metrics.txt"),
+        normal_markdups_metrics = join(WORKDIR, "normal_markdups_metrics.txt"),
+        tumor_markdups_metrics = join(WORKDIR, "tumor_markdups_metrics.txt"),
+        qc_metrics_file = config["qc_metrics_file"]
+      output:
+        join(WORKDIR, "sequencing_qc_out.txt")
+      shell:
+        "python $SCRIPTS/sequencing.py "
+        "--metrics-spec-file {input.qc_metrics_file} "
+        "--normal-hs-metrics {input.normal_hs_metrics} "
+        "--tumor-hs-metrics {input.tumor_hs_metrics} "
+        "--normal-duplication-metrics {input.normal_markdups_metrics} "
+        "--tumor-duplication-metrics {input.tumor_markdups_metrics} "
+        "--out {output}"

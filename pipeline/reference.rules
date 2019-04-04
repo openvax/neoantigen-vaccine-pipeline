@@ -117,10 +117,6 @@ rule extract_contig_names:
         if contig.isdigit() or contig.lower() in ['x', 'y', 'm' ,'mt']:
           o.write(i[0] + '\n')
 
-def sequence_dict_output():
-  root, ext = splitext(config["reference"]["genome"])
-  return root + ".dict"
-
 rule picard_sequence_dict_reference:
   input:
     reference = config["reference"]["genome"]

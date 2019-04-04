@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# NOTE: for easiest readability, run this with: "nosetests --nocapture --nologcapture"
 
 import glob
 from os import chdir, listdir
@@ -46,21 +48,15 @@ class TestPipeline(unittest.TestCase):
 
     @classmethod
     def populate_test_files(cls):
-        # populate reference files with random crap
-        with open(join(cls.referencedir.name, 'b37decoy.fasta'), 'w') as genome:
-            genome.write('placeholder')
-        with open(join(cls.referencedir.name, 'transcripts.gtf'), 'w') as transcripts:
-            transcripts.write('placeholder')
-        with open(join(cls.referencedir.name, 'dbsnp.vcf'), 'w') as dbsnp:
-            dbsnp.write('placeholder')
-        with open(join(cls.referencedir.name, 'cosmic.vcf'), 'w') as cosmic:
-            cosmic.write('placeholder')
-        with open(join(cls.referencedir.name, 'b37decoy.fasta.contigs'), 'w') as contigs:
-            contigs.write('placeholder')
-        with open(join(cls.referencedir.name, 'b37decoy.fasta.done'), 'w') as done:
-            done.write('placeholder')
-        with open(join(cls.referencedir.name, 'S04380110_Padded_grch37_with_M.bed'), 'w') as cover:
-            cover.write('placeholder')
+        # populate reference files with placeholder content
+        files_to_populate = [
+            'b37decoy.fasta', 'b37decoy.dict', 'b37decoy.fasta.contigs', 'b37decoy.fasta.done',
+            'transcripts.gtf', 'dbsnp.vcf', 'cosmic.vcf', 'S04380110_Covered_grch37.bed'
+        ]
+        for path in files_to_populate:
+            with open(join(cls.referencedir.name, path), 'w') as f:
+                f.write('placeholder')
+
         for path in glob.glob('datagen/*.fastq.gz'):
             copy2(path, cls.inputdir.name)
 
@@ -87,7 +83,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_vaxrank_targets(self):
         with open(join(self._get_test_dir_path(), 'idh1_config.yaml'), 'r') as idh1_config_file:
-            config = yaml.load(idh1_config_file)
+            config = yaml.safe_load(idh1_config_file)
         targets = default_vaxrank_targets(config)
         expected_targets = (
             '/outputs/idh1-test-sample/vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.txt',
@@ -101,7 +97,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_somatic_vcf_targets(self):
         with open(join(self._get_test_dir_path(), 'idh1_config.yaml'), 'r') as idh1_config_file:
-            config = yaml.load(idh1_config_file)
+            config = yaml.safe_load(idh1_config_file)
         targets = somatic_vcf_targets(config)
         expected_targets = (
             '/outputs/idh1-test-sample/mutect.vcf',
@@ -121,7 +117,6 @@ class TestPipeline(unittest.TestCase):
             configfile=self.config_tmpfile.name,
             config={'num_threads': 22, 'mem_gb': 160, 'contigs': ['2']},
             dryrun=True,
-            printshellcmds=True,
             targets=[
                 join(
                     self.workdir.name, 
@@ -208,6 +203,16 @@ class TestPipeline(unittest.TestCase):
                 self.workdir.name,
                 'idh1-test-sample',
                 'fastqc.done'),
+        ]
+        docker_entrypoint(qc_cli_args)
+
+    def test_docker_entrypoint_script_picard(self):
+        qc_cli_args = [
+            '--configfile', self.config_tmpfile.name,
+            '--dry-run',
+            '--memory', '33',
+            '--run-qc',
+            '--qc-metrics-file', self.config_tmpfile.name,  # this file just needs to exist
         ]
         docker_entrypoint(qc_cli_args)
 

@@ -18,7 +18,7 @@ import datetime
 import logging
 
 from os import access, R_OK, W_OK
-from os.path import dirname, isfile, join, basename, splitext
+from os.path import dirname, isfile, join, basename, splitext, exists
 import psutil
 import sys
 import tempfile
@@ -43,23 +43,6 @@ parser.add_argument(
     help="Snakemake YAML config file path")
 
 parser.add_argument(
-    "--target",
-    action="append",
-    help="Snakemake target(s). For multiple targets, can specify --target t1 --target t2 ...")
-
-parser.add_argument(
-    "--somatic-variant-calling-only",
-    help="If this argument is present, will only call somatic variants - no RNA processing "
-        "or final vaccine peptide computation",
-    action="store_true")
-
-parser.add_argument(
-    "--process-reference-only",
-    help="If this argument is present, will only process the input reference files - no pipeline "
-        "run beyond that",
-    action="store_true")
-
-parser.add_argument(
     "--cores",
     default=max(1, psutil.cpu_count() - 1),
     type=int,
@@ -75,6 +58,37 @@ parser.add_argument(
     "--dry-run",
     help="If this argument is present, Snakemake will do a dry run of the pipeline",
     action="store_true")
+
+targets_group = parser.add_argument_group("Target arguments")
+
+targets_group.add_argument(
+    "--target",
+    action="append",
+    help="Snakemake target(s). For multiple targets, can specify --target t1 --target t2 ...")
+
+targets_group.add_argument(
+    "--somatic-variant-calling-only",
+    help="If this argument is present, will only call somatic variants - no RNA processing "
+        "or final vaccine peptide computation",
+    action="store_true")
+
+targets_group.add_argument(
+    "--process-reference-only",
+    help="If this argument is present, will only process the input reference files - no pipeline "
+        "run beyond that",
+    action="store_true")
+
+qc_group = parser.add_argument_group("QC-related arguments")
+
+qc_group.add_argument(
+    "--run-qc",
+    help="If this argument is present, will run several QC metrics",
+    action="store_true")
+
+qc_group.add_argument(
+    "--qc-metrics-file",
+    default="",
+    help="Path to YAML file specifying Picard QC related metrics to run and check")
 
 overrides_group = parser.add_argument_group("Dockerless runs: directory override options")
 
@@ -214,10 +228,13 @@ def get_and_check_targets(args, config):
     if len(targets) == 0:
         raise ValueError("Must specify at least one target")
 
-    # in all cases, run FASTQC
-    fastqc_target = join(get_output_dir(config), "fastqc.done")
-    if fastqc_target not in targets:
-        targets.append(fastqc_target)
+    # if QC requested, run FASTQC and a few Picard metrics
+    if args.run_qc:
+        fastqc_target = join(get_output_dir(config), "fastqc.done")
+        if fastqc_target not in targets:
+            targets.append(fastqc_target)
+        sequencing_qc_target = join(get_output_dir(config), "sequencing_qc_out.txt")
+        targets.append(sequencing_qc_target)
     
     for target in targets:
         validate_target(target, args, config)
@@ -228,6 +245,19 @@ def get_and_check_targets(args, config):
 #########################          Execution         #################################
 ######################################################################################
 
+# Returns a dictionary to be used as an add-on config for the Snakemake main pipeline run.
+def make_config_extension_dict(args, parsed_config):
+    # include all relevant contigs in the pipeline config
+    with open(parsed_config["reference"]["genome"] + ".contigs") as f:
+        contigs = [x.strip() for x in f.readlines()]
+    config = {
+        'num_threads': args.cores,
+        'mem_gb': args.memory,
+        'contigs': contigs,
+    }
+    if args.qc_metrics_file:
+        config['qc_metrics_file'] = args.qc_metrics_file
+    return config
 
 def run_neoantigen_pipeline(args, parsed_config, configfile):
     configfile.seek(0)
@@ -241,19 +271,15 @@ def run_neoantigen_pipeline(args, parsed_config, configfile):
         logger.info("No output targets specified")
         return
 
+    config_extension = make_config_extension_dict(args, parsed_config)
+
     logger.info("Running neoantigen pipeline with targets %s " % targets)
-
-    # include all relevant contigs in the pipeline config
-    with open(parsed_config["reference"]["genome"] + ".contigs") as f:
-        contigs = [x.strip() for x in f.readlines()]
-
-    # parse out targets that start with output directory (not reference)
     start_time = datetime.datetime.now()
     if not snakemake.snakemake(
             'pipeline/Snakefile',
             cores=args.cores,
             resources={'mem_mb': int(1024 * args.memory)},
-            config={'num_threads': args.cores, 'mem_gb': args.memory, 'contigs': contigs},
+            config=config_extension,
             configfile=configfile.name,
             printshellcmds=True,
             dryrun=args.dry_run,
@@ -317,20 +343,30 @@ def main(args_list=None):
             '/reference-genome', args.reference_genome).replace(
             '/inputs', args.inputs)
 
-    parsed_config = yaml.load(configfile_contents)
+    parsed_config = yaml.safe_load(configfile_contents)
     validate_config(parsed_config)
 
     with tempfile.NamedTemporaryFile(mode='w') as config_tmpfile:
         config_tmpfile.write(configfile_contents)
-        logger.info("Processing reference...")
+        logger.info("Processing reference, if necessary...")
         process_reference(args, parsed_config, config_tmpfile)
+        logger.info("Reference processing done.")
         if args.process_reference_only:
             if args.target is not None:
                 raise ValueError("If requesting --process-reference-only, cannot specify targets")
         else:
             logger.info("Running main pipeline...")
             run_neoantigen_pipeline(args, parsed_config, config_tmpfile)
-    
+            logger.info('Main pipeline done.')
+
+    # sanity-check post-processing: print any contents of QC result file
+    qc_contents_path = join(get_output_dir(parsed_config), "sequencing_qc_out.txt")
+    if args.run_qc and exists(qc_contents_path):
+        with open(qc_contents_path) as qc_out_contents:
+            if len(qc_out_contents) > 0:
+                print('Some sequencing checks failed!')
+                print(qc_out_contents)
+
 
 if __name__ == "__main__":
     main()

@@ -157,6 +157,5 @@ pip install -r requirements.txt
 
 You can run a small local unit test which simulates a pipeline dependency graph and does not require Docker. Once you clone this repo and install the Python requirements, run:
 ```
-nosetests --nocapture --nologcapture
+nosetests
 ```
-The optional `--nocapture` and `--nologcapture` arguments suppress unnecessary output. If the tests fail, you'll still see what goes wrong.

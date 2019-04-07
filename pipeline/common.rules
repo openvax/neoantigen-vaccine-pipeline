@@ -14,7 +14,7 @@
 
 # This file contains pipeline constants and a few functions.
 
-from os.path import join, dirname
+from os.path import join, dirname, splitext
 
 SAMPLE_ID = config["input"]["id"]
 WORKDIR = join(config["workdir"], SAMPLE_ID)

@@ -362,7 +362,8 @@ def main(args_list=None):
     # sanity-check post-processing: print any contents of QC result file
     qc_contents_path = join(get_output_dir(parsed_config), "sequencing_qc_out.txt")
     if args.run_qc and exists(qc_contents_path):
-        with open(qc_contents_path) as qc_out_contents:
+        with open(qc_contents_path) as qc_contents_file:
+            qc_out_contents = qc_contents_file.read()
             if len(qc_out_contents) > 0:
                 print('Some sequencing checks failed!')
                 print(qc_out_contents)

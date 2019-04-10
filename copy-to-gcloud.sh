@@ -18,17 +18,24 @@ gsutil -m cp $DIRNAME/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam g
 gsutil -m cp $DIRNAME/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bai gs://$FOLDER/normal.bam.bai
 gsutil -m cp $DIRNAME/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam gs://$FOLDER/tumor.bam
 gsutil -m cp $DIRNAME/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bai gs://$FOLDER/tumor.bam.bai
-gsutil -m cp $DIRNAME/rna_final_sorted.bam gs://$FOLDER/rna.bam
-gsutil -m cp $DIRNAME/rna_final_sorted.bam.bai gs://$FOLDER/rna.bam.bai
 
-gsutil -m cp $DIRNAME/mutect.vcf gs://$FOLDER/mutect.vcf
-gsutil -m cp $DIRNAME/strelka.vcf gs://$FOLDER/strelka.vcf
-gsutil -m cp $DIRNAME/vaccine-peptide-report* gs://$FOLDER/
-gsutil -m cp $DIRNAME/all-passing-variants*.csv gs://$FOLDER/
+for vcf in mutect.vcf mutect2.vcf strelka.vcf
+do
+    if [ -f $DIRNAME/$vcf ]
+    then
+        #gsutil -m cp $DIRNAME/$vcf gs://$FOLDER/$vcf
+        echo "$DIRNAME/$vcf exists, would copy to gs://$FOLDER/$vcf"
+    else   
+        echo "$DIRNAME/$vcf does not exist"
+    fi
+done
 
 gsutil -m cp -r $DIRNAME/fastqc-output/ gs://$FOLDER/
 
-# may or may not exist
-gsutil -m cp $DIRNAME/mutect2.vcf gs://$FOLDER/mutect2.vcf
+gsutil -m cp $DIRNAME/rna_final_sorted.bam gs://$FOLDER/rna.bam
+gsutil -m cp $DIRNAME/rna_final_sorted.bam.bai gs://$FOLDER/rna.bam.bai
 
-echo "Done"
+gsutil -m cp $DIRNAME/vaccine-peptide-report* gs://$FOLDER/
+gsutil -m cp $DIRNAME/all-passing-variants*.csv gs://$FOLDER/
+
+echo "Done."

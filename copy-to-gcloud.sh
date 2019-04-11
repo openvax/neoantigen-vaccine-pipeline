@@ -23,8 +23,7 @@ for vcf in mutect.vcf mutect2.vcf strelka.vcf
 do
     if [ -f $DIRNAME/$vcf ]
     then
-        #gsutil -m cp $DIRNAME/$vcf gs://$FOLDER/$vcf
-        echo "$DIRNAME/$vcf exists, would copy to gs://$FOLDER/$vcf"
+        gsutil -m cp $DIRNAME/$vcf gs://$FOLDER/$vcf
     else   
         echo "$DIRNAME/$vcf does not exist"
     fi

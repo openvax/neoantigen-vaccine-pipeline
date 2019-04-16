@@ -5,7 +5,7 @@
 #
 # Example usage: ./copy-to-gcloud.sh pgv001-012 pgv001/pt012/snake
 
-set -e
+set -ex
 
 if [ $# -lt 2 ]; then
     echo "Too few arguments supplied ($#), expected <output directory> <bucket path>";
@@ -29,11 +29,11 @@ echo "=== Copying FastQC files ==="
 if [ -d $LOCAL_DIRNAME/fastqc-output/ ]; then 
   gsutil -m cp -r $LOCAL_DIRNAME/fastqc-output/ gs://$GCLOUD_PATH/
 else
-  echo "Skipping %LOCAL_DIRNAME/fastqc-output, directory not found"
+  echo "Skipping $LOCAL_DIRNAME/fastqc-output, directory not found"
 fi 
 
 echo "=== Copying Picard metrics ==="
-gsutil -m cp -R $LOCAL_DIRNAME/*metrics*.txt gs://$CLOUD_PATH/picard-metrics
+gsutil -m cp -R $LOCAL_DIRNAME/*metrics*.txt gs://$CLOUD_PATH/picard-metrics/
 
 echo "=== Copying logs ==="
 gsutil -m cp -R $LOCAL_DIRNAME/logs/ gs://$GCLOUD_PATH/

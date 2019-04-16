@@ -33,7 +33,7 @@ else
 fi 
 
 echo "=== Copying Picard metrics ==="
-gsutil -m cp -R $LOCAL_DIRNAME/*metrics*.txt gs://$CLOUD_PATH/picard-metrics/
+gsutil -m cp -R $LOCAL_DIRNAME/*metrics*.txt gs://$GCLOUD_PATH/picard-metrics/
 
 echo "=== Copying logs ==="
 gsutil -m cp -R $LOCAL_DIRNAME/logs/ gs://$GCLOUD_PATH/

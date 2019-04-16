@@ -8,7 +8,7 @@
 set -e
 
 if [ $# -lt 2 ]; then
-    echo "Too few arguments supplied ($#)";
+    echo "Too few arguments supplied ($#), expected <output directory> <bucket path>";
     exit 1;
 fi
 
@@ -19,13 +19,13 @@ gsutil -m cp $DIRNAME/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bai g
 gsutil -m cp $DIRNAME/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam gs://$FOLDER/tumor.bam
 gsutil -m cp $DIRNAME/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bai gs://$FOLDER/tumor.bam.bai
 
-for vcf in mutect.vcf mutect2.vcf strelka.vcf
+for vcf in mutect.vcf mutect2.vcf strelka.vcf filtered_normal_germline_snps_indels.vcf filtered_covered_normal_germline_snps_indels.vcf
 do
     if [ -f $DIRNAME/$vcf ]
     then
         gsutil -m cp $DIRNAME/$vcf gs://$FOLDER/$vcf
     else   
-        echo "$DIRNAME/$vcf does not exist"
+        echo "Skipping $DIRNAME/$vcf, does not exist"
     fi
 done
 

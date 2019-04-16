@@ -24,8 +24,13 @@ echo "LOCAL_DIRNAME=$LOCAL_DIRNAME"
 echo "GCLOUD_PATH=$GCLOUD_PATH"
 
 
+
 echo "=== Copying FastQC files ===" 
-gsutil -m cp -r $LOCAL_DIRNAME/fastqc-output/ gs://$GCLOUD_PATH/
+if [ -d $LOCAL_DIRNAME/fastqc-output/ ]; then 
+  gsutil -m cp -r $LOCAL_DIRNAME/fastqc-output/ gs://$GCLOUD_PATH/
+else
+  echo "Skipping %LOCAL_DIRNAME/fastqc-output, directory not found"
+fi 
 
 echo "=== Copying Picard metrics ==="
 gsutil -m cp -R $LOCAL_DIRNAME/*metrics*.txt gs://$CLOUD_PATH/picard-metrics

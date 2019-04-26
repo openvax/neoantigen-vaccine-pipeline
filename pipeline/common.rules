@@ -32,7 +32,7 @@ _READ_LENGTH = 124
 _STAR_GENOME_DIR = join(GENOMEDIR, "star-genome-%d" % _READ_LENGTH)
 
 _IDEAL_ALIGNMENT_MEM_GB = 6
-_IDEAL_LARGE_MEM_GB = 20
+_IDEAL_LARGE_MEM_GB = 40
 
 # Common functions
 

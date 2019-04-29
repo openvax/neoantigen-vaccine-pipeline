@@ -28,10 +28,12 @@ function copy_file_if_exists {
     # Two arguments:
     # 1) local name of file relative to LOCAL_DIRNAME
     # 2) remote name of file relative to GCLOUD_PATH
-    if [[ -f $LOCAL_DIRNAME/$1 ]]; then
-        gsutil -m cp "$LOCAL_DIRNAME/$1" "gs://$GCLOUD_PATH/$2"
+    SOURCE="$LOCAL_DIRNAME/$1"
+    DEST="gs://$GCLOUD_PATH/$2"
+    if [[ -f $SOURCE ]]; then
+        gsutil -m cp "$SOURCE" "$DEST"
      else
-        echo "Skipping $1, file not found"
+        echo "Skipping $SOURCE, file not found"
     fi
 }
 
@@ -40,10 +42,11 @@ function copy_directory_if_exists {
     #   1) Local sub-directory relative to LOCAL_DIRNAME
     # Will be copied into GCLOUD_PATH
     FULL_DIRPATH=$LOCAL_DIRNAME/$1
-    # remove trailing slashes
+    # remove trailing slashes to avoid double slashes
     FULL_DIRPATH=${FULL_DIRPATH%/}
+    DEST="gs://$GCLOUD_PATH/"
     if [[ -d FULL_DIRPATH ]]; then
-        gsutil -m cp -r "$FULL_DIRPATH/" "gs://$GCLOUD_PATH/"
+        gsutil -m cp -r "$FULL_DIRPATH/" "$DEST"
      else
         echo "Skipping $FULL_DIRPATH, directory not found"
     fi

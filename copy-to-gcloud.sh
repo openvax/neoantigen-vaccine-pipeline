@@ -5,9 +5,9 @@
 #
 # Example usage: ./copy-to-gcloud.sh pgv001-012 pgv001/pt012/snake
 
-set -ex
+set -e
 
-if [ $# -lt 2 ]; then
+if [[ $# -lt 2 ]]; then
     echo "Too few arguments supplied ($#), expected <output directory> <bucket path>";
     exit 1;
 fi
@@ -24,40 +24,62 @@ echo "LOCAL_DIRNAME=$LOCAL_DIRNAME"
 echo "GCLOUD_PATH=$GCLOUD_PATH"
 
 
+function copy_file_if_exists {
+    # Two arguments:
+    # 1) local name of file relative to LOCAL_DIRNAME
+    # 2) remote name of file relative to GCLOUD_PATH
+    if [[ -f $LOCAL_DIRNAME/$1 ]]; then
+        gsutil -m cp "$LOCAL_DIRNAME/$1" "gs://$GCLOUD_PATH/$2"
+     else
+        echo "Skipping $1, file not found"
+    fi
+}
 
-echo "=== Copying FastQC files ===" 
-if [ -d $LOCAL_DIRNAME/fastqc-output/ ]; then 
-  gsutil -m cp -r $LOCAL_DIRNAME/fastqc-output/ gs://$GCLOUD_PATH/
-else
-  echo "Skipping $LOCAL_DIRNAME/fastqc-output, directory not found"
-fi 
+function copy_directory_if_exists {
+    # One argument:
+    #   1) Local sub-directory relative to LOCAL_DIRNAME
+    # Will be copied into GCLOUD_PATH
+    FULL_DIRPATH=$LOCAL_DIRNAME/$1
+    # remove trailing slashes
+    FULL_DIRPATH=${FULL_DIRPATH%/}
+    if [[ -d FULL_DIRPATH ]]; then
+        gsutil -m cp -r "$FULL_DIRPATH/" "gs://$GCLOUD_PATH/"
+     else
+        echo "Skipping $FULL_DIRPATH, directory not found"
+    fi
+}
+
+echo "=== Copying FastQC files ==="
+copy_directory_if_exists "fastqc-output"
 
 echo "=== Copying Picard metrics ==="
-gsutil -m cp -R $LOCAL_DIRNAME/*metrics*.txt gs://$GCLOUD_PATH/picard-metrics/
+for f in "$LOCAL_DIRNAME"/*metrics*.txt; do
+    gsutil -m cp -R "$f" "gs://$GCLOUD_PATH/picard-metrics/"
+done
 
 echo "=== Copying logs ==="
-gsutil -m cp -R $LOCAL_DIRNAME/logs/ gs://$GCLOUD_PATH/
+copy_directory_if_exists "logs"
 
 echo "=== Copying VCF files ==="
 for vcf in mutect.vcf mutect2.vcf strelka.vcf filtered_normal_germline_snps_indels.vcf filtered_covered_normal_germline_snps_indels.vcf
 do
-    if [ -f $LOCAL_DIRNAME/$vcf ]
-    then
-        gsutil -m cp $LOCAL_DIRNAME/$vcf gs://$GCLOUD_PATH/$vcf
-    else   
-        echo "Skipping $LOCAL_DIRNAME/$vcf, does not exist"
-    fi
+    copy_file_if_exists "$vcf" "$vcf"
 done
 
 echo "=== Copying Vaxrank output ==="
-gsutil -m cp $LOCAL_DIRNAME/vaccine-peptide-report* gs://$GCLOUD_PATH/
-gsutil -m cp $LOCAL_DIRNAME/all-passing-variants*.csv gs://$GCLOUD_PATH/
+for f in "$LOCAL_DIRNAME"/vaccine-peptide-report*; do
+    gsutil -m cp "$f" "gs://$GCLOUD_PATH/"
+done
+for f in "$LOCAL_DIRNAME"/all-passing-variants*.csv; do
+    gsutil -m cp "$f" "gs://$GCLOUD_PATH/"
+done
 
 echo "=== Copying BAM files ==="
-gsutil -m cp $LOCAL_DIRNAME/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam gs://$GCLOUD_PATH/normal.bam
-gsutil -m cp $LOCAL_DIRNAME/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bai gs://$GCLOUD_PATH/normal.bam.bai
-gsutil -m cp $LOCAL_DIRNAME/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam gs://$GCLOUD_PATH/tumor.bam
-gsutil -m cp $LOCAL_DIRNAME/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bai gs://$GCLOUD_PATH/tumor.bam.bai
-gsutil -m cp $LOCAL_DIRNAME/rna_final_sorted.bam gs://$GCLOUD_PATH/rna.bam
-gsutil -m cp $LOCAL_DIRNAME/rna_final_sorted.bam.bai gs://$GCLOUD_PATH/rna.bam.bai
+copy_file_if_exists normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam normal.bam
+copy_file_if_exists normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bai normal.bam.bai
+copy_file_if_exists tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam tumor.bam
+copy_file_if_exists tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bai tumor.bam.bai
+copy_file_if_exists rna_final_sorted.bam rna.bam
+copy_file_if_exists rna_final_sorted.bam.bai rna.bam.bai
+
 echo "Done."

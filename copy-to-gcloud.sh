@@ -24,31 +24,43 @@ echo "LOCAL_DIRNAME=$LOCAL_DIRNAME"
 echo "GCLOUD_PATH=$GCLOUD_PATH"
 
 
-function copy_file_if_exists {
-    # Two arguments:
-    # 1) local name of file relative to LOCAL_DIRNAME
+function copy_path_if_exists {
+    # Two arguments
+    # 1) local path to file
     # 2) remote name of file relative to GCLOUD_PATH
-    SOURCE="$LOCAL_DIRNAME/$1"
+    SOURCE="$1"
     DEST="gs://$GCLOUD_PATH/$2"
-    if [[ -f $SOURCE ]]; then
+    if [[ -f "$SOURCE" ]]; then
         gsutil -m cp "$SOURCE" "$DEST"
      else
         echo "Skipping $SOURCE, file not found"
     fi
 }
 
+function copy_file_if_exists {
+    # Prepends $LOCAL_DIRNAME to first argument and then
+    # calls copy_if_exists
+    #
+    # Two arguments:
+    # 1) local name of file relative to LOCAL_DIRNAME
+    # 2) remote name of file relative to GCLOUD_PATH
+    SOURCE="$LOCAL_DIRNAME/$1"
+    DEST="$2"
+    copy_path_if_exists "$SOURCE" "$DEST"
+}
+
 function copy_directory_if_exists {
     # One argument:
     #   1) Local sub-directory relative to LOCAL_DIRNAME
     # Will be copied into GCLOUD_PATH
-    FULL_DIRPATH=$LOCAL_DIRNAME/$1
+    SOURCE=$LOCAL_DIRNAME/$1
     # remove trailing slashes to avoid double slashes
-    FULL_DIRPATH=${FULL_DIRPATH%/}
+    SOURCE=${SOURCE%/}
     DEST="gs://$GCLOUD_PATH/"
     if [[ -d FULL_DIRPATH ]]; then
-        gsutil -m cp -r "$FULL_DIRPATH/" "$DEST"
+        gsutil -m cp -r "$SOURCE/" "$DEST"
      else
-        echo "Skipping $FULL_DIRPATH, directory not found"
+        echo "Skipping $SOURCE, directory not found"
     fi
 }
 
@@ -57,7 +69,7 @@ copy_directory_if_exists "fastqc-output"
 
 echo "=== Copying Picard metrics ==="
 for f in "$LOCAL_DIRNAME"/*metrics*.txt; do
-    gsutil -m cp -R "$f" "gs://$GCLOUD_PATH/picard-metrics/"
+    copy_path_if_exists "$f" picard-metrics/`basename "$f"`
 done
 
 echo "=== Copying logs ==="
@@ -71,10 +83,10 @@ done
 
 echo "=== Copying Vaxrank output ==="
 for f in "$LOCAL_DIRNAME"/vaccine-peptide-report*; do
-    gsutil -m cp "$f" "gs://$GCLOUD_PATH/"
+    copy_path_if_exists "$f" `basename "$f"`
 done
 for f in "$LOCAL_DIRNAME"/all-passing-variants*.csv; do
-    gsutil -m cp "$f" "gs://$GCLOUD_PATH/"
+    copy_file_if_exists "$f" `basename "$f"`
 done
 
 echo "=== Copying BAM files ==="

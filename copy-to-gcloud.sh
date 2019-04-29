@@ -37,7 +37,7 @@ function copy_path_if_exists {
     fi
 }
 
-function copy_file_if_exists {
+function copy_local_file_if_exists {
     # Prepends $LOCAL_DIRNAME to first argument and then
     # calls copy_if_exists
     #
@@ -78,7 +78,7 @@ copy_directory_if_exists "logs"
 echo "=== Copying VCF files ==="
 for vcf in mutect.vcf mutect2.vcf strelka.vcf filtered_normal_germline_snps_indels.vcf filtered_covered_normal_germline_snps_indels.vcf
 do
-    copy_file_if_exists "$vcf" "$vcf"
+    copy_local_file_if_exists "$vcf" "$vcf"
 done
 
 echo "=== Copying Vaxrank output ==="
@@ -86,15 +86,15 @@ for f in "$LOCAL_DIRNAME"/vaccine-peptide-report*; do
     copy_path_if_exists "$f" `basename "$f"`
 done
 for f in "$LOCAL_DIRNAME"/all-passing-variants*.csv; do
-    copy_file_if_exists "$f" `basename "$f"`
+    copy_local_file_if_exists "$f" `basename "$f"`
 done
 
 echo "=== Copying BAM files ==="
-copy_file_if_exists normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam normal.bam
-copy_file_if_exists normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bai normal.bam.bai
-copy_file_if_exists tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam tumor.bam
-copy_file_if_exists tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bai tumor.bam.bai
-copy_file_if_exists rna_final_sorted.bam rna.bam
-copy_file_if_exists rna_final_sorted.bam.bai rna.bam.bai
+copy_local_file_if_exists normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam normal.bam
+copy_local_file_if_exists normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bai normal.bam.bai
+copy_local_file_if_exists tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam tumor.bam
+copy_local_file_if_exists tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bai tumor.bam.bai
+copy_local_file_if_exists rna_final_sorted.bam rna.bam
+copy_local_file_if_exists rna_final_sorted.bam.bai rna.bam.bai
 
 echo "Done."

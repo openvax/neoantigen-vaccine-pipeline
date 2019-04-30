@@ -5,9 +5,9 @@
 #
 # Example usage: ./copy-to-gcloud.sh pgv001-012 pgv001/pt012/snake
 
-set -ex
+set -e
 
-if [ $# -lt 2 ]; then
+if [[ $# -lt 2 ]]; then
     echo "Too few arguments supplied ($#), expected <output directory> <bucket path>";
     exit 1;
 fi
@@ -24,40 +24,85 @@ echo "LOCAL_DIRNAME=$LOCAL_DIRNAME"
 echo "GCLOUD_PATH=$GCLOUD_PATH"
 
 
+function copy_to_gcloud_if_exists {
+    # Copies file (or directory) to gcloud if it exists.
+    #
+    # Two arguments
+    # 1) local name of file or directory, relative to $LOCAL_DIRNAME
+    # 2) remote name of file or directory, relative to gs://$GCLOUD_PATH
+    #
+    # If second argument is omitted then remote file has same name as local
+    # file.
+    #
+    # remove trailing slashes to avoid double slashes
+    SOURCE_NAME=${1%/}
+    DEST_NAME=${2%/}
 
-echo "=== Copying FastQC files ===" 
-if [ -d $LOCAL_DIRNAME/fastqc-output/ ]; then 
-  gsutil -m cp -r $LOCAL_DIRNAME/fastqc-output/ gs://$GCLOUD_PATH/
-else
-  echo "Skipping $LOCAL_DIRNAME/fastqc-output, directory not found"
-fi 
+    # if destination name isn't specified, use the same as the source name
+    if [[ -z $DEST_NAME ]]; then
+        DEST_NAME="$SOURCE_NAME"
+    fi
+
+    # prepend paths to filenames
+    SOURCE_PATH="$LOCAL_DIRNAME/$SOURCE_NAME"
+    DEST_PATH="gs://$GCLOUD_PATH/$DEST_NAME"
+
+    if [[ -f "$SOURCE_PATH" ]]; then
+        gsutil -m cp "$SOURCE_PATH" "$DEST_PATH"
+     elif [[ -d "$SOURCE_PATH" ]]; then
+        gsutil -m cp -r "$SOURCE_PATH/" "$DEST_PATH/"
+     else
+        echo "Skipping $1, file or directory not found"
+    fi
+}
+
+function copy_pattern {
+    # Loops over files matching a pattern and copies them to gcloud
+    #
+    # Two arguments
+    #   1) Pattern (e.g. "dir/*.txt") relative to $LOCAL_DIRNAME
+    #   2) Subdirectory on gcloud relative to $GCLOUD_PATH
+
+    PATTERN="$1"
+    # remove trailing slash so we can safely join
+    # dir with remote file name
+    DEST_SUBDIR=${2%/}
+    for f in "$LOCAL_DIRNAME/"$PATTERN; do
+        BASENAME=`basename "$f"`
+        if [[ -z $DEST_SUBDIR ]]; then
+            REMOTE_NAME="$BASENAME"
+        else
+            REMOTE_NAME="$DEST_SUBDIR/$BASENAME"
+        fi
+        copy_to_gcloud_if_exists "$BASENAME" "$REMOTE_NAME"
+    done
+}
+
+echo "=== Copying FastQC files ==="
+copy_to_gcloud_if_exists fastqc-output/
 
 echo "=== Copying Picard metrics ==="
-gsutil -m cp -R $LOCAL_DIRNAME/*metrics*.txt gs://$GCLOUD_PATH/picard-metrics/
+copy_pattern *metrics*.txt picard-metrics/
 
 echo "=== Copying logs ==="
-gsutil -m cp -R $LOCAL_DIRNAME/logs/ gs://$GCLOUD_PATH/
+copy_to_gcloud_if_exists logs/
 
 echo "=== Copying VCF files ==="
 for vcf in mutect.vcf mutect2.vcf strelka.vcf filtered_normal_germline_snps_indels.vcf filtered_covered_normal_germline_snps_indels.vcf
 do
-    if [ -f $LOCAL_DIRNAME/$vcf ]
-    then
-        gsutil -m cp $LOCAL_DIRNAME/$vcf gs://$GCLOUD_PATH/$vcf
-    else   
-        echo "Skipping $LOCAL_DIRNAME/$vcf, does not exist"
-    fi
+    copy_to_gcloud_if_exists "$vcf"
 done
 
 echo "=== Copying Vaxrank output ==="
-gsutil -m cp $LOCAL_DIRNAME/vaccine-peptide-report* gs://$GCLOUD_PATH/
-gsutil -m cp $LOCAL_DIRNAME/all-passing-variants*.csv gs://$GCLOUD_PATH/
+copy_pattern vaccine-peptide-report*
+copy_pattern all-passing-variants*.csv
 
 echo "=== Copying BAM files ==="
-gsutil -m cp $LOCAL_DIRNAME/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam gs://$GCLOUD_PATH/normal.bam
-gsutil -m cp $LOCAL_DIRNAME/normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bai gs://$GCLOUD_PATH/normal.bam.bai
-gsutil -m cp $LOCAL_DIRNAME/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam gs://$GCLOUD_PATH/tumor.bam
-gsutil -m cp $LOCAL_DIRNAME/tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bai gs://$GCLOUD_PATH/tumor.bam.bai
-gsutil -m cp $LOCAL_DIRNAME/rna_final_sorted.bam gs://$GCLOUD_PATH/rna.bam
-gsutil -m cp $LOCAL_DIRNAME/rna_final_sorted.bam.bai gs://$GCLOUD_PATH/rna.bam.bai
+copy_to_gcloud_if_exists normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam normal.bam
+copy_to_gcloud_if_exists normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bai normal.bam.bai
+copy_to_gcloud_if_exists tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam tumor.bam
+copy_to_gcloud_if_exists tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bai tumor.bam.bai
+copy_to_gcloud_if_exists rna_final_sorted.bam rna.bam
+copy_to_gcloud_if_exists rna_final_sorted.bam.bai rna.bam.bai
+
 echo "Done."

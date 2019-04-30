@@ -79,10 +79,10 @@ function copy_pattern {
 }
 
 echo "=== Copying FastQC files ==="
-copy_to_gcloud_if_exists "fastqc-output/"
+copy_to_gcloud_if_exists fastqc-output/
 
 echo "=== Copying Picard metrics ==="
-copy_pattern *metrics*.txt "picard-metrics/"
+copy_pattern *metrics*.txt picard-metrics/
 
 echo "=== Copying logs ==="
 copy_to_gcloud_if_exists logs/

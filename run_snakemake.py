@@ -85,11 +85,6 @@ qc_group.add_argument(
     help="If this argument is present, will run several QC metrics",
     action="store_true")
 
-qc_group.add_argument(
-    "--qc-metrics-file",
-    default="",
-    help="Path to YAML file specifying Picard QC related metrics to run and check")
-
 overrides_group = parser.add_argument_group("Dockerless runs: directory override options")
 
 # TODO(julia): make sure that if any of these is specified, all the others are too
@@ -230,11 +225,13 @@ def get_and_check_targets(args, config):
 
     # if QC requested, run FASTQC and a few Picard metrics
     if args.run_qc:
-        fastqc_target = join(get_output_dir(config), "fastqc.done")
-        if fastqc_target not in targets:
-            targets.append(fastqc_target)
-        sequencing_qc_target = join(get_output_dir(config), "sequencing_qc_out.txt")
-        targets.append(sequencing_qc_target)
+        qc_targets = [
+            join(get_output_dir(config), "fastqc.done"),
+            join(get_output_dir(config), "sequencing_qc_out.txt"),
+        ]
+        for qc_target in qc_targets:
+            if qc_target not in targets:
+                targets.append(qc_target)
     
     for target in targets:
         validate_target(target, args, config)
@@ -250,14 +247,12 @@ def make_config_extension_dict(args, parsed_config):
     # include all relevant contigs in the pipeline config
     with open(parsed_config["reference"]["genome"] + ".contigs") as f:
         contigs = [x.strip() for x in f.readlines()]
-    config = {
+    return {
         'num_threads': args.cores,
         'mem_gb': args.memory,
         'contigs': contigs,
     }
-    if args.qc_metrics_file:
-        config['qc_metrics_file'] = args.qc_metrics_file
-    return config
+
 
 def run_neoantigen_pipeline(args, parsed_config, configfile):
     configfile.seek(0)

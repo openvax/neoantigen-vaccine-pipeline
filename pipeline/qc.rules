@@ -52,6 +52,7 @@ rule bed_to_interval_list:
     "O={output} "
     "SD={input.sequence_dict}"
 
+# Can only run these if you pass in a capture kit coverage file.
 if "capture_kit_coverage_file" in config["reference"]:
   rule hs_metrics:
     input:
@@ -80,21 +81,34 @@ if "capture_kit_coverage_file" in config["reference"]:
       "TARGET_INTERVALS={input.target_interval_list} "
       "2> {log}"
 
-  if "qc_metrics_file" in config:
-    rule sequencing_qc:
-      input:
-        normal_hs_metrics = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr_hs_metrics.txt"),
-        tumor_hs_metrics = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr_hs_metrics.txt"),
-        normal_markdups_metrics = join(WORKDIR, "normal_markdups_metrics.txt"),
-        tumor_markdups_metrics = join(WORKDIR, "tumor_markdups_metrics.txt"),
-        qc_metrics_file = config["qc_metrics_file"]
-      output:
-        join(WORKDIR, "sequencing_qc_out.txt")
-      shell:
-        "python $SCRIPTS/sequencing.py "
-        "--metrics-spec-file {input.qc_metrics_file} "
-        "--normal-hs-metrics {input.normal_hs_metrics} "
-        "--tumor-hs-metrics {input.tumor_hs_metrics} "
-        "--normal-duplication-metrics {input.normal_markdups_metrics} "
-        "--tumor-duplication-metrics {input.tumor_markdups_metrics} "
-        "--out {output}"
+
+def _get_sequencing_qc_input(wildcards):
+    # initialize with empty HS metrics files, update if we have a capture kit file
+    inputs = {
+        'normal_markdups_metrics': join(WORKDIR, "normal_markdups_metrics.txt"),
+        'tumor_markdups_metrics': join(WORKDIR, "tumor_markdups_metrics.txt"),
+        'normal_hs_metrics': '',
+        'tumor_hs_metrics': '',
+    }
+    if "capture_kit_coverage_file" in config["reference"]:
+        inputs.update({
+          'normal_hs_metrics': join(
+              WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr_hs_metrics.txt"),
+          'tumor_hs_metrics': join(
+                WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr_hs_metrics.txt"),
+        })
+    return inputs
+
+rule sequencing_qc:
+  input:
+    unpack(_get_sequencing_qc_input)
+  output:
+    join(WORKDIR, "sequencing_qc_out.txt")
+  shell:
+    "python $SCRIPTS/sequencing.py "
+    "--metrics-spec-file $SCRIPTS/qc-metrics-spec.yaml "
+    "--normal-hs-metrics {input.normal_hs_metrics} "
+    "--tumor-hs-metrics {input.tumor_hs_metrics} "
+    "--normal-duplication-metrics {input.normal_markdups_metrics} "
+    "--tumor-duplication-metrics {input.tumor_markdups_metrics} "
+    "--out {output}"

@@ -1,0 +1,31 @@
+normal_dna_hs_metrics:
+  - comparator: MIN
+    key: MEAN_TARGET_COVERAGE
+    value: 125
+  - comparator: MIN
+    key: PCT_TARGET_BASES_30X
+    value: 0.95
+  - comparator: MIN
+    key: PCT_PF_UQ_READS_ALIGNED
+    value: 0.5
+
+tumor_dna_hs_metrics:
+  - comparator: MIN
+    key: MEAN_TARGET_COVERAGE
+    value: 250
+  - comparator: MIN
+    key: PCT_TARGET_BASES_30X
+    value: 0.95
+  - comparator: MIN
+    key: PCT_PF_UQ_READS_ALIGNED
+    value: 0.5
+
+normal_dna_duplication_metrics:
+  - comparator: MAX
+    key: PERCENT_DUPLICATION
+    value: 0.3
+
+tumor_dna_duplication_metrics:
+  - comparator: MAX
+    key: PERCENT_DUPLICATION
+    value: 0.4

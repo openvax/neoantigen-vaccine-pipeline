@@ -42,9 +42,10 @@ if "mhc_alleles" in config["input"] and _rna_exists():
         ascii_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.txt"),
         json_file = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.json"),
         pdf_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.pdf"),
-        xlsx_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.xlsx"),
         all_passing_variants = join(WORKDIR, "all-passing-variants_{mhc_predictor}_{vcf_types}.csv")
       params:
+        # excel report is a param because if there are no vaccine peptides, this output won't exist
+        xlsx_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.xlsx"),
         mhc_alleles = config["input"]["mhc_alleles"],
         patient_id = config["input"]["id"],
         vaccine_peptide_length = 25,
@@ -69,7 +70,7 @@ if "mhc_alleles" in config["input"] and _rna_exists():
             --mhc-alleles %s \
             --output-ascii-report {output.ascii_report} \
             --output-pdf-report {output.pdf_report} \
-            --output-xlsx-report {output.xlsx_report} \
+            --output-xlsx-report {params.xlsx_report} \
             --output-json-file {output.json_file} \
             --output-passing-variants-csv {output.all_passing_variants} \
             --output-patient-id {params.patient_id} \

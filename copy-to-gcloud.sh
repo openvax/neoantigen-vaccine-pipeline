@@ -48,9 +48,9 @@ function copy_to_gcloud_if_exists {
     DEST_PATH="gs://$GCLOUD_PATH/$DEST_NAME"
 
     if [[ -f "$SOURCE_PATH" ]]; then
-        gsutil -m cp "$SOURCE_PATH" "$DEST_PATH"
+        gsutil -m cp $SOURCE_PATH $DEST_PATH
      elif [[ -d "$SOURCE_PATH" ]]; then
-        gsutil -m cp -r "$SOURCE_PATH/" "$DEST_PATH/"
+        gsutil -m cp -r $SOURCE_PATH/ $DEST_PATH/
      else
         echo "Skipping $1, file or directory not found"
     fi

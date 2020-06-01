@@ -51,7 +51,8 @@ ENV USER=user
 WORKDIR /home/user
 
 # Install the Perl vcftools
-RUN cd /tmp && wget https://kent.dl.sourceforge.net/project/vcftools/vcftools_0.1.13.tar.gz && \
+RUN cd /tmp && wget -O vcftools_0.1.13.tar.gz \
+    https://sourceforge.net/projects/vcftools/files/vcftools_0.1.13.tar.gz/download && \
     tar xvfz vcftools_0.1.13.tar.gz && cd vcftools_0.1.13/ && make && \
     sudo cp -r /tmp/vcftools_0.1.13/bin/* /usr/local/bin && \
     sudo cp -r /tmp/vcftools_0.1.13/lib/perl5/site_perl/* /usr/local/lib && \

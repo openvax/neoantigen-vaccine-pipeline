@@ -1,5 +1,5 @@
 input:
-  id: idh1-test-sample
+  id: idh1-test-sample-grch38
   mhc_alleles:
     - HLA-A*30:01
   # The input FASTQ files must live in the same directory as your config YAML file.
@@ -27,7 +27,7 @@ reference:
   dbsnp: /reference-genome/grch38/Homo_sapiens_assembly38.dbsnp138.vcf
   cosmic: /reference-genome/grch38/CosmicCodingMuts.grch38.vcf
   transcripts: /reference-genome/grch38/gencode.v22.annotation.gtf
-  capture_kit_coverage_file: /reference-genome/grch38/S04380110_Covered_grch38.bed
+  capture_kit_coverage_file: /reference-genome/grch38/S31285117_Covered_grch38.bed
 parallel_indel_realigner: true
 mhc_predictor: netmhcpan-iedb
 variant_callers:

@@ -1,0 +1,31 @@
+# Sample-specific configuration
+input:
+  id: test-sample
+  mhc_alleles:
+    - HLA-A*02:01
+    - HLA-A*30:01
+  normal:
+    - fragment_id: L001
+      type: single-end
+      r: /inputs/normal.fastq.gz
+  tumor:
+    - fragment_id: L001
+      type: single-end
+      r: /inputs/tumor.fastq.gz
+  rna:
+    - fragment_id: L001
+      type: single-end
+      r: /inputs/rna.fastq.gz
+
+# Pipeline parameter configuration
+workdir: /outputs
+reference:
+  genome: /reference-genome/b37decoy/b37decoy.fasta
+  dbsnp: /reference-genome/b37decoy/dbsnp.vcf
+  cosmic: /reference-genome/b37decoy/cosmic.vcf
+  transcripts: /reference-genome/b37decoy/transcripts.gtf
+  capture_kit_coverage_file: /reference-genome/b37decoy/S04380110_Covered.bed
+mhc_predictor: netmhcpan-iedb
+variant_callers:
+  - mutect
+  - strelka

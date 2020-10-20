@@ -1,6 +1,8 @@
 cython
+isovar==0.9.0
+mhctools>=1.8.1
 psutil
 pyyaml
-snakemake
+snakemake==5.4.4
 varcode>=0.8.0
-vaxrank>=1.0.0
+vaxrank==1.0.0

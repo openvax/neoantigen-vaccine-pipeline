@@ -96,13 +96,17 @@ RUN conda config --add channels r && \
     gatk==3.7 \
     java-jdk==8.0.92 \
     picard==2.18.5 \
-    pip \
+    pip==19.0.3 \
     sambamba==0.6.6 \
     samtools==1.8 \
-    snakemake \
     star==2.6.0c \
     vcftools==0.1.15 \
     && conda clean --all -y
+
+# Conda needs to install in two stages because for some reason it hangs when trying to do it all
+#RUN conda install -n pgv \
+#    pip==19.0.3 \
+#    && conda clean --all -y    
 
 # most of the tools we're using are in the pgv environment; adding to PATH for convenience
 ENV PATH $PGV_BIN:$PATH
@@ -112,14 +116,11 @@ ENV PATH $PGV_BIN:$PATH
 RUN conda create -n java7 java-jdk==7.0.91 && conda clean --all -y
 
 # Set up MuTect 1.1.7
-RUN wget --content-disposition https://software.broadinstitute.org/gatk/download/auth?package=M1 \
-    && unzip mutect-1.1.7.jar.zip && rm mutect-1.1.7.jar.zip
+RUN wget -O $HOME/mutect-1.1.7.jar http://storage.googleapis.com/common-files/tools/mutect-1.1.7.jar
 ENV MUTECT $HOME/mutect-1.1.7.jar
 
 # Set up GATK 3.7; need to link with gatk-register
-RUN wget --content-disposition "https://software.broadinstitute.org/gatk/download/auth?package=GATK-archive&version=3.7-0-gcfedb67" \
-    && tar -xvjf GenomeAnalysisTK-3.7-0-gcfedb67.tar.bz2 \
-    && rm -rf resources/ GenomeAnalysisTK-3.7-0-gcfedb67.tar.bz2
+RUN wget -O $HOME/GenomeAnalysisTK.jar http://storage.googleapis.com/common-files/tools/GenomeAnalysisTK.jar
 RUN $PGV_BIN/gatk-register $HOME/GenomeAnalysisTK.jar
 
 # Copy and install Vaxrank and other python dependencies; they won't change very often,

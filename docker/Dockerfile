@@ -103,11 +103,6 @@ RUN conda config --add channels r && \
     vcftools==0.1.15 \
     && conda clean --all -y
 
-# Conda needs to install in two stages because for some reason it hangs when trying to do it all
-#RUN conda install -n pgv \
-#    pip==19.0.3 \
-#    && conda clean --all -y    
-
 # most of the tools we're using are in the pgv environment; adding to PATH for convenience
 ENV PATH $PGV_BIN:$PATH
 

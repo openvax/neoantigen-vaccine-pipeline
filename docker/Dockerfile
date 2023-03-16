@@ -1,6 +1,6 @@
 # Build with: docker build -f docker/Dockerfile .
 
-FROM ubuntu:16.04
+FROM --platform=linux/amd64 ubuntu:16.04
 
 MAINTAINER Julia Kodysh <julia326@gmail.com>
 
@@ -16,6 +16,10 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
         g++ \
         libfreetype6-dev \
         libx11-dev \
+        libbz2-dev \
+        libcurl4-openssl-dev \
+        libgnutls-dev \
+        libssl-dev \
         make \
         perl \
         pkg-config \
@@ -51,7 +55,8 @@ ENV USER=user
 WORKDIR /home/user
 
 # Install the Perl vcftools
-RUN cd /tmp && wget https://kent.dl.sourceforge.net/project/vcftools/vcftools_0.1.13.tar.gz && \
+# Original address for vcftools: https://kent.dl.sourceforge.net/project/vcftools/vcftools_0.1.13.tar.gz
+RUN cd /tmp && wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/0.3.0/vcftools_0.1.13.tar.gz && \
     tar xvfz vcftools_0.1.13.tar.gz && cd vcftools_0.1.13/ && make && \
     sudo cp -r /tmp/vcftools_0.1.13/bin/* /usr/local/bin && \
     sudo cp -r /tmp/vcftools_0.1.13/lib/perl5/site_perl/* /usr/local/lib && \
@@ -60,8 +65,9 @@ RUN cd /tmp && wget https://kent.dl.sourceforge.net/project/vcftools/vcftools_0.
 ENV PERL5LIB /usr/local/lib
 
 # Install Strelka
+# Original address for Strelka: ftp://strelka:%27%27@ftp.illumina.com/v1-branch/v1.0.14/strelka_workflow-1.0.14.tar.gz
 RUN mkdir $HOME/strelka && \
-    cd /tmp && wget ftp://strelka:%27%27@ftp.illumina.com/v1-branch/v1.0.14/strelka_workflow-1.0.14.tar.gz && \
+    cd /tmp && wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/0.3.0/strelka_workflow-1.0.14.tar.gz && \
     tar xvfz strelka_workflow-1.0.14.tar.gz && \
     cd strelka_workflow-1.0.14 && \
     ./configure prefix=$HOME/strelka && \
@@ -139,6 +145,9 @@ ENV STRELKA_CONFIG $HOME/pipeline/strelka_config.txt
 
 # Python scripts setup, for things that are too small/simple to be their own modules
 ENV SCRIPTS $HOME/pipeline/scripts
+
+# MHCFlurry download models
+RUN /home/user/miniconda/envs/pgv/bin/mhcflurry-downloads fetch
 
 # snakemake logs get written here (hidden dir)
 RUN mkdir -p $HOME/.snakemake && sudo chown -R $USER $HOME/.snakemake

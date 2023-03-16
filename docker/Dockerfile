@@ -95,6 +95,8 @@ RUN conda config --add channels r && \
     conda config --add channels conda-forge && \
     conda config --add channels bioconda && \
     conda create -n pgv \
+    setuptools==57.4.0 \
+    python=3.6 \
     bedtools \
     bwa==0.7.17 \
     cython \
@@ -108,6 +110,22 @@ RUN conda config --add channels r && \
     star==2.6.0c \
     vcftools==0.1.15 \
     && conda clean --all -y
+
+# We also setup a newer environment with mhcflurry and an updated vaxrank.
+RUN conda config --add channels r && \
+    conda config --add channels defaults && \
+    conda config --add channels conda-forge && \
+    conda config --add channels bioconda && \
+    conda create -n mhcflurry \
+    python=3.7 numpy pandas pip
+
+ENV MHCFLURRY_BIN /home/user/miniconda/envs/mhcflurry/bin
+RUN $MHCFLURRY_BIN/pip install 'tensorflow-cpu<=2.3.0' mhcflurry vaxrank
+RUN $MHCFLURRY_BIN/mhcflurry-downloads fetch
+
+# Test MHCflurry
+RUN $MHCFLURRY_BIN/mhcflurry-predict --alleles HLA-A0201 --peptides SIINFEKL
+
 
 # most of the tools we're using are in the pgv environment; adding to PATH for convenience
 ENV PATH $PGV_BIN:$PATH
@@ -145,9 +163,6 @@ ENV STRELKA_CONFIG $HOME/pipeline/strelka_config.txt
 
 # Python scripts setup, for things that are too small/simple to be their own modules
 ENV SCRIPTS $HOME/pipeline/scripts
-
-# MHCFlurry download models
-RUN /home/user/miniconda/envs/pgv/bin/mhcflurry-downloads fetch
 
 # snakemake logs get written here (hidden dir)
 RUN mkdir -p $HOME/.snakemake && sudo chown -R $USER $HOME/.snakemake

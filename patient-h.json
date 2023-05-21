@@ -1,0 +1,71 @@
+{
+  "taskName": "patient-h",
+  "taskRunName": "patient-h-run",
+  "taskNamespace": "breakbio-dev",
+  "openvaxContainerName": "hremon331046/neoantigen-vaccine-pipeline:d0.4",
+  "resourceLimit": {
+    "cpu": "46",
+    "memory": "360Gi"
+  },
+  "referenceGenomeBucket": {
+    "bucketName": "breakbio-reference-gnome",
+    "bucketRegionName": "us-west-2"
+  },
+  "inputBucket": {
+    "bucketName": "patient-h-input",
+    "bucketRegionName": "us-east-1"
+  },
+  "outputBucket": {
+    "bucketName": "patient-h-output",
+    "bucketRegionName": "us-east-1"
+  },
+  "input_config": {
+    "input": {
+      "id": "patient-h-sample",
+      "mhc_alleles": [
+        "HLA-A*01:01:01",
+        "HLA-A*31:01:02",
+        "HLA-B*08:01:01",
+        "HLA-B*51:01:01",
+        "HLA-C*07:01:01",
+        "HLA-C*05:01:01"
+      ],
+      "normal": [
+        {
+          "fragment_id": "L001",
+          "type": "paired-end",
+          "r1": "/inputs/patient_h_normal_dna_1_1.fastq.gz",
+          "r2": "/inputs/patient_h_normal_dna_1_2.fastq.gz"
+        }],
+      "tumor": [
+        {
+          "fragment_id": "L001",
+          "type": "paired-end",
+          "r1": "/inputs/patient_h_tumor_dna_1_1.fastq.gz",
+          "r2": "/inputs/patient_h_tumor_dna_1_2.fastq.gz"
+        }],
+      "rna": [
+        {
+          "fragment_id": "L001",
+          "type": "single-end",
+          "r": "/inputs/patient_h_tumor_rna_1_3.fastq.gz"
+        }]
+    },
+    "workdir": "/outputs",
+    "reference": {
+      "genome": "/reference-genome/b37decoy/b37decoy.fasta",
+      "dbsnp": "/reference-genome/b37decoy/dbsnp.vcf",
+      "cosmic": "/reference-genome/b37decoy/cosmic.vcf",
+      "transcripts": "/reference-genome/b37decoy/transcripts.gtf",
+      "capture_kit_coverage_file": "/reference-genome/b37decoy/S04380110_Covered_grch37_with_M.bed"
+    },
+    "parallel_indel_realigner": true,
+    "mhc_predictor": "netmhcpan-iedb",
+    "variant_callers": [
+      "mutect",
+      "strelka"
+    ]
+  }
+}
+
+

@@ -5,11 +5,12 @@
 set -ex
 
 # docker hub username
-USERNAME=openvax
+USERNAME=hremon331046
+IMAGE_TAG=d0.4.1
 # image name
 IMAGE=neoantigen-vaccine-pipeline
 # directory of this script
 BASEDIR=$(dirname "$0")
 
 # Build image
-docker build -t $USERNAME/$IMAGE:latest -f $BASEDIR/docker/Dockerfile .
+docker build -t $USERNAME/$IMAGE:$IMAGE_TAG -f $BASEDIR/docker/Dockerfile .

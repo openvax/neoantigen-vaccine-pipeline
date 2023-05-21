@@ -1,0 +1,55 @@
+
+{
+  "taskName": "dummy-patient",
+  "taskRunName": "dummy-patient",
+  "taskNamespace": "breakbio-dev",
+  "openvaxContainerName": "docker.io/hremon331046/neoantigen-vaccine-pipeline:d0.4",
+  "resourceLimit": {
+    "cpu": "20",
+    "memory": "36Gi"
+  },
+  "referenceGenomeBucket": {
+    "bucketName": "breakbio-reference-gnome",
+    "bucketRegionName": "us-west-2"
+  },
+  "inputBucket": {
+    "bucketName": "idh-sample-input",
+    "bucketRegionName": "us-west-2"
+  },
+  "outputBucket": {
+    "bucketName": "demo-pipe-s3",
+    "bucketRegionName": "us-east-1"
+  },
+  "input_config":{
+    "input": {
+      "id": "idh1-test-sample",
+      "mhc_alleles": ["HLA-A*30:01"],
+      "normal": [{
+        "fragment_id": "L001",
+        "type": "single-end",
+        "r": "/inputs/idh1_r132h_normal.fastq.gz"
+      }],
+      "tumor": [{
+        "fragment_id": "L001",
+        "type": "single-end",
+        "r": "/inputs/idh1_r132h_tumor.fastq.gz"
+      }],
+      "rna": [{
+        "fragment_id": "L001",
+        "type": "single-end",
+        "r": "/inputs/idh1_r132h_tumor.fastq.gz"
+      }]
+    },
+    "workdir": "/outputs",
+    "reference": {
+      "genome": "/reference-genome/b37decoy/b37decoy.fasta",
+      "dbsnp": "/reference-genome/b37decoy/dbsnp.vcf",
+      "cosmic": "/reference-genome/b37decoy/cosmic.vcf",
+      "transcripts": "/reference-genome/b37decoy/transcripts.gtf",
+      "capture_kit_coverage_file": "/reference-genome/b37decoy/S04380110_Covered_grch37_with_M.bed"
+    },
+    "parallel_indel_realigner": true,
+    "mhc_predictor": "netmhcpan-iedb",
+    "variant_callers": ["mutect","strelka"]
+  }
+}

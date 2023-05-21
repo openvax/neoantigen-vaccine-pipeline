@@ -1,9 +1,10 @@
 cython
-isovar==0.9.0
+isovar>=1.1.1
 mhctools>=1.8.1
 psutil
 pyensembl==1.7.3
 pyyaml
 snakemake==5.4.4
 varcode==0.8.0
-vaxrank==1.0.0
+git+https://github.com/BreakBio-Corp/vaxrank.git
+gtfparse==1.2.0

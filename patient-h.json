@@ -2,7 +2,7 @@
   "taskName": "patient-h",
   "taskRunName": "patient-h-run",
   "taskNamespace": "breakbio-dev",
-  "openvaxContainerName": "hremon331046/neoantigen-vaccine-pipeline:d0.4",
+  "openvaxContainerName": "hremon331046/neoantigen-vaccine-pipeline:d0.4.1",
   "resourceLimit": {
     "cpu": "46",
     "memory": "360Gi"

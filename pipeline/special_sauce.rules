@@ -81,5 +81,6 @@ if "mhc_alleles" in config["input"] and _rna_exists():
             --min-mapping-quality {params.min_mapping_quality} \
             --min-variant-sequence-coverage {params.min_variant_sequence_coverage} \
             --min-alt-rna-reads {params.min_alt_rna_reads} \
+            --min-epitope-score 10e-100 \
             --mhc-epitope-lengths {params.mhc_epitope_lengths}
             """ % (vcf_input_str, ",".join(params.mhc_alleles)))

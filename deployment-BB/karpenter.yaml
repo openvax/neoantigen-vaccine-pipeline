@@ -1,0 +1,28 @@
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: alpha.eksctl.io/nodegroup-name
+              operator: In
+              values:
+                - worker-ng-1
+
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/instance: karpenterSkip
+            app.kubernetes.io/name: karpenterSkip
+        topologyKey: kubernetes.io/hostname
+
+
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::359343221949:role/eksctl-breakbio-cluster-addon-iamserviceacco-Role1-VP66ZLZWDVHC
+settings:
+  aws:
+    clusterEndpoint: https://E46563B40B372DBC2333BFCD212C0A8C.gr7.us-east-1.eks.amazonaws.com
+    clusterName: breakbio-cluster
+    defaultInstanceProfile: "eks-08c30e12-4d82-65a1-5f68-6a78c27d2ee3"

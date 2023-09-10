@@ -66,16 +66,15 @@ ENV PERL5LIB /usr/local/lib
 
 # Install Strelka
 # Original address for Strelka: ftp://strelka:%27%27@ftp.illumina.com/v1-branch/v1.0.14/strelka_workflow-1.0.14.tar.gz
-RUN mkdir $HOME/strelka && \
-    cd /tmp && wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/0.3.0/strelka_workflow-1.0.14.tar.gz && \
-    tar xvfz strelka_workflow-1.0.14.tar.gz && \
-    cd strelka_workflow-1.0.14 && \
-    ./configure prefix=$HOME/strelka && \
-    make && \
-    chmod -R a+rx ./* && \
-    make install && \
+RUN export STRELKA_VERSION=2.9.10 && \
+    cd /tmp && \
+    mkdir $HOME/strelka && \
+    wget https://github.com/Illumina/strelka/releases/download/v${STRELKA_VERSION}/strelka-${STRELKA_VERSION}.release_src.tar.bz2 && \
+    tar -xjf strelka-${STRELKA_VERSION}.release_src.tar.bz2 && \
+    mkdir build && cd build && \
+    ../strelka-${STRELKA_VERSION}.release_src/configure --jobs=4 --prefix=$HOME/strelka && \
+    make -j4 install && \
     rm -rf /tmp/*
-
 ENV STRELKA_BIN $HOME/strelka/bin
 
 # Install Miniconda

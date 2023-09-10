@@ -108,7 +108,7 @@ rule strelka:
     normal = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"),
     tumor = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam")
   output:
-    expand(join(WORKDIR, "strelka_output/results/passed.somatic.{type}.vcf"),
+    expand(join(WORKDIR, "strelka_output/results/variants/somatic.{type}.vcf"),
       type=['snvs', 'indels'])
   params:
     output_dir = join(WORKDIR, "strelka_output"),
@@ -120,20 +120,21 @@ rule strelka:
   threads: _get_all_cores
   shell:
     "rm -rf {params.output_dir}; "
-    "$STRELKA_BIN/configureStrelkaWorkflow.pl "
-    "--normal {input.normal} "
-    "--tumor {input.tumor} "
-    "--ref {params.reference} "
+    "$STRELKA_BIN/configureStrelkaSomaticWorkflow.py "
+    "--normalBam {input.normal} "
+    "--tumorBam {input.tumor} "
+    "--referenceFasta {params.reference} "
     "--config $STRELKA_CONFIG "
-    "--output-dir {params.output_dir} &> {log}; "
+    "--runDir {params.output_dir} &> {log}; "
     "cd {params.output_dir}; "
-    "make -j {threads} "
-    ">> {log} 2>&1"
+    "./runWorkflow.py -m local -j {threads} "
+    ">> {log} 2>&1; "
+    "cd results/variants; gunzip -k  somatic.snvs.vcf.gz somatic.indels.vcf.gz"
 
 rule strelka_combine:
   input:
-    snvs = join(WORKDIR, "strelka_output/results/passed.somatic.snvs.vcf"),
-    indels = join(WORKDIR, "strelka_output/results/passed.somatic.indels.vcf")
+    snvs = join(WORKDIR, "strelka_output/results/variants/somatic.snvs.vcf"),
+    indels = join(WORKDIR, "strelka_output/results/variants/somatic.indels.vcf")
   output:
     join(WORKDIR, "strelka.vcf")
   params:

@@ -104,3 +104,5 @@ ENV/
 
 # creation of test data
 snakemake/test-sample/*
+
+.idea/*

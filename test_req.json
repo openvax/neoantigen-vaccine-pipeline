@@ -3,7 +3,7 @@
   "taskName": "dummy-patient",
   "taskRunName": "dummy-patient",
   "taskNamespace": "breakbio-dev",
-  "openvaxContainerName": "docker.io/hremon331046/neoantigen-vaccine-pipeline:d0.4",
+  "openvaxContainerName": "docker.io/hremon331046/neoantigen-vaccine-pipeline:d0.4.2-strelka-v2-test-1.2",
   "resourceLimit": {
     "cpu": "20",
     "memory": "36Gi"

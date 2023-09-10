@@ -6,7 +6,7 @@ set -ex
 
 # docker hub username
 USERNAME=hremon331046
-IMAGE_TAG=d0.4.1
+IMAGE_TAG=d0.4.2-strelka-v2-test-1.2
 # image name
 IMAGE=neoantigen-vaccine-pipeline
 # directory of this script

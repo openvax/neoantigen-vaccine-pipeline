@@ -1,4 +1,4 @@
-[user]
+[StrelkaSomatic]
 isSkipDepthFilters = 1
 maxInputDepth = 10000
 depthFilterMultiple = 3.0
@@ -19,3 +19,23 @@ sindelQuality_LowerBound = 30
 isWriteRealignedBam = 0
 binSize = 25000000
 extraStrelkaArguments = --eland-compatibility
+
+
+# =================== add new config for strelka 2 by emon ==================
+# Maximum reported indel size
+#
+maxIndelSize = 49
+
+#
+# somatic indel noise factor
+#
+sindelNoiseFactor = 2.2
+
+
+#
+# Tolerance of tumor contamination in the normal sample
+# Allowed range: [0-1]
+#
+ssnvContamTolerance = 0.15
+indelContamTolerance = 0.15
+

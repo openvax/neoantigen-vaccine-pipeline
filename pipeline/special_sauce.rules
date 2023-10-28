@@ -54,7 +54,7 @@ if "mhc_alleles" in config["input"] and _rna_exists():
         min_mapping_quality = 1,
         min_variant_sequence_coverage = 1,
         min_alt_rna_reads = 2,
-        mhc_epitope_lengths = "8-11"
+        mhc_epitope_lengths = "15-20"
       benchmark:
         join(BENCHMARKDIR, "vaxrank_{mhc_predictor}_{vcf_types}.txt")
       log:

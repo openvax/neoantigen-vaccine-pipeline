@@ -168,3 +168,5 @@ ENV SCRIPTS $HOME/pipeline/scripts
 RUN mkdir -p $HOME/.snakemake && sudo chown -R $USER $HOME/.snakemake
 
 ENTRYPOINT ["python", "run_snakemake.py"]
+#ENTRYPOINT ["sleep", "36000"]
+

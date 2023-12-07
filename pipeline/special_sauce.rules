@@ -48,7 +48,7 @@ if "mhc_alleles" in config["input"] and _rna_exists():
         xlsx_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.xlsx"),
         mhc_alleles = config["input"]["mhc_alleles"],
         patient_id = config["input"]["id"],
-        vaccine_peptide_length = 25,
+        vaccine_peptide_length = 40,
         padding_around_mutation = 5,
         max_vaccine_peptides_per_mutation = 3,
         min_mapping_quality = 1,

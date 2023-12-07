@@ -1,14 +1,35 @@
+#apiVersion: v1
+#kind: Pod
+#metadata:
+#  name: busybox-test
+#  labels:
+#    app: busybox1
+#spec:
+#  containers:
+#    - name: busybox1
+#      image: docker.io/hremon331046/neoantigen-vaccine-pipeline:d0.4.2-mhc2-test-v1.0.0
+#      imagePullPolicy: IfNotPresent
+#      ports:
+#        - containerPort: 80
+#      command: ["/bin/sh", "-ec", "sleep 10000"]
+
+
+
+---
+
 apiVersion: v1
 kind: Pod
 metadata:
-  name: busybox-test
-  labels:
-    app: busybox1
+  name: my-pod
+  namespace: breakbio-dev
 spec:
   containers:
-    - name: busybox1
-      image: docker.io/hremon331046/neoantigen-vaccine-pipeline:d0.4.2-mhc2-test-v1.0.0
-      imagePullPolicy: IfNotPresent
-      ports:
-        - containerPort: 80
-      command: ["/bin/sh", "-ec", "sleep 10000"]
+    - name: my-container
+      image: nginx
+      volumeMounts:
+        - name: my-volume
+          mountPath: /outputs
+  volumes:
+    - name: my-volume
+      persistentVolumeClaim:
+        claimName: pvc-patient-h-mhc2-flexible-cutoff-1

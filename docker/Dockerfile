@@ -1,6 +1,6 @@
 # Build with: docker build -f docker/Dockerfile .
 
-FROM --platform=linux/amd64 ubuntu:16.04
+FROM --platform=linux/amd64 ubuntu:22.04
 
 MAINTAINER Julia Kodysh <julia326@gmail.com>
 
@@ -18,14 +18,13 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
         libx11-dev \
         libbz2-dev \
         libcurl4-openssl-dev \
-        libgnutls-dev \
+        libgnutls28-dev \
         libssl-dev \
         make \
         perl \
         pkg-config \
         python-tk \
         python2.7-dev \
-        python3.5-dev \
         rsync \
         sudo \
         tar \
@@ -38,12 +37,12 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
     rm -rf /var/lib/apt/lists/*
 
 # install wkhtmltopdf from source, this version comes with patched QT necessary for PDF gen
-RUN cd /tmp && \
-    wget https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz && \
-    tar xvfJ wkhtmltox-0.12.4_linux-generic-amd64.tar.xz && \
-    cd /tmp/wkhtmltox/bin && sudo chown root:root wkhtmltopdf && \
-    sudo cp /tmp/wkhtmltox/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf && \
-    rm -rf /tmp/*
+# RUN cd /tmp && \
+#    wget https://github.com/wkhtmltopdf/wkhtmltopdf/archive/refs/tags/0.12.6.tar.gz && \
+#    tar xvzf 0.12.6.tar.gz && \
+#    cd /tmp/wkhtmltox/bin && sudo chown root:root wkhtmltopdf && \
+#    sudo cp /tmp/wkhtmltox/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf && \
+#    rm -rf /tmp/*
 
 RUN useradd --create-home --home-dir /home/user --shell /bin/bash -G sudo user && \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
@@ -66,17 +65,15 @@ ENV PERL5LIB /usr/local/lib
 
 # Install Strelka
 # Original address for Strelka: ftp://strelka:%27%27@ftp.illumina.com/v1-branch/v1.0.14/strelka_workflow-1.0.14.tar.gz
-RUN mkdir $HOME/strelka && \
-    cd /tmp && wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/0.3.0/strelka_workflow-1.0.14.tar.gz && \
-    tar xvfz strelka_workflow-1.0.14.tar.gz && \
-    cd strelka_workflow-1.0.14 && \
-    ./configure prefix=$HOME/strelka && \
-    make && \
-    chmod -R a+rx ./* && \
-    make install && \
-    rm -rf /tmp/*
-
-ENV STRELKA_BIN $HOME/strelka/bin
+# RUN mkdir $HOME/strelka && \
+#     cd /tmp && wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/0.3.0/strelka_workflow-1.0.14.tar.gz && \
+#     tar xvfz strelka_workflow-1.0.14.tar.gz && \
+#     cd strelka_workflow-1.0.14 && \
+#     ./configure prefix=$HOME/strelka && \
+#     make && \
+#     chmod -R a+rx ./* && \
+#     make install && \
+#     rm -rf /tmp/*
 
 # Install Miniconda
 RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && \
@@ -95,44 +92,56 @@ RUN conda config --add channels r && \
     conda config --add channels conda-forge && \
     conda config --add channels bioconda && \
     conda create -n pgv \
-    setuptools==57.4.0 \
+    setuptools \
     python=3.6 \
     bedtools \
     bwa==0.7.17 \
     cython \
     fastqc \
     gatk==3.7 \
-    java-jdk==8.0.92 \
+    java-jdk==8.0.112 \
     picard==2.18.5 \
-    pip==19.0.3 \
-    sambamba==0.6.6 \
-    samtools==1.8 \
+    pip \
+    sambamba \
+    samtools \
     star==2.6.0c \
     vcftools==0.1.15 \
     && conda clean --all -y
 
-# We also setup a newer environment with mhcflurry and an updated vaxrank.
+# We also setup a newer environment with mhcflurry.
+#RUN conda config --add channels r && \
+#    conda config --add channels defaults && \
+#    conda config --add channels conda-forge && \
+#    conda config --add channels bioconda && \
+#    conda create -n mhcflurry \
+#    python=3.7 numpy pandas pip \
+#    && conda clean --all -y
+
+# And an older one with Python 2.7 so that Strelka can run.
 RUN conda config --add channels r && \
     conda config --add channels defaults && \
     conda config --add channels conda-forge && \
     conda config --add channels bioconda && \
-    conda create -n mhcflurry \
-    python=3.7 numpy pandas pip
-
-ENV MHCFLURRY_BIN /home/user/miniconda/envs/mhcflurry/bin
-RUN $MHCFLURRY_BIN/pip install 'tensorflow-cpu<=2.3.0' mhcflurry vaxrank
-RUN $MHCFLURRY_BIN/mhcflurry-downloads fetch
-
-# Test MHCflurry
-RUN $MHCFLURRY_BIN/mhcflurry-predict --alleles HLA-A0201 --peptides SIINFEKL
-
-
-# most of the tools we're using are in the pgv environment; adding to PATH for convenience
-ENV PATH $PGV_BIN:$PATH
+    conda create -n strelka \
+    python=2.7 \
+    strelka==2.9.10 \
+    && conda clean --all -y
 
 # MuTect needs Java 1.7, while GATK and other things need Java 1.8.
 # Dealing with this by setting up a separate Conda environment, specifically for Java 7
-RUN conda create -n java7 java-jdk==7.0.91 && conda clean --all -y
+RUN conda create -n java7 \
+    java-jdk==7.0.91 \
+    && conda clean --all -y
+
+#ENV MHCFLURRY_BIN /home/user/miniconda/envs/mhcflurry/bin
+#RUN $MHCFLURRY_BIN/pip install 'tensorflow-cpu<=2.3.0' mhcflurry vaxrank
+#RUN $MHCFLURRY_BIN/mhcflurry-downloads fetch
+
+# Test MHCflurry
+#RUN $MHCFLURRY_BIN/mhcflurry-predict --alleles HLA-A0201 --peptides SIINFEKL
+
+# most of the tools we're using are in the pgv environment; adding to PATH for convenience
+ENV PATH $PGV_BIN:$PATH
 
 # Set up MuTect 1.1.7
 RUN wget -O $HOME/mutect-1.1.7.jar http://storage.googleapis.com/common-files/tools/mutect-1.1.7.jar
@@ -160,6 +169,7 @@ COPY . $HOME
 
 # Strelka setup
 ENV STRELKA_CONFIG $HOME/pipeline/strelka_config.txt
+ENV STRELKA_BIN $HOME/miniconda/envs/strelka/bin
 
 # Python scripts setup, for things that are too small/simple to be their own modules
 ENV SCRIPTS $HOME/pipeline/scripts

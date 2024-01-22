@@ -32,7 +32,7 @@ if "mhc_alleles" in config["input"] and _rna_exists():
         if wildcards.vcf_types != "-".join(config["variant_callers"]):
             raise ValueError("Vaccine peptide report output filenames must match variant callers "
                 "specified in config: %s" % config["variant_callers"])
-    
+
     rule vaxrank:
       input:
         vcfs = _get_vaxrank_input_vcfs,
@@ -41,7 +41,8 @@ if "mhc_alleles" in config["input"] and _rna_exists():
       output:
         ascii_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.txt"),
         json_file = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.json"),
-        pdf_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.pdf"),
+	# commenting this out for now: will need to figure out wkhtmltopdf install in Docker image
+        #pdf_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.pdf"),
         all_passing_variants = join(WORKDIR, "all-passing-variants_{mhc_predictor}_{vcf_types}.csv")
       params:
         # excel report is a param because if there are no vaccine peptides, this output won't exist
@@ -69,7 +70,6 @@ if "mhc_alleles" in config["input"] and _rna_exists():
             --mhc-predictor {wildcards.mhc_predictor} \
             --mhc-alleles %s \
             --output-ascii-report {output.ascii_report} \
-            --output-pdf-report {output.pdf_report} \
             --output-xlsx-report {params.xlsx_report} \
             --output-json-file {output.json_file} \
             --output-passing-variants-csv {output.all_passing_variants} \

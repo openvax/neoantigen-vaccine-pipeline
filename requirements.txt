@@ -1,9 +1,9 @@
 cython
-isovar
-mhctools
+isovar==1.3.0
+mhctools==1.8.1
 psutil
-pyensembl
+pyensembl==2.2.4
 pyyaml
 snakemake==5.4.4
-varcode
-vaxrank
+varcode==1.1.0
+vaxrank==1.4.0

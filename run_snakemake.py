@@ -200,7 +200,8 @@ def default_vaxrank_targets(config):
     path_without_ext = join(
         get_output_dir(config),
         "vaccine-peptide-report_%s_%s" % (mhc_predictor, vcfs))
-    return ['%s.%s' % (path_without_ext, ext) for ext in ('txt', 'json', 'pdf')]
+    # removed 'pdf' from this list until we install wkhtmltopdf in Docker image
+    return ['%s.%s' % (path_without_ext, ext) for ext in ('txt', 'json')]
 
 
 def somatic_vcf_targets(config):

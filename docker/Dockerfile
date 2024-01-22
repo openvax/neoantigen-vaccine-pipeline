@@ -75,8 +75,6 @@ ENV PERL5LIB /usr/local/lib
 #     make install && \
 #     rm -rf /tmp/*
 
-# ENV STRELKA_BIN $HOME/strelka/bin
-
 # Install Miniconda
 RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && \
     bash miniconda.sh -b -p $HOME/miniconda
@@ -110,24 +108,22 @@ RUN conda config --add channels r && \
     vcftools==0.1.15 \
     && conda clean --all -y
 
-# bwa==0.7.17 gatk==3.7 java-jdk==8.0.92 picard==2.18.5 sambamba
-
 # We also setup a newer environment with mhcflurry.
-RUN conda config --add channels r && \
-    conda config --add channels defaults && \
-    conda config --add channels conda-forge && \
-    conda config --add channels bioconda && \
-    conda create -n mhcflurry \
-    python=3.7 numpy pandas pip \
-    && conda clean --all -y
+#RUN conda config --add channels r && \
+#    conda config --add channels defaults && \
+#    conda config --add channels conda-forge && \
+#    conda config --add channels bioconda && \
+#    conda create -n mhcflurry \
+#    python=3.7 numpy pandas pip \
+#    && conda clean --all -y
 
 # And an older one with Python 2.7 so that Strelka can run.
 RUN conda config --add channels r && \
     conda config --add channels defaults && \
     conda config --add channels conda-forge && \
     conda config --add channels bioconda && \
-    conda create -n mhcflurry \
-    python==2.7 \
+    conda create -n strelka \
+    python=2.7 \
     strelka==2.9.10 \
     && conda clean --all -y
 
@@ -137,12 +133,12 @@ RUN conda create -n java7 \
     java-jdk==7.0.91 \
     && conda clean --all -y
 
-ENV MHCFLURRY_BIN /home/user/miniconda/envs/mhcflurry/bin
-RUN $MHCFLURRY_BIN/pip install 'tensorflow-cpu<=2.3.0' mhcflurry vaxrank
-RUN $MHCFLURRY_BIN/mhcflurry-downloads fetch
+#ENV MHCFLURRY_BIN /home/user/miniconda/envs/mhcflurry/bin
+#RUN $MHCFLURRY_BIN/pip install 'tensorflow-cpu<=2.3.0' mhcflurry vaxrank
+#RUN $MHCFLURRY_BIN/mhcflurry-downloads fetch
 
 # Test MHCflurry
-RUN $MHCFLURRY_BIN/mhcflurry-predict --alleles HLA-A0201 --peptides SIINFEKL
+#RUN $MHCFLURRY_BIN/mhcflurry-predict --alleles HLA-A0201 --peptides SIINFEKL
 
 # most of the tools we're using are in the pgv environment; adding to PATH for convenience
 ENV PATH $PGV_BIN:$PATH
@@ -173,6 +169,7 @@ COPY . $HOME
 
 # Strelka setup
 ENV STRELKA_CONFIG $HOME/pipeline/strelka_config.txt
+ENV STRELKA_BIN $HOME/miniconda/envs/strelka/bin
 
 # Python scripts setup, for things that are too small/simple to be their own modules
 ENV SCRIPTS $HOME/pipeline/scripts

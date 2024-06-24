@@ -7,3 +7,8 @@ pyyaml
 snakemake==5.4.4
 varcode==1.1.0
 vaxrank==1.4.0
+tensorflow-cpu<=2.3.0
+mhcflurry
+numpy
+pandas
+jinja2==3.0.3

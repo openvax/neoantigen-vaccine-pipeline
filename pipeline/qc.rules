@@ -16,11 +16,7 @@
 This file contains QC-related processing rules.
 """
 
-import glob
 from os.path import join
-
-def _get_all_fastq_files(_):
-    return glob.glob("%s/*.fastq.gz" % WORKDIR)
 
 rule fastqc:
   input:

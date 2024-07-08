@@ -48,7 +48,7 @@ rule bwa_mem_single_end:
     r = join(WORKDIR, "{prefix}.fastq.gz"),
     done = config["reference"]["genome"] + ".done"
   output:
-    join(WORKDIR, "{prefix}_aligned.sam")
+    temp(join(WORKDIR, "{prefix}_aligned.sam"))
   params:
     rg = _get_read_group_header,
     reference = config["reference"]["genome"]
@@ -70,7 +70,7 @@ rule bwa_mem_paired_end:
     r2 = join(WORKDIR, "{prefix}_R2.fastq.gz"),
     done = config["reference"]["genome"] + ".done"
   output:
-    join(WORKDIR, "{prefix}_aligned.sam")
+    temp(join(WORKDIR, "{prefix}_aligned.sam"))
   params:
     rg = _get_read_group_header,
     reference = config["reference"]["genome"]
@@ -90,7 +90,8 @@ rule convert_alignment_to_sorted_bam:
   input:
     join(WORKDIR, "{prefix}_aligned.sam")
   output:
-    join(WORKDIR, "{prefix}_aligned_coordinate_sorted.bam")
+    bam = temp(join(WORKDIR, "{prefix}_aligned_coordinate_sorted.bam")),
+    tmpdir = temp(directory(join(WORKDIR, "{prefix}_tmp")))
   params:
     mem_gb = _mem_gb_for_ram_hungry_jobs(),
     tmpdir = join(WORKDIR, "{prefix}_tmp")
@@ -103,14 +104,14 @@ rule convert_alignment_to_sorted_bam:
   shell:
     "TMPDIR={params.tmpdir} "
     "picard -Xmx{params.mem_gb}g -Djava.io.tmpdir={params.tmpdir} "
-    "SortSam INPUT={input} OUTPUT={output} SORT_ORDER=coordinate 2> {log}"
+    "SortSam INPUT={input} OUTPUT={output.bam} SORT_ORDER=coordinate 2> {log}"
 
 rule merge_normal_aligned_fragments:
   input:
     expand(join(WORKDIR, "normal_{fragment_id}_aligned_coordinate_sorted.bam"),
       fragment_id=_get_fragment_ids("normal"))
   output:
-    join(WORKDIR, "normal_merged_aligned_coordinate_sorted.bam")
+    temp(join(WORKDIR, "normal_merged_aligned_coordinate_sorted.bam"))
   threads: _get_half_cores
   run:
     if len(input) > 1:
@@ -123,7 +124,7 @@ rule merge_tumor_aligned_fragments:
     expand(join(WORKDIR, "tumor_{fragment_id}_aligned_coordinate_sorted.bam"),
       fragment_id=_get_fragment_ids("tumor"))
   output:
-    join(WORKDIR, "tumor_merged_aligned_coordinate_sorted.bam")
+    temp(join(WORKDIR, "tumor_merged_aligned_coordinate_sorted.bam"))
   threads: _get_half_cores
   run:
     if len(input) > 1:

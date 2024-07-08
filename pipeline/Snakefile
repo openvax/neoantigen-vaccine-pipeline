@@ -30,6 +30,10 @@ include:
 include:
     "qc.rules"
 
+# make a workdir "tmp" subdirectory if it doesn't exist - needed for some processes
+if not os.path.exists("/outputs/tmp"):
+  os.makedirs("/outputs/tmp")
+
 # copy all fragments over to the sample-specific workdir, create if it doesn't exist
 if not os.path.exists(WORKDIR):
   os.makedirs(WORKDIR)

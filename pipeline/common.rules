@@ -14,6 +14,7 @@
 
 # This file contains pipeline constants and a few functions.
 
+import glob
 from os.path import join, dirname, splitext
 
 SAMPLE_ID = config["input"]["id"]
@@ -68,6 +69,9 @@ def _get_fragment_ids(input_type):
     for fragment in config["input"][input_type]:
       fragment_ids.append(fragment["fragment_id"])
   return fragment_ids
+
+def _get_all_fastq_files(_):
+    return glob.glob("%s/*.fastq.gz" % WORKDIR)
 
 def sequence_dict_output():
   root, ext = splitext(config["reference"]["genome"])

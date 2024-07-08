@@ -25,7 +25,11 @@ if _rna_exists():
       r2 = join(WORKDIR, "{prefix}_R2.fastq.gz"),
       done = config["reference"]["genome"] + ".done"
     output:
-      join(WORKDIR, "{prefix}Aligned.sortedByCoord.out.bam")
+      temp(join(WORKDIR, "{prefix}Aligned.sortedByCoord.out.bam")),
+      temp(join(WORKDIR, "{prefix}Log.final.out")),
+      temp(join(WORKDIR, "{prefix}Log.out")),
+      temp(join(WORKDIR, "{prefix}Log.progress.out")),
+      temp(join(WORKDIR, "{prefix}SJ.out.tab"))
     params:
       genome_dir = _STAR_GENOME_DIR,
       output_dir = WORKDIR,
@@ -58,7 +62,11 @@ if _rna_exists():
       r = join(WORKDIR, "{prefix}.fastq.gz"),
       done = config["reference"]["genome"] + ".done"
     output:
-      join(WORKDIR, "{prefix}Aligned.sortedByCoord.out.bam")
+      temp(join(WORKDIR, "{prefix}Aligned.sortedByCoord.out.bam")),
+      temp(join(WORKDIR, "{prefix}Log.final.out")),
+      temp(join(WORKDIR, "{prefix}Log.out")),
+      temp(join(WORKDIR, "{prefix}Log.progress.out")),
+      temp(join(WORKDIR, "{prefix}SJ.out.tab"))
     params:
       genome_dir = _STAR_GENOME_DIR,
       output_dir = WORKDIR,
@@ -91,7 +99,7 @@ if _rna_exists():
       expand(join(WORKDIR, "rna_{fragment_id}Aligned.sortedByCoord.out.bam"),
         fragment_id=_get_fragment_ids("rna"))
     output:
-      join(WORKDIR, "rna_merged_aligned_coordinate_sorted.bam")
+      temp(join(WORKDIR, "rna_merged_aligned_coordinate_sorted.bam"))
     benchmark:
       join(BENCHMARKDIR, "merge_rna_aligned_fragments.txt")
     log:
@@ -112,7 +120,7 @@ if _rna_exists():
     input:
       join(WORKDIR, "rna_aligned_coordinate_sorted_dups.bam")
     output:
-      join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_N_filtered.bam")
+      temp(join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_N_filtered.bam"))
     benchmark:
       join(BENCHMARKDIR, "rna_filter_N.txt")
     shell:
@@ -126,7 +134,7 @@ if _rna_exists():
     input:
       join(WORKDIR, "rna_aligned_coordinate_sorted_dups.bam")
     output:
-      join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered.bam")
+      temp(join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_0-9MIDSHPX_filtered.bam"))
     benchmark:
       join(BENCHMARKDIR, "rna_split_out_other.txt")
     shell:
@@ -140,7 +148,9 @@ if _rna_exists():
     input:
       join(WORKDIR, "{prefix}.bam")
     output:
-      bam = join(WORKDIR, "{prefix}_sorted.bam")
+      bam = temp(join(WORKDIR, "{prefix}_sorted.bam")),
+      bai = temp(join(WORKDIR, "{prefix}_sorted.bam.bai")),
+      tmpdir = temp(directory(join(WORKDIR, "{prefix}_sort_tmp")))
     params:
       output_dir = WORKDIR
     threads: _get_half_cores
@@ -156,6 +166,7 @@ if _rna_exists():
       "-o {output.bam} "
       "{input} "
       "2> {log}"
+  ruleorder: sort_rna_bam > sambamba_index_bam
 
   # run indel realignment on the reads without Ns
   rule rna_indel_realigner_per_chr:
@@ -194,8 +205,8 @@ if _rna_exists():
         bai = expand(join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_{chr}.bai"),
                      chr=config["contigs"])
       output:
-        bam = join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"),
-        bai = join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam.bai")
+        bam = temp(join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam")),
+        bai = temp(join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam.bai"))
       benchmark:
         join(BENCHMARKDIR, "rna_indel_realigner_benchmark.txt")
       log:
@@ -209,8 +220,8 @@ if _rna_exists():
         bam = join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_ALL.bam"),
         bai = join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal_chr_ALL.bai")
       output:
-        bam = join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"),
-        bai = join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam.bai")
+        bam = temp(join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam")),
+        bai = temp(join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam.bai"))
       benchmark:
         join(BENCHMARKDIR, "rna_indel_realigner.txt")
       log:
@@ -224,8 +235,19 @@ if _rna_exists():
       join(WORKDIR, "rna_cigar_0-9MIDSHPX_filtered_sorted_indelreal.bam"),
       join(WORKDIR, "rna_aligned_coordinate_sorted_dups_cigar_N_filtered_sorted.bam")
     output:
-      join(WORKDIR, "rna_final.bam")
+      bam = temp(join(WORKDIR, "rna_final.bam")),
+      bai = temp(join(WORKDIR, "rna_final.bam.bai"))
     benchmark:
       join(BENCHMARKDIR, "rna_final_merge.txt")
     shell:
-      "sambamba merge {output} {input}"
+      "sambamba merge {output.bam} {input}"
+
+  rule rename_and_protect_rna_bam:
+    input:
+      rna = join(WORKDIR, "rna_final_sorted.bam"),
+      rna_bai = join(WORKDIR, "rna_final_sorted.bam.bai")
+    output:
+      rna = protected(join(WORKDIR, "rna.bam")),
+      rna_bai = protected(join(WORKDIR, "rna.bam.bai"))
+    shell:
+      "cp {input.rna} {output.rna} && cp {input.rna_bai} {output.rna_bai}"

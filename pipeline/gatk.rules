@@ -22,7 +22,8 @@ rule mark_dups:
   input:
     join(WORKDIR, "{prefix}_merged_aligned_coordinate_sorted.bam")
   output:
-    bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups.bam"),
+    bam = temp(join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups.bam")),
+    tmpdir = temp(directory(join(WORKDIR, "{prefix}_tmp"))),
     metrics_file = join(WORKDIR, "{prefix}_markdups_metrics.txt")
   params:
     mem_gb = _mem_gb_for_ram_hungry_jobs(),
@@ -48,7 +49,7 @@ rule sambamba_index_bam:
   input:
     join(WORKDIR, "{prefix}.bam")
   output:
-    join(WORKDIR, "{prefix}.bam.bai")
+    temp(join(WORKDIR, "{prefix}.bam.bai"))
   threads: _get_half_cores
   benchmark:
     join(BENCHMARKDIR, "{prefix}_sambamba_index.txt")
@@ -151,8 +152,8 @@ if _PARALLEL_INDEL_REALIGNER:
         join(WORKDIR, "{{prefix}}_aligned_coordinate_sorted_dups_indelreal_chr_{chr}.bai"),
         chr=config["contigs"])
     output:
-      bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"),
-      bai = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam.bai")
+      bam = temp(join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam")),
+      bai = temp(join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam.bai"))
     benchmark:
       join(BENCHMARKDIR, "{prefix}_indel_realigner.txt")
     log:
@@ -166,8 +167,8 @@ else:
       bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_chr_ALL.bam"),
       bai = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_chr_ALL.bai")
     output:
-      bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"),
-      bai = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam.bai")
+      bam = temp(join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam")),
+      bai = temp(join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam.bai"))
     benchmark:
       join(BENCHMARKDIR, "{prefix}_indel_realigner.txt")
     log:
@@ -181,7 +182,7 @@ rule base_recalibrator:
     bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"),
     bai = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam.bai")
   output:
-    join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table")
+    temp(join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table"))
   params:
     mem_gb = _mem_gb_for_ram_hungry_jobs(),
     reference = config["reference"]["genome"],
@@ -201,9 +202,11 @@ rule base_recalibrator:
 rule bqsr_print_reads:
   input:
     bam = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam"),
+    bai = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal.bam.bai"),
     bqsr = join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.table")
   output:
-    join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.bam")
+    bam = temp(join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.bam")),
+    bai = temp(join(WORKDIR, "{prefix}_aligned_coordinate_sorted_dups_indelreal_bqsr.bai"))
   params:
     mem_gb = _mem_gb_for_ram_hungry_jobs(),
     reference = config["reference"]["genome"]
@@ -217,4 +220,4 @@ rule bqsr_print_reads:
   shell:
     "gatk -Xmx{params.mem_gb}g "
     "-T PrintReads -nct {threads} -R {params.reference} -I {input.bam} -BQSR {input.bqsr} "
-    "-o {output} 2> {log}"
+    "-o {output.bam} 2> {log}"

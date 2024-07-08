@@ -18,6 +18,24 @@ def _get_cosmic_str():
   cosmic = config["reference"].get("cosmic", None)
   return "--cosmic " + cosmic if cosmic else ""
 
+rule rename_and_protect_dna_bams:
+  input:
+    normal = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"),
+    normal_bai = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bai"),
+    tumor = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"),
+    tumor_bai = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bai")
+  output:
+    normal = protected(join(WORKDIR, "normal.bam")),
+    normal_bai = protected(join(WORKDIR, "normal.bam.bai")),
+    tumor = protected(join(WORKDIR, "tumor.bam")),
+    tumor_bai = protected(join(WORKDIR, "tumor.bam.bai"))
+  run:
+    shell("""
+        cp {input.normal} {output.normal} && \
+        cp {input.normal_bai} {output.normal_bai} && \
+        cp {input.tumor} {output.tumor} && \
+        cp {input.tumor_bai} {output.tumor_bai}""")
+
 # run a separate mutect task for each chromosome
 #
 # If not running in a Docker image, user must have these environment variables set:
@@ -26,8 +44,8 @@ def _get_cosmic_str():
 # TODO(julia): this should go in the config instead of being set by env variables
 rule mutect_per_chr:
   input:
-    normal = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"),
-    tumor = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam")
+    normal = join(WORKDIR, "normal.bam"),
+    tumor = join(WORKDIR, "tumor.bam")
   output:
     temp(join(WORKDIR, "mutect_{chr}.vcf.idx")),
     temp(join(WORKDIR, "mutect_{chr}.vcf.out")),
@@ -62,14 +80,14 @@ rule mutect:
   input:
     expand(join(WORKDIR, "mutect_{chr}.vcf"), chr=config["contigs"])
   output:
-    join(WORKDIR, "mutect.vcf")
+    protected(join(WORKDIR, "mutect.vcf"))
   shell:
     "vcf-concat {input} > {output}"
 
 rule mutect2_per_chr:
   input:
-    normal = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"),
-    tumor = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam")
+    normal = join(WORKDIR, "normal.bam"),
+    tumor = join(WORKDIR, "tumor.bam")
   output:
     temp(join(WORKDIR, "mutect2_{chr}.vcf"))
   params:
@@ -96,7 +114,7 @@ rule mutect2:
   input:
     expand(join(WORKDIR, "mutect2_{chr}.vcf"), chr=config["contigs"])
   output:
-    join(WORKDIR, "mutect2.vcf")
+    protected(join(WORKDIR, "mutect2.vcf"))
   shell:
     "vcf-concat {input} > {output}"
 
@@ -105,11 +123,11 @@ rule mutect2:
 # - STRELKA_CONFIG: path to Strelka config file
 rule strelka:
   input:
-    normal = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam"),
-    tumor = join(WORKDIR, "tumor_aligned_coordinate_sorted_dups_indelreal_bqsr.bam")
+    normal = join(WORKDIR, "normal.bam"),
+    tumor = join(WORKDIR, "tumor.bam")
   output:
-    expand(join(WORKDIR, "strelka_output/results/variants/somatic.{type}.vcf.gz"),
-      type=['snvs', 'indels'])
+    temp(expand(join(WORKDIR, "strelka_output/results/variants/somatic.{type}.vcf.gz"),
+      type=['snvs', 'indels']))
   params:
     output_dir = join(WORKDIR, "strelka_output"),
     reference = config["reference"]["genome"]
@@ -130,14 +148,16 @@ rule strelka:
     "./runWorkflow.py -m local -j {threads} "
     ">> {log} 2>&1"
 
+# This rule also deletes the Strelka output directory when it's done.
 rule strelka_combine:
   input:
     snvs = join(WORKDIR, "strelka_output/results/variants/somatic.snvs.vcf.gz"),
     indels = join(WORKDIR, "strelka_output/results/variants/somatic.indels.vcf.gz")
   output:
-    join(WORKDIR, "strelka.vcf")
+    protected(join(WORKDIR, "strelka.vcf"))
   params:
-    reference = config["reference"]["genome"]
+    reference = config["reference"]["genome"],
+    output_dir = join(WORKDIR, "strelka_output")
   benchmark:
     join(BENCHMARKDIR, "strelka_combine.txt")
   log:
@@ -150,13 +170,14 @@ rule strelka_combine:
     "-genotypeMergeOptions PRIORITIZE "
     "-o {output} "
     "-priority snvs,indels "
-    "2> {log}"
+    "2> {log} && "
+    "rm -rf {params.output_dir}"
 
 rule haplotype_caller_per_chr:
   input:
-    normal = join(WORKDIR, "normal_aligned_coordinate_sorted_dups_indelreal_bqsr.bam")
+    normal = join(WORKDIR, "normal.bam")
   output:
-    join(WORKDIR, "normal_germline_snps_indels_{chr}.vcf")
+    temp(join(WORKDIR, "normal_germline_snps_indels_{chr}.vcf"))
   params:
     reference = config["reference"]["genome"],
     dbsnp = config["reference"]["dbsnp"]

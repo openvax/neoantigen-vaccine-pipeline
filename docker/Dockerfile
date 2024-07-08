@@ -36,14 +36,6 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
     apt-get clean -y && \
     rm -rf /var/lib/apt/lists/*
 
-# install wkhtmltopdf from source, this version comes with patched QT necessary for PDF gen
-# RUN cd /tmp && \
-#    wget https://github.com/wkhtmltopdf/wkhtmltopdf/archive/refs/tags/0.12.6.tar.gz && \
-#    tar xvzf 0.12.6.tar.gz && \
-#    cd /tmp/wkhtmltox/bin && sudo chown root:root wkhtmltopdf && \
-#    sudo cp /tmp/wkhtmltox/bin/wkhtmltopdf /usr/local/bin/wkhtmltopdf && \
-#    rm -rf /tmp/*
-
 RUN useradd --create-home --home-dir /home/user --shell /bin/bash -G sudo user && \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
@@ -63,18 +55,6 @@ RUN cd /tmp && wget https://github.com/openvax/neoantigen-vaccine-pipeline/relea
 
 ENV PERL5LIB /usr/local/lib
 
-# Install Strelka
-# Original address for Strelka: ftp://strelka:%27%27@ftp.illumina.com/v1-branch/v1.0.14/strelka_workflow-1.0.14.tar.gz
-# RUN mkdir $HOME/strelka && \
-#     cd /tmp && wget https://github.com/openvax/neoantigen-vaccine-pipeline/releases/download/0.3.0/strelka_workflow-1.0.14.tar.gz && \
-#     tar xvfz strelka_workflow-1.0.14.tar.gz && \
-#     cd strelka_workflow-1.0.14 && \
-#     ./configure prefix=$HOME/strelka && \
-#     make && \
-#     chmod -R a+rx ./* && \
-#     make install && \
-#     rm -rf /tmp/*
-
 # Install Miniconda
 RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && \
     bash miniconda.sh -b -p $HOME/miniconda
@@ -82,6 +62,10 @@ ENV PATH $HOME/miniconda/bin:$PATH
 
 ENV PGV_BIN /home/user/miniconda/envs/pgv/bin
 ENV JAVA7_BIN /home/user/miniconda/envs/java7/bin
+
+# Switch to a faster solver for conda
+RUN conda update -n base conda && conda install -n base conda-libmamba-solver && \
+    conda config --set solver libmamba
 
 # install a bunch of bfx tools; gatk needs to be this version, latest doesn't work
 # graphviz needed for DAG visualization
@@ -109,13 +93,16 @@ RUN conda config --add channels r && \
     && conda clean --all -y
 
 # We also setup a newer environment with mhcflurry.
-#RUN conda config --add channels r && \
-#    conda config --add channels defaults && \
-#    conda config --add channels conda-forge && \
-#    conda config --add channels bioconda && \
-#    conda create -n mhcflurry \
-#    python=3.7 numpy pandas pip \
-#    && conda clean --all -y
+RUN conda config --add channels r && \
+    conda config --add channels defaults && \
+    conda config --add channels conda-forge && \
+    conda config --add channels bioconda && \
+    conda create -n mhcflurry \
+    python=3.7 \
+    setuptools \
+    cython \
+    pip \
+    && conda clean --all -y
 
 # And an older one with Python 2.7 so that Strelka can run.
 RUN conda config --add channels r && \
@@ -133,16 +120,6 @@ RUN conda create -n java7 \
     java-jdk==7.0.91 \
     && conda clean --all -y
 
-#ENV MHCFLURRY_BIN /home/user/miniconda/envs/mhcflurry/bin
-#RUN $MHCFLURRY_BIN/pip install 'tensorflow-cpu<=2.3.0' mhcflurry vaxrank
-#RUN $MHCFLURRY_BIN/mhcflurry-downloads fetch
-
-# Test MHCflurry
-#RUN $MHCFLURRY_BIN/mhcflurry-predict --alleles HLA-A0201 --peptides SIINFEKL
-
-# most of the tools we're using are in the pgv environment; adding to PATH for convenience
-ENV PATH $PGV_BIN:$PATH
-
 # Set up MuTect 1.1.7
 RUN wget -O $HOME/mutect-1.1.7.jar http://storage.googleapis.com/common-files/tools/mutect-1.1.7.jar
 ENV MUTECT $HOME/mutect-1.1.7.jar
@@ -155,7 +132,15 @@ RUN $PGV_BIN/gatk-register $HOME/GenomeAnalysisTK.jar
 # so we want to do this before any further COPY commands in this Dockerfile.
 # See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#add-or-copy
 COPY requirements.txt $HOME
-RUN pip install --ignore-installed -r $HOME/requirements.txt
+ENV MHCFLURRY_BIN /home/user/miniconda/envs/mhcflurry/bin
+RUN $MHCFLURRY_BIN/pip install --ignore-installed -r $HOME/requirements.txt
+RUN $MHCFLURRY_BIN/mhcflurry-downloads fetch
+
+# Test MHCflurry
+RUN $MHCFLURRY_BIN/mhcflurry-predict --alleles HLA-A0201 --peptides SIINFEKL
+
+# most of the tools we're using are in the pgv environment; adding to PATH for convenience
+ENV PATH $MHCFLURRY_BIN:$PGV_BIN:$PATH
 
 # Vaxrank-required env variables and setup
 ENV KERAS_BACKEND tensorflow

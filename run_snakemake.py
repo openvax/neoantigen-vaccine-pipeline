@@ -201,8 +201,11 @@ def default_vaxrank_targets(config):
         get_output_dir(config),
         "vaccine-peptide-report_%s_%s" % (mhc_predictor, vcfs))
     # removed 'pdf' from this list until we install wkhtmltopdf in Docker image
-    return ['%s.%s' % (path_without_ext, ext) for ext in ('txt', 'json')]
-
+    return [
+        '%s.%s' % (path_without_ext, ext) for ext in ('txt', 'json')
+    ] + [
+        join(get_output_dir(config), f"annotated.all-passing-variants_{mhc_predictor}_{vcfs}.csv")
+    ]
 
 def somatic_vcf_targets(config):
     return [join(

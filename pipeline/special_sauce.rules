@@ -37,11 +37,11 @@ if "mhc_alleles" in config["input"] and _rna_exists():
       input:
         vcfs = _get_vaxrank_input_vcfs,
         rna = join(WORKDIR, "rna.bam"),
-        rna_index = join(WORKDIR, "rna.bam.bai")
+        rna_index = join(WORKDIR, "rna.bam.bai"),
       output:
         ascii_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.txt"),
         json_file = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.json"),
-	# commenting this out for now: will need to figure out wkhtmltopdf install in Docker image
+	    # commenting this out for now: will need to figure out wkhtmltopdf install in Docker image
         #pdf_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.pdf"),
         all_passing_variants = join(WORKDIR, "all-passing-variants_{mhc_predictor}_{vcf_types}.csv")
       params:
@@ -83,3 +83,24 @@ if "mhc_alleles" in config["input"] and _rna_exists():
             --min-alt-rna-reads {params.min_alt_rna_reads} \
             --mhc-epitope-lengths {params.mhc_epitope_lengths}
             """ % (vcf_input_str, ",".join(params.mhc_alleles)))
+
+    rule annotated_all_passing_variants:
+      input:
+        tumor_rna_bam = join(WORKDIR, "rna.bam"),
+        tumor_dna_bam = join(WORKDIR, "tumor.bam"),
+        normal_dna_bam = join(WORKDIR, "normal.bam"),
+        all_passing_variants = join(WORKDIR, "all-passing-variants_{mhc_predictor}_{vcf_types}.csv")
+      output:
+        annotated_all_passing_variants = join(WORKDIR, "annotated.all-passing-variants_{mhc_predictor}_{vcf_types}.csv")
+      log:
+        join(LOGDIR, "annotate_variants_{mhc_predictor}_{vcf_types}.log")
+      run:
+        _check_vaxrank_wildcards(wildcards)
+        shell("""
+            python $SCRIPTS/annotate_variants.py \
+                {input.all_passing_variants} \
+                --bam normal_dna {input.normal_dna_bam} \
+                --bam tumor_dna {input.tumor_dna_bam} \
+                --bam tumor_rna {input.tumor_rna_bam} \
+                --output {output.annotated_all_passing_variants}
+            """)

@@ -96,7 +96,25 @@ def get_aligned_pairs_with_cigar(read):
     df['read_position'] = df['read_position'].astype(float)
     return df
 
-def annotate_from_vcf(vcf_file, variants_df, label, min_mapq=10):
+def annotate_from_vcf(vcf_file, variants_df, label):
+    """
+    Annotate allelic depths and VAFs from a VCF file.
+
+    Mutect / Mutect2 / Strelka all specify different fields in the VCF sample
+    info. In the case of strelka, the allelic depths and VAFs aren't provided,
+    so we do not extract that info.
+
+    We add the following columns:
+    - {label}_normal_ref_count - Reference allele count in normal sample
+    - {label}_normal_alt_count - Alternate allele count in normal sample
+    - {label}_normal_depth - Depth in normal sample
+    - {label}_normal_vaf - Variant allele frequency in normal sample
+    - {label}_tumor_ref_count - Reference allele count in tumor sample
+    - {label}_tumor_alt_count - Alternate allele count in tumor sample
+    - {label}_tumor_depth - Depth in tumor sample
+    - {label}_tumor_vaf - Variant allele frequency in tumor sample
+    - {label} - Boolean indicating whether the variant was found in the VCF file
+    """
     vcf = varcode.load_vcf(vcf_file)
     metadata = vcf.metadata
 

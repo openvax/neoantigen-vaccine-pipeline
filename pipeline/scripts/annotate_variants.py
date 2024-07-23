@@ -1,10 +1,11 @@
 """
-Count the reads supporting reference and alternate alleles for given variants in BAM files.
+Count the reads supporting reference and alternate alleles for given variants in BAM and VCF files.
 
 Arguments:
 variants_file : str : CSV file containing variants with columns: contig, start, ref, alt. You can give the "all passing
                     variants" file that vaxrank outputs here.
 --bam : str, str    : Label and path to BAM file (can be repeated for multiple BAM files)
+--vcf : str, str    : Label and path to VCF file (can also be repeated)
 --output : str      : Output CSV file to save the results
 
 Example:
@@ -13,6 +14,7 @@ python count_alleles_varcode_tqdm_rna.py \
     --bam normal_dna /path/to/tumor_rna.bam \
     --bam tumor_rna /path/to/tumor_rna.bam \
     --bam tumor_dna /path/to/tumor_dna.bam \
+    --vcf mutect /path/to/mutect.vcf \
     --output output_with_counts.csv
 
 Author: Tim O'Donnell, July 2024
@@ -24,6 +26,7 @@ import pandas as pd
 import argparse
 from tqdm import tqdm
 
+import varcode
 import pysam
 import pandas as pd
 
@@ -92,7 +95,87 @@ def get_aligned_pairs_with_cigar(read):
     df['reference_position'] = df['reference_position'].astype(float)
     df['read_position'] = df['read_position'].astype(float)
     return df
-def count_alleles(bam_file, variants_df, label, min_mapq=10):
+
+def annotate_from_vcf(vcf_file, variants_df, label, min_mapq=10):
+    vcf = varcode.load_vcf(vcf_file)
+    metadata = vcf.metadata
+
+    # Initialize new columns in the DataFrame
+    for kind in ["normal", "tumor"]:
+        variants_df[f'{label}_{kind}_ref_count'] = np.nan
+        variants_df[f'{label}_{kind}_alt_count'] = np.nan
+        variants_df[f'{label}_{kind}_depth'] = np.nan
+        variants_df[f'{label}_{kind}_vaf'] = np.nan
+
+    variants_df[label] = False
+
+    if not vcf.variants:
+        return variants_df
+
+    example_variant = vcf.variants[0]
+
+    variants = [
+        varcode.Variant(
+            contig=row.contig,
+            start=row.start,
+            ref=row.ref,
+            alt=row.alt,
+            genome=example_variant.reference_name)
+        for _, row in variants_df.iterrows()
+    ]
+
+    sample_names = metadata[example_variant]["sample_info"]
+    tumor_sample_name, = [s for s in sample_names if "tumor" in s.lower()]
+    normal_sample_name, = [s for s in sample_names if "normal" in s.lower()]
+
+    for ((idx, row), variant) in zip(variants_df.iterrows(), variants):
+        info = metadata.get(variant)
+        if info is not None:
+            d = {
+                "normal": info["sample_info"][normal_sample_name],
+                "tumor": info["sample_info"][tumor_sample_name],
+            }
+            for kind in ["normal", "tumor"]:
+                sample_info = d[kind]
+                if "DP" in sample_info:
+                    depth = sample_info["DP"]
+                else:
+                    try:
+                        depth = sample_info["AD"][1] / sample_info["AF"]  # Guess the depth from alt count and VAF
+                    except ZeroDivisionError:
+                        if sample_info["AD"][1] == 0:
+                            depth = 0
+                        else:
+                            depth = np.nan
+                variants_df.loc[idx, f'{label}_{kind}_depth'] = depth
+
+                if "FA" in sample_info:
+                    variants_df.loc[idx, f'{label}_{kind}_vaf'] = sample_info["FA"]
+                elif "AF" in sample_info:
+                    variants_df.loc[idx, f'{label}_{kind}_vaf'] = sample_info["AF"]
+
+                if "AD" in sample_info:
+                    ref_count, alt_count = sample_info["AD"]
+                else:
+                    ref_count = alt_count = np.nan
+
+                variants_df.loc[idx, f'{label}_{kind}_ref_count'] = ref_count
+                variants_df.loc[idx, f'{label}_{kind}_alt_count'] = alt_count
+
+                variants_df.loc[idx, f"{label}"] = True
+
+    for kind in ["normal", "tumor"]:
+        for suffix in ["ref_count", "alt_count", "depth", "vaf"]:
+            col = f'{label}_{kind}_{suffix}'
+            if variants_df[col].isnull().all():
+                print("Dropping col (all nan)", col)
+                del variants_df[col]
+
+    print(f"Annotated {label} variants: {variants_df[label].sum()} of {len(variants_df)}")
+    return variants_df
+
+
+def annotate_from_bam(bam_file, variants_df, label, min_mapq=10):
     """
     Function to count reads supporting reference and alternate alleles for given variants in a BAM file.
 
@@ -240,7 +323,7 @@ are not marked as duplicates.
 *****************************
 """.strip())
 
-def main(variants_file, bam_files, output_file):
+def main(variants_file, bam_files, vcf_files, output_file):
     print(disclaimer)
 
     # Load the variants DataFrame
@@ -258,7 +341,11 @@ def main(variants_file, bam_files, output_file):
 
     # Process each BAM file
     for label, bam_path in bam_files:
-        variants_df = count_alleles(bam_path, variants_df, label)
+        variants_df = annotate_from_bam(bam_path, variants_df, label)
+
+    # Process each VCF file
+    for label, vcf_path in vcf_files:
+        variants_df = annotate_from_vcf(vcf_path, variants_df, label)
 
     # Save the updated DataFrame to the specified output file
     variants_df.to_csv(output_file, index=False)
@@ -272,9 +359,11 @@ if __name__ == '__main__':
         help='CSV file containing variants with columns: contig, start, ref, alt')
     parser.add_argument('--bam', type=str, nargs=2, action='append',
         required=True, help='Label and path to BAM file. Example: --bam tumor_rna /path/to/tumor.bam')
+    parser.add_argument("--vcf", type=str, nargs=2, action='append',
+                        required=True, help='Label and path to VCF file.')
     parser.add_argument('--output', type=str, required=True,
         help='Output CSV file to save the results')
 
     args = parser.parse_args()
 
-    main(args.variants_file, args.bam, args.output)
+    main(args.variants_file, args.bam, args.vcf, args.output)

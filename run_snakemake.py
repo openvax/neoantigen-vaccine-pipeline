@@ -203,9 +203,12 @@ def default_vaxrank_targets(config):
     # removed 'pdf' from this list until we install wkhtmltopdf in Docker image
     return [
         '%s.%s' % (path_without_ext, ext) for ext in ('txt', 'json')
-    ] + [
-        join(get_output_dir(config), f"annotated.all-passing-variants_{mhc_predictor}_{vcfs}.csv")
     ]
+
+def annotated_vaxrank_targets(config):
+    mhc_predictor = config["mhc_predictor"]
+    vcfs = "-".join(config["variant_callers"])
+    return [join(get_output_dir(config), f"annotated.all-passing-variants_{mhc_predictor}_{vcfs}.csv")]
 
 def somatic_vcf_targets(config):
     return [join(
@@ -222,7 +225,7 @@ def get_and_check_targets(args, config):
         elif args.process_reference_only:
             targets = [config["reference"]["genome"] + ".done"]
         else:
-            targets = default_vaxrank_targets(config)
+            targets = default_vaxrank_targets(config) + annotated_vaxrank_targets(config)
     
     if len(targets) == 0:
         raise ValueError("Must specify at least one target")

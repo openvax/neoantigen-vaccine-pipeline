@@ -37,7 +37,7 @@ if "mhc_alleles" in config["input"] and _rna_exists():
       input:
         vcfs = _get_vaxrank_input_vcfs,
         rna = join(WORKDIR, "rna.bam"),
-        rna_index = join(WORKDIR, "rna.bam.bai"),
+        rna_index = join(WORKDIR, "rna.bam.bai")
       output:
         ascii_report = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.txt"),
         json_file = join(WORKDIR, "vaccine-peptide-report_{mhc_predictor}_{vcf_types}.json"),

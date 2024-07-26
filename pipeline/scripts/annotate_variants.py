@@ -17,8 +17,17 @@ python count_alleles_varcode_tqdm_rna.py \
     --vcf mutect /path/to/mutect.vcf \
     --output output_with_counts.csv
 
-Author: Tim O'Donnell, July 2024
 """
+disclaimer = ("""
+*****************************
+Note: this script is a useful first-pass for annotating VAFs, but it is simplistic. It works directly with the
+alignments in the BAM and does not attempt to do any kind of realignment. That means it's not "seeing" the realigned version
+that e.g. mutect2 will be operating from. Especially for indels or variants with unexpectedly low VAFs you should
+manually check the results yourself in IGV. Also note that there may be discrepancies between what this script outputs
+and what you see in IGV due to differences in filters. This script counts reads with mapping quality at least 10 that
+are not marked as duplicates.
+*****************************
+""".strip())
 
 import pysam
 import numpy as np
@@ -30,71 +39,6 @@ import varcode
 import pysam
 import pandas as pd
 
-def get_aligned_pairs_with_cigar(read):
-    """
-    Get aligned pairs with the CIGAR operation and read sequence at each position.
-
-    Parameters:
-    read (pysam.AlignedSegment): A read from a BAM file.
-
-    Returns:
-    pd.DataFrame: A DataFrame containing the reference position, read position, CIGAR operation, and read base.
-    """
-    aligned_pairs = read.get_aligned_pairs(with_seq=False)
-    cigar_operations = read.cigartuples
-
-    # Create lists to hold the result
-    ref_positions = []
-    read_positions = []
-    cigar_ops = []
-    read_bases = []
-
-    # Variables to track the current position in the read and reference
-    read_index = 0
-
-    for operation, length in cigar_operations:
-        for _ in range(length):
-            if read_index < len(aligned_pairs):
-                read_pos, ref_pos = aligned_pairs[read_index]
-
-                if operation == 0:  # Match or mismatch
-                    cigar_op = 'M'
-                elif operation == 1:  # Insertion
-                    cigar_op = 'I'
-                elif operation == 2:  # Deletion
-                    cigar_op = 'D'
-                elif operation == 3:  # Skip (N)
-                    cigar_op = 'N'
-                elif operation == 4:  # Soft clipping
-                    cigar_op = 'S'
-                elif operation == 5:  # Hard clipping
-                    cigar_op = 'H'
-                elif operation == 6:  # Padding (P)
-                    cigar_op = 'P'
-                else:
-                    cigar_op = None
-
-                if read_pos is not None and read_pos < len(read.query_sequence):
-                    read_base = read.query_sequence[read_pos]
-                else:
-                    read_base = None
-
-                ref_positions.append(ref_pos)
-                read_positions.append(read_pos)
-                cigar_ops.append(cigar_op)
-                read_bases.append(read_base)
-
-                read_index += 1
-
-    df = pd.DataFrame({
-        'reference_position': ref_positions,
-        'read_position': read_positions,
-        'cigar_operation': cigar_ops,
-        'read_base': read_bases
-    })
-    df['reference_position'] = df['reference_position'].astype(float)
-    df['read_position'] = df['read_position'].astype(float)
-    return df
 
 def annotate_from_vcf(vcf_file, variants_df, label):
     """
@@ -192,6 +136,71 @@ def annotate_from_vcf(vcf_file, variants_df, label):
     print(f"Annotated {label} variants: {variants_df[label].sum()} of {len(variants_df)}")
     return variants_df
 
+def get_aligned_pairs_with_cigar(read):
+    """
+    Get aligned pairs with the CIGAR operation and read sequence at each position.
+
+    Parameters:
+    read (pysam.AlignedSegment): A read from a BAM file.
+
+    Returns:
+    pd.DataFrame: A DataFrame containing the reference position, read position, CIGAR operation, and read base.
+    """
+    aligned_pairs = read.get_aligned_pairs(with_seq=False)
+    cigar_operations = read.cigartuples
+
+    # Create lists to hold the result
+    ref_positions = []
+    read_positions = []
+    cigar_ops = []
+    read_bases = []
+
+    # Variables to track the current position in the read and reference
+    read_index = 0
+
+    for operation, length in cigar_operations:
+        for _ in range(length):
+            if read_index < len(aligned_pairs):
+                read_pos, ref_pos = aligned_pairs[read_index]
+
+                if operation == 0:  # Match or mismatch
+                    cigar_op = 'M'
+                elif operation == 1:  # Insertion
+                    cigar_op = 'I'
+                elif operation == 2:  # Deletion
+                    cigar_op = 'D'
+                elif operation == 3:  # Skip (N)
+                    cigar_op = 'N'
+                elif operation == 4:  # Soft clipping
+                    cigar_op = 'S'
+                elif operation == 5:  # Hard clipping
+                    cigar_op = 'H'
+                elif operation == 6:  # Padding (P)
+                    cigar_op = 'P'
+                else:
+                    cigar_op = None
+
+                if read_pos is not None and read_pos < len(read.query_sequence):
+                    read_base = read.query_sequence[read_pos]
+                else:
+                    read_base = None
+
+                ref_positions.append(ref_pos)
+                read_positions.append(read_pos)
+                cigar_ops.append(cigar_op)
+                read_bases.append(read_base)
+
+                read_index += 1
+
+    df = pd.DataFrame({
+        'reference_position': ref_positions,
+        'read_position': read_positions,
+        'cigar_operation': cigar_ops,
+        'read_base': read_bases
+    })
+    df['reference_position'] = df['reference_position'].astype(float)
+    df['read_position'] = df['read_position'].astype(float)
+    return df
 
 def annotate_from_bam(bam_file, variants_df, label, min_mapq=10):
     """
@@ -254,8 +263,10 @@ def annotate_from_bam(bam_file, variants_df, label, min_mapq=10):
         variants_df.at[idx, 'unmangled_contig'] = correct_contig
 
         # Exclude reads with very low mapping quality or that are marked as duplicates.
-        reads = [read for read in reads if read.mapping_quality >= min_mapq]
-        reads = [read for read in reads if not read.is_duplicate]
+        reads = [
+            read for read in reads
+            if read.mapping_quality >= min_mapq and not read.is_duplicate
+        ]
 
         if alt == "":
             # Handle deletion
@@ -330,16 +341,6 @@ def annotate_from_bam(bam_file, variants_df, label, min_mapq=10):
 
     return variants_df
 
-disclaimer = ("""
-*****************************
-Note: this script is a useful first-pass for annotating VAFs, but it is simplistic. It works directly with the
-alignments in the BAM and does not attempt to do any kind of realignment. That means it's not "seeing" the realigned version
-that e.g. mutect2 will be operating from. Especially for indels or variants with unexpectedly low VAFs you should
-manually check the results yourself in IGV. Also note that there may be discrepancies between what this script outputs
-and what you see in IGV due to differences in filters. This script counts reads with mapping quality at least 10 that
-are not marked as duplicates.
-*****************************
-""".strip())
 
 def main(variants_file, bam_files, vcf_files, output_file):
     print(disclaimer)
@@ -371,8 +372,7 @@ def main(variants_file, bam_files, vcf_files, output_file):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Count alleles in BAM files for given variants.')
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('variants_file', type=str,
         help='CSV file containing variants with columns: contig, start, ref, alt')
     parser.add_argument('--bam', type=str, nargs=2, action='append',

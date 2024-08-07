@@ -11,4 +11,5 @@ tensorflow-cpu<=2.3.0
 mhcflurry
 numpy
 pandas
+ipdb
 jinja2==3.0.3

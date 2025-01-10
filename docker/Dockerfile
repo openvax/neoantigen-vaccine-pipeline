@@ -162,4 +162,9 @@ ENV SCRIPTS $HOME/pipeline/scripts
 # snakemake logs get written here (hidden dir)
 RUN mkdir -p $HOME/.snakemake && sudo chown -R $USER $HOME/.snakemake
 
+# Hack to patch broken vaxrank after WUSTL server change.
+# This can be removed once vaxrank is fixed (and we update this image to latest vaxrank).
+# Replace specific exception handling with a generic "except Exception as e:" in report.py
+RUN sed -i '/^\s*except requests\.exceptions\.ConnectionError as e:/s/except requests\.exceptions\.ConnectionError as e:/except Exception as e:/g' /home/user/miniconda/envs/mhcflurry/lib/python3.7/site-packages/vaxrank/report.py
+
 ENTRYPOINT ["python", "run_snakemake.py"]

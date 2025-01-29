@@ -104,16 +104,6 @@ RUN conda config --add channels r && \
     pip \
     && conda clean --all -y
 
-# And an older one with Python 2.7 so that Strelka can run.
-RUN conda config --add channels r && \
-    conda config --add channels defaults && \
-    conda config --add channels conda-forge && \
-    conda config --add channels bioconda && \
-    conda create -n strelka \
-    python=2.7 \
-    strelka==2.9.10 \
-    && conda clean --all -y
-
 # MuTect needs Java 1.7, while GATK and other things need Java 1.8.
 # Dealing with this by setting up a separate Conda environment, specifically for Java 7
 RUN conda create -n java7 \
@@ -153,8 +143,13 @@ RUN curl https://pastebin.com/raw/AmfYN3er > $HOME/.fonts.conf
 COPY . $HOME
 
 # Strelka setup
+RUN wget https://github.com/Illumina/strelka/releases/download/v2.9.10/strelka-2.9.10.centos6_x86_64.tar.bz2 \
+    && tar -xvf strelka-2.9.10.centos6_x86_64.tar.bz2 \
+    && mv strelka-2.9.10.centos6_x86_64 $HOME/strelka \
+    && rm strelka-2.9.10.centos6_x86_64.tar.bz2
+
 ENV STRELKA_CONFIG $HOME/pipeline/strelka_config.txt
-ENV STRELKA_BIN $HOME/miniconda/envs/strelka/bin
+ENV STRELKA_BIN $HOME/strelka/bin
 
 # Python scripts setup, for things that are too small/simple to be their own modules
 ENV SCRIPTS $HOME/pipeline/scripts

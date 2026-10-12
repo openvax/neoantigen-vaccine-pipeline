@@ -148,7 +148,6 @@ RUN wget https://github.com/Illumina/strelka/releases/download/v2.9.10/strelka-2
     && mv strelka-2.9.10.centos6_x86_64 $HOME/strelka \
     && rm strelka-2.9.10.centos6_x86_64.tar.bz2
 
-ENV STRELKA_CONFIG $HOME/pipeline/strelka_config.txt
 ENV STRELKA_BIN $HOME/strelka/bin
 
 # Python scripts setup, for things that are too small/simple to be their own modules

@@ -118,9 +118,12 @@ rule mutect2:
   shell:
     "vcf-concat {input} > {output}"
 
-# If not running in a Docker image, user must have these environment variables set:
-# - STRELKA_BIN: directory of Strelka installation, must contain configureStrelkaWorkflow.pl
-# - STRELKA_CONFIG: path to Strelka config file
+# If not running in a Docker image, user must have this environment variable set:
+# - STRELKA_BIN: directory of Strelka installation, must contain
+#   configureStrelkaSomaticWorkflow.py
+#
+# Note: --exome turns off Strelka's high-depth filters, which are designed for WGS
+# and are inappropriate for the exome/targeted input this pipeline expects.
 rule strelka:
   input:
     normal = join(WORKDIR, "normal.bam"),
@@ -142,7 +145,7 @@ rule strelka:
     "--normal {input.normal} "
     "--tumor {input.tumor} "
     "--ref {params.reference} "
-    "--config $STRELKA_CONFIG "
+    "--exome "
     "--runDir {params.output_dir} &> {log}; "
     "cd {params.output_dir}; "
     "./runWorkflow.py -m local -j {threads} "

@@ -20,7 +20,7 @@ The steps performed by the workflow are as follows.
 * Tumor and normal whole exome sequencing FASTQ files are aligned to GRCh37+decoy (b37decoy) using [bwa mem](http://bio-bwa.sourceforge.net/). RNA-seq of the tumor sample is aligned by [STAR](https://academic.oup.com/bioinformatics/article/29/1/15/272537) to the same reference genome.
 * Aligned tumor and normal exome reads pass through several steps using GATK 3.7: MarkDuplicates, IndelRealigner, BQSR.
 * Aligned RNA-seq reads are grouped into two sets: those spanning introns and those aligning entirely within an exon (determined based on the CIGAR string). The latter group is passed through IndelRealigner, and the two groups of reads are merged.
-* Somatic variant calling is performed by running Mutect 1.1.7, Mutect 2, and/or Strelka version 1. The user is expected to specify which of those 3 variant callers the pipeline should run.
+* Somatic variant calling is performed by running Mutect 1.1.7, Mutect 2, and/or Strelka 2.9.10. The user is expected to specify which of those 3 variant callers the pipeline should run.
 * [Vaxrank](https://github.com/openvax/vaxrank) is run, using the combined VCFs from all variant callers and the aligned RNA reads.
 
 ## Running using Docker

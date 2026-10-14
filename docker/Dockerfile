@@ -83,26 +83,35 @@ RUN cd /tmp && wget https://github.com/openvax/neoantigen-vaccine-pipeline/relea
 
 ENV PERL5LIB /usr/local/lib
 
-# Install Miniconda
-RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && \
-    bash miniconda.sh -b -p $HOME/miniconda
+# Install Miniforge (not Miniconda).
+#
+# Miniforge defaults to conda-forge and never configures Anaconda's repo.anaconda.com
+# channels. This matters for two reasons:
+#  1. Anaconda now requires explicit Terms of Service acceptance for pkgs/main and
+#     pkgs/r, which fails any non-interactive build that touches those channels.
+#  2. Those terms require a paid license for organizations over 200 employees, so
+#     accepting them is a licensing decision, not a build fix.
+# Every package we install lives on conda-forge or bioconda, so we avoid both.
+#
+# Installed to $HOME/miniconda (not $HOME/miniforge) so the PGV_BIN / MHCFLURRY_BIN
+# paths below and the sed patch further down keep working unchanged.
+RUN wget -q https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O miniforge.sh && \
+    bash miniforge.sh -b -p $HOME/miniconda && \
+    rm miniforge.sh
 ENV PATH $HOME/miniconda/bin:$PATH
 
 ENV PGV_BIN /home/user/miniconda/envs/pgv/bin
 ENV JAVA7_BIN /home/user/miniconda/envs/java7/bin
 
-# Switch to a faster solver for conda
-RUN conda update -n base conda && conda install -n base conda-libmamba-solver && \
-    conda config --set solver libmamba
+# No conda-libmamba-solver step is needed: Miniforge ships conda >= 23.10, which
+# already uses the libmamba solver by default.
 
 # install a bunch of bfx tools; gatk needs to be this version, latest doesn't work
 # graphviz needed for DAG visualization
 # ucsc-liftover for converting coverage bed files between various alignments
 # java version specific to MuTect
-RUN conda config --add channels r && \
-    conda config --add channels defaults && \
-    conda config --add channels conda-forge && \
-    conda config --add channels bioconda && \
+# conda-forge is already Miniforge's default channel; bioconda goes on top of it.
+RUN conda config --add channels bioconda && \
     conda create -n pgv \
     setuptools \
     python=3.6 \
@@ -121,11 +130,7 @@ RUN conda config --add channels r && \
     && conda clean --all -y
 
 # We also setup a newer environment with mhcflurry.
-RUN conda config --add channels r && \
-    conda config --add channels defaults && \
-    conda config --add channels conda-forge && \
-    conda config --add channels bioconda && \
-    conda create -n mhcflurry \
+RUN conda create -n mhcflurry \
     python=3.7 \
     setuptools \
     cython \

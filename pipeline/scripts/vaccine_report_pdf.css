@@ -1,61 +1,153 @@
 /*
- * Overrides applied when converting the vaxrank HTML report to PDF with
+ * Stylesheet applied when converting the vaxrank HTML report to PDF with
  * WeasyPrint. See the vaccine_peptide_report_pdf rule in special_sauce.rules.
  *
- * Two things this file compensates for:
+ * WHY THIS FILE EXISTS
  *
- * 1. vaxrank's own PDF path rendered via pdfkit -> wkhtmltopdf with the options
- *    {'zoom': 0.55, 'margin-top': '20mm'}. wkhtmltopdf is unmaintained, so we
- *    render with WeasyPrint instead. WeasyPrint has no equivalent of 'zoom', so
- *    the shrink-to-fit is done with a reduced base font size here.
+ * vaxrank's HTML template links two stylesheets from Yahoo's retired YUI "Pure"
+ * CDN over plain HTTP. The pdf rule strips those <link> tags so that rendering
+ * needs no network and is deterministic. vaxrank's tables are marked up with
+ * Pure's classes ("pure-table", "pure-table-bordered"), so the table styling is
+ * vendored below rather than fetched. It is copied faithfully from Pure 0.6.0,
+ * limited to the two classes vaxrank actually uses.
  *
- * 2. vaxrank's HTML template links two stylesheets from Yahoo's retired YUI CDN
- *    over plain HTTP. The pdf rule strips those links so rendering needs no
- *    network, so the generic base styling they supplied is replaced below. The
- *    template uses no pure-* classes -- vaxrank's own inline stylesheet does the
- *    real layout -- so only generic defaults are needed.
- *
- * Matching the old wkhtmltopdf output exactly is explicitly NOT a goal. These
- * values are a starting point; tune them if the layout needs it.
+ * The rest of the report's layout -- table widths, column widths, page breaks --
+ * comes from vaxrank's own inline stylesheet. Do not set table width or
+ * table-layout here: vaxrank assigns those per table via <col> elements
+ * (col.epitope-data-column-*, col.patient-info-*, ...) and a blanket rule
+ * collapses the epitope columns until peptide sequences wrap mid-string.
  */
 
 @page {
     size: A4;
-    margin: 20mm 10mm 12mm 10mm;
+    margin: 14mm 12mm;
 }
 
 body {
-    font-family: sans-serif;
-    font-size: 7pt;
+    font-family: "DejaVu Sans", sans-serif;
+    font-size: 8pt;
+    line-height: 1.4;
     color: #000;
+    margin: 0;
 }
 
-/* The report is table-heavy and the tables are wide. Constrain them to the page
-   box and wrap inside cells rather than letting content overflow and clip. */
-table {
-    width: 100%;
-    table-layout: fixed;
+/* ------------------------------------------------------------------------
+ * Vendored from Pure 0.6.0 (pure-min.css), the .pure-table rules only.
+ * ------------------------------------------------------------------------ */
+
+.pure-table {
     border-collapse: collapse;
+    border-spacing: 0;
+    empty-cells: show;
+    border: 1px solid #cbcbcb;
 }
 
-th, td {
-    padding: 0.25em 0.4em;
+.pure-table td,
+.pure-table th {
+    border-left: 1px solid #cbcbcb;
+    border-width: 0 0 0 1px;
+    font-size: inherit;
+    margin: 0;
+    overflow: visible;
+    padding: 0.5em 1em;
+}
+
+.pure-table td:first-child,
+.pure-table th:first-child {
+    border-left-width: 0;
+}
+
+.pure-table thead {
+    background-color: #e0e0e0;
+    color: #000;
     text-align: left;
-    vertical-align: top;
+    vertical-align: bottom;
+}
+
+.pure-table td {
+    background-color: transparent;
+}
+
+.pure-table-bordered td {
+    border-bottom: 1px solid #cbcbcb;
+}
+
+.pure-table-bordered tbody > tr:last-child > td {
+    border-bottom-width: 0;
+}
+
+/* ------------------------------------------------------------------------
+ * Adjustments for vaxrank rules that were tuned for wkhtmltopdf.
+ * ------------------------------------------------------------------------ */
+
+/* NOTE ON !important BELOW
+ *
+ * WeasyPrint loads --stylesheet as a USER stylesheet, and in the CSS cascade an
+ * author stylesheet (vaxrank's inline <style> block) beats a user stylesheet for
+ * normal declarations no matter how specific the user selector is. A user
+ * declaration only wins when marked !important. So any rule here that has to
+ * override something vaxrank sets must be !important -- without it the rule is
+ * silently ignored. Rules that merely fill gaps vaxrank leaves alone (the
+ * vendored .pure-table block, @page, body) need no such marker.
+ */
+
+/* vaxrank pads #main by 4em. Combined with the @page margin that doubles up and
+   leaves the report using only about 60% of the page width. */
+#main {
+    padding: 0 !important;
+}
+
+/* vaxrank sets div.variant-span to an absolute 16px, which ignores the body size
+   above, so every per-variant section renders far larger than the summary tables
+   and the epitope columns overflow. Scale it down -- these per-peptide tables are
+   dense reference data, not prose, and do not need to be larger than the summary
+   tables on page 1. */
+div.variant-span {
+    font-size: 8pt !important;
+}
+
+/* Pure's 0.5em/1em cell padding makes the per-peptide tables very tall for the
+   amount of data in them. Tighten it for the variant sections only; the page-1
+   summary tables keep Pure's roomier spacing. */
+div.variant-span .pure-table td,
+div.variant-span .pure-table th {
+    padding: 0.35em 0.7em;
+}
+
+/* Peptide and epitope sequences must never break mid-string -- a wrapped
+   "KPIIIGHHAY" is unreadable and easy to misread. Stated explicitly so a future
+   edit doesn't reintroduce a global word-break. */
+table.peptide td,
+table.epitope-inner td,
+table.epitope-inner th,
+table.wt-epitopes td,
+span.mutant {
+    overflow-wrap: normal;
+    hyphens: none;
+}
+
+/* Long filesystem paths in the patient-info and command-line-args tables do need
+   to wrap, or they run off the right edge of the page.
+   Note "break-word" rather than "anywhere": "anywhere" also lets the column
+   shrink below its longest word when the table is laid out, which chops argument
+   names like "max_reference_transcript_mismatches" mid-identifier. */
+table.patient-info td,
+table.args td {
     overflow-wrap: break-word;
-    word-break: break-word;
 }
 
-th {
-    border-bottom: 1px solid #666;
-    font-weight: bold;
-}
-
-td {
-    border-bottom: 1px solid #ddd;
+/* The six-column epitope table is the tightest thing in the report: vaxrank gives
+   every column 16% regardless of content, and Pure's 1em horizontal padding then
+   pushes values like "1470.85 nM" onto a second line. Tighten the padding and
+   forbid wrapping so the auto table layout widens columns to fit instead -- the
+   full row is only ~60 characters, so there is ample room inside the table. */
+table.epitope-inner td,
+table.epitope-inner th {
+    padding: 0.4em 0.5em;
+    white-space: nowrap;
 }
 
 /* Keep headings attached to the content that follows them. */
-h1, h2, h3 {
+h1, h2, h3, h4 {
     break-after: avoid;
 }

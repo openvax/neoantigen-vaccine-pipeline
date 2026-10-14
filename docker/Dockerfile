@@ -36,6 +36,28 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
     apt-get clean -y && \
     rm -rf /var/lib/apt/lists/*
 
+# WeasyPrint, used to render the vaccine peptide PDF report.
+#
+# We deliberately do NOT use vaxrank's own PDF output: vaxrank 1.4.0 renders PDFs
+# via pdfkit -> wkhtmltopdf, and wkhtmltopdf was archived upstream in 2023. Instead
+# vaxrank emits the HTML report and the vaccine_peptide_report_pdf rule converts it
+# (see pipeline/special_sauce.rules).
+#
+# WeasyPrint is installed against the system Python 3.10 rather than vaxrank's
+# Python 3.7 conda env, and is invoked as a CLI, so vaxrank's Python version does
+# not constrain it. Needs Pango >= 1.44; jammy ships 1.50.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        python3-pip \
+        libpango-1.0-0 \
+        libpangoft2-1.0-0 \
+        libharfbuzz-subset0 \
+        libfontconfig1 && \
+    pip3 install --no-cache-dir weasyprint==70.0 && \
+    apt-get clean -y && \
+    rm -rf /var/lib/apt/lists/* && \
+    weasyprint --version
+
 RUN useradd --create-home --home-dir /home/user --shell /bin/bash -G sudo user && \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 

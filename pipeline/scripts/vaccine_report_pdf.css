@@ -1,0 +1,61 @@
+/*
+ * Overrides applied when converting the vaxrank HTML report to PDF with
+ * WeasyPrint. See the vaccine_peptide_report_pdf rule in special_sauce.rules.
+ *
+ * Two things this file compensates for:
+ *
+ * 1. vaxrank's own PDF path rendered via pdfkit -> wkhtmltopdf with the options
+ *    {'zoom': 0.55, 'margin-top': '20mm'}. wkhtmltopdf is unmaintained, so we
+ *    render with WeasyPrint instead. WeasyPrint has no equivalent of 'zoom', so
+ *    the shrink-to-fit is done with a reduced base font size here.
+ *
+ * 2. vaxrank's HTML template links two stylesheets from Yahoo's retired YUI CDN
+ *    over plain HTTP. The pdf rule strips those links so rendering needs no
+ *    network, so the generic base styling they supplied is replaced below. The
+ *    template uses no pure-* classes -- vaxrank's own inline stylesheet does the
+ *    real layout -- so only generic defaults are needed.
+ *
+ * Matching the old wkhtmltopdf output exactly is explicitly NOT a goal. These
+ * values are a starting point; tune them if the layout needs it.
+ */
+
+@page {
+    size: A4;
+    margin: 20mm 10mm 12mm 10mm;
+}
+
+body {
+    font-family: sans-serif;
+    font-size: 7pt;
+    color: #000;
+}
+
+/* The report is table-heavy and the tables are wide. Constrain them to the page
+   box and wrap inside cells rather than letting content overflow and clip. */
+table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 0.25em 0.4em;
+    text-align: left;
+    vertical-align: top;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+th {
+    border-bottom: 1px solid #666;
+    font-weight: bold;
+}
+
+td {
+    border-bottom: 1px solid #ddd;
+}
+
+/* Keep headings attached to the content that follows them. */
+h1, h2, h3 {
+    break-after: avoid;
+}

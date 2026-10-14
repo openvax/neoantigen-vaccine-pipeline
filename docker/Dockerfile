@@ -46,14 +46,20 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
 # WeasyPrint is installed against the system Python 3.10 rather than vaxrank's
 # Python 3.7 conda env, and is invoked as a CLI, so vaxrank's Python version does
 # not constrain it. Needs Pango >= 1.44; jammy ships 1.50.
+#
+# Version pin, do not bump without also bumping the base image: WeasyPrint 63.0+
+# subsets fonts with HarfBuzz and needs libharfbuzz-subset.so.0 (HarfBuzz >= 4.1).
+# Ubuntu 22.04 ships HarfBuzz 2.7.4 and provides that library in no package at all
+# -- there is no libharfbuzz-subset0 on jammy. 62.3 is the last release that
+# subsets via fontTools instead, so it is the newest version that builds here.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         python3-pip \
         libpango-1.0-0 \
         libpangoft2-1.0-0 \
-        libharfbuzz-subset0 \
+        libharfbuzz0b \
         libfontconfig1 && \
-    pip3 install --no-cache-dir weasyprint==70.0 && \
+    pip3 install --no-cache-dir weasyprint==62.3 && \
     apt-get clean -y && \
     rm -rf /var/lib/apt/lists/* && \
     weasyprint --version

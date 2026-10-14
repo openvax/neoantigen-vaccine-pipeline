@@ -4,12 +4,17 @@ FROM --platform=linux/amd64 ubuntu:22.04
 
 MAINTAINER Julia Kodysh <julia326@gmail.com>
 
+# Note on fonts-dejavu-core: WeasyPrint renders text via Pango/fontconfig, which
+# needs at least one real font present. --no-install-recommends below strips the
+# font packages that would otherwise arrive as recommends, leaving the image with
+# fontconfig but no fonts, so one is requested explicitly.
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections && \
     apt-get clean && \
     apt-get update && \
     apt-get install --no-install-recommends --no-upgrade -y \
         ca-certificates \
         curl \
+        fonts-dejavu-core \
         gawk \
         git \
         graphviz \
@@ -52,6 +57,12 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
 # Ubuntu 22.04 ships HarfBuzz 2.7.4 and provides that library in no package at all
 # -- there is no libharfbuzz-subset0 on jammy. 62.3 is the last release that
 # subsets via fontTools instead, so it is the newest version that builds here.
+#
+# pydyf must be pinned alongside it. WeasyPrint 62.3 requires "pydyf>=0.10.0" with
+# no upper bound, so pip otherwise installs the newest pydyf, whose Stream API no
+# longer provides transform(). That combination installs cleanly and only fails at
+# render time with "AttributeError: 'super' object has no attribute 'transform'".
+# 0.10.0 is the version 62.3 was built against; pydyf 0.11+ pairs with WeasyPrint 63+.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         python3-pip \
@@ -59,7 +70,7 @@ RUN apt-get update && \
         libpangoft2-1.0-0 \
         libharfbuzz0b \
         libfontconfig1 && \
-    pip3 install --no-cache-dir weasyprint==62.3 && \
+    pip3 install --no-cache-dir weasyprint==62.3 pydyf==0.10.0 && \
     apt-get clean -y && \
     rm -rf /var/lib/apt/lists/* && \
     weasyprint --version

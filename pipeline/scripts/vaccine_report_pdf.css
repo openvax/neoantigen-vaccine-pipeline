@@ -114,6 +114,17 @@ div.variant-span .pure-table th {
     padding: 0.35em 0.7em;
 }
 
+/* vaxrank gives table.variant a -2em top margin to compensate for wkhtmltopdf's
+   spacing. Under WeasyPrint that lifts the table above its own list marker, so
+   the "1." ends up sitting below the top of the table it labels. Zero it so the
+   marker and the table top line up.
+   Note this is deliberately NOT applied to table.peptide, whose -1em margin is
+   still doing useful work there: zeroing it pushes the peptide tables down and
+   roughly doubles the gap to their markers. */
+table.variant {
+    margin-top: 0 !important;
+}
+
 /* Peptide and epitope sequences must never break mid-string -- a wrapped
    "KPIIIGHHAY" is unreadable and easy to misread. Stated explicitly so a future
    edit doesn't reintroduce a global word-break. */

@@ -4,12 +4,17 @@ FROM --platform=linux/amd64 ubuntu:22.04
 
 MAINTAINER Julia Kodysh <julia326@gmail.com>
 
+# Note on fonts-dejavu-core: WeasyPrint renders text via Pango/fontconfig, which
+# needs at least one real font present. --no-install-recommends below strips the
+# font packages that would otherwise arrive as recommends, leaving the image with
+# fontconfig but no fonts, so one is requested explicitly.
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections && \
     apt-get clean && \
     apt-get update && \
     apt-get install --no-install-recommends --no-upgrade -y \
         ca-certificates \
         curl \
+        fonts-dejavu-core \
         gawk \
         git \
         graphviz \
@@ -36,6 +41,40 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
     apt-get clean -y && \
     rm -rf /var/lib/apt/lists/*
 
+# WeasyPrint, used to render the vaccine peptide PDF report.
+#
+# We deliberately do NOT use vaxrank's own PDF output: vaxrank 1.4.0 renders PDFs
+# via pdfkit -> wkhtmltopdf, and wkhtmltopdf was archived upstream in 2023. Instead
+# vaxrank emits the HTML report and the vaccine_peptide_report_pdf rule converts it
+# (see pipeline/special_sauce.rules).
+#
+# WeasyPrint is installed against the system Python 3.10 rather than vaxrank's
+# Python 3.7 conda env, and is invoked as a CLI, so vaxrank's Python version does
+# not constrain it. Needs Pango >= 1.44; jammy ships 1.50.
+#
+# Version pin, do not bump without also bumping the base image: WeasyPrint 63.0+
+# subsets fonts with HarfBuzz and needs libharfbuzz-subset.so.0 (HarfBuzz >= 4.1).
+# Ubuntu 22.04 ships HarfBuzz 2.7.4 and provides that library in no package at all
+# -- there is no libharfbuzz-subset0 on jammy. 62.3 is the last release that
+# subsets via fontTools instead, so it is the newest version that builds here.
+#
+# pydyf must be pinned alongside it. WeasyPrint 62.3 requires "pydyf>=0.10.0" with
+# no upper bound, so pip otherwise installs the newest pydyf, whose Stream API no
+# longer provides transform(). That combination installs cleanly and only fails at
+# render time with "AttributeError: 'super' object has no attribute 'transform'".
+# 0.10.0 is the version 62.3 was built against; pydyf 0.11+ pairs with WeasyPrint 63+.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        python3-pip \
+        libpango-1.0-0 \
+        libpangoft2-1.0-0 \
+        libharfbuzz0b \
+        libfontconfig1 && \
+    pip3 install --no-cache-dir weasyprint==62.3 pydyf==0.10.0 && \
+    apt-get clean -y && \
+    rm -rf /var/lib/apt/lists/* && \
+    weasyprint --version
+
 RUN useradd --create-home --home-dir /home/user --shell /bin/bash -G sudo user && \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
@@ -55,26 +94,35 @@ RUN cd /tmp && wget https://github.com/openvax/neoantigen-vaccine-pipeline/relea
 
 ENV PERL5LIB /usr/local/lib
 
-# Install Miniconda
-RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && \
-    bash miniconda.sh -b -p $HOME/miniconda
+# Install Miniforge (not Miniconda).
+#
+# Miniforge defaults to conda-forge and never configures Anaconda's repo.anaconda.com
+# channels. This matters for two reasons:
+#  1. Anaconda now requires explicit Terms of Service acceptance for pkgs/main and
+#     pkgs/r, which fails any non-interactive build that touches those channels.
+#  2. Those terms require a paid license for organizations over 200 employees, so
+#     accepting them is a licensing decision, not a build fix.
+# Every package we install lives on conda-forge or bioconda, so we avoid both.
+#
+# Installed to $HOME/miniconda (not $HOME/miniforge) so the PGV_BIN / MHCFLURRY_BIN
+# paths below and the sed patch further down keep working unchanged.
+RUN wget -q https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O miniforge.sh && \
+    bash miniforge.sh -b -p $HOME/miniconda && \
+    rm miniforge.sh
 ENV PATH $HOME/miniconda/bin:$PATH
 
 ENV PGV_BIN /home/user/miniconda/envs/pgv/bin
 ENV JAVA7_BIN /home/user/miniconda/envs/java7/bin
 
-# Switch to a faster solver for conda
-RUN conda update -n base conda && conda install -n base conda-libmamba-solver && \
-    conda config --set solver libmamba
+# No conda-libmamba-solver step is needed: Miniforge ships conda >= 23.10, which
+# already uses the libmamba solver by default.
 
 # install a bunch of bfx tools; gatk needs to be this version, latest doesn't work
 # graphviz needed for DAG visualization
 # ucsc-liftover for converting coverage bed files between various alignments
 # java version specific to MuTect
-RUN conda config --add channels r && \
-    conda config --add channels defaults && \
-    conda config --add channels conda-forge && \
-    conda config --add channels bioconda && \
+# conda-forge is already Miniforge's default channel; bioconda goes on top of it.
+RUN conda config --add channels bioconda && \
     conda create -n pgv \
     setuptools \
     python=3.6 \
@@ -93,11 +141,7 @@ RUN conda config --add channels r && \
     && conda clean --all -y
 
 # We also setup a newer environment with mhcflurry.
-RUN conda config --add channels r && \
-    conda config --add channels defaults && \
-    conda config --add channels conda-forge && \
-    conda config --add channels bioconda && \
-    conda create -n mhcflurry \
+RUN conda create -n mhcflurry \
     python=3.7 \
     setuptools \
     cython \
@@ -148,7 +192,6 @@ RUN wget https://github.com/Illumina/strelka/releases/download/v2.9.10/strelka-2
     && mv strelka-2.9.10.centos6_x86_64 $HOME/strelka \
     && rm strelka-2.9.10.centos6_x86_64.tar.bz2
 
-ENV STRELKA_CONFIG $HOME/pipeline/strelka_config.txt
 ENV STRELKA_BIN $HOME/strelka/bin
 
 # Python scripts setup, for things that are too small/simple to be their own modules

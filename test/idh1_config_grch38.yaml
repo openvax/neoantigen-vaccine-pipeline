@@ -1,7 +1,9 @@
 input:
   id: idh1-test-sample-grch38
   mhc_alleles:
-    - HLA-A*30:01
+    # B*35:01 is the strongest predicted binder for the IDH1 R132H neoepitope
+    # (KPIIIGHHAY, ~55nM by mhcflurry), so this test yields a non-empty report.
+    - HLA-B*35:01
   # The input FASTQ files must live in the same directory as your config YAML file.
   # You should only need to modify the basename of the sample file paths, leaving the /inputs part
   # of the filename unchanged.
@@ -29,7 +31,7 @@ reference:
   transcripts: /reference-genome/grch38/gencode.v22.annotation.gtf
   capture_kit_coverage_file: /reference-genome/grch38/S31285117_Covered_grch38.bed
 parallel_indel_realigner: true
-mhc_predictor: netmhcpan-iedb
+mhc_predictor: mhcflurry
 variant_callers:
   - mutect
   - strelka

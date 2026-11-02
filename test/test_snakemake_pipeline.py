@@ -86,9 +86,9 @@ class TestPipeline(unittest.TestCase):
             config = yaml.safe_load(idh1_config_file)
         targets = default_vaxrank_targets(config)
         expected_targets = (
-            '/outputs/idh1-test-sample/vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.txt',
-            '/outputs/idh1-test-sample/vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.json',
-            '/outputs/idh1-test-sample/vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.pdf',
+            '/outputs/idh1-test-sample/vaccine-peptide-report_mhcflurry_mutect-strelka.txt',
+            '/outputs/idh1-test-sample/vaccine-peptide-report_mhcflurry_mutect-strelka.json',
+            '/outputs/idh1-test-sample/vaccine-peptide-report_mhcflurry_mutect-strelka.pdf',
         )
         self.assertEqual(len(expected_targets), len(targets))
         for target in targets:
@@ -120,7 +120,7 @@ class TestPipeline(unittest.TestCase):
                 join(
                     self.workdir.name, 
                     'idh1-test-sample',
-                    'vaccine-peptide-report_netmhcpan-iedb_mutect-strelka.txt'),
+                    'vaccine-peptide-report_mhcflurry_mutect-strelka.txt'),
                 join(
                     self.workdir.name,
                     'idh1-test-sample',
@@ -234,7 +234,7 @@ class TestPipeline(unittest.TestCase):
             '--target', join(
                 self.workdir.name, 
                 'idh1-test-sample',
-                'vaccine-peptide-report_netmhcpan-iedb_mutect-strelka-mutect2.txt'),
+                'vaccine-peptide-report_mhcflurry_mutect-strelka-mutect2.txt'),
         ]
         self.assertRaises(ValueError, docker_entrypoint, bad_vaxrank_target_cli_args)
 
